@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'packs/pack_providers.dart';
+import 'packs/pack_repository.dart';
 import 'state/theme_controller.dart';
 import 'theme/app_theme.dart';
 import 'widgets/main_scaffold.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: StikkApp()));
+  final repository = await HivePackRepository.open();
+  runApp(
+    ProviderScope(
+      overrides: [
+        packRepositoryProvider.overrideWithValue(repository),
+      ],
+      child: const StikkApp(),
+    ),
+  );
 }
 
 class StikkApp extends ConsumerWidget {

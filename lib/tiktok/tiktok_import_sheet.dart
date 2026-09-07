@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../editor/editor_screen.dart';
 import 'tiktok_import_controller.dart';
 
 Future<void> showTiktokImportSheet(BuildContext context) {
@@ -88,16 +89,22 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
           ..showSnackBar(SnackBar(content: Text(next.errorMessage!)));
       }
       if (next.phase == TiktokImportPhase.completed &&
-          previous?.phase != TiktokImportPhase.completed) {
-        final messenger = ScaffoldMessenger.of(context);
-        Navigator.of(context).pop();
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('Video downloaded. Ready to turn into a sticker.'),
+          previous?.phase != TiktokImportPhase.completed &&
+          next.savedFilePath != null) {
+        final navigator = Navigator.of(context, rootNavigator: true);
+        final path = next.savedFilePath!;
+        final caption = next.caption;
+        navigator.pop();
+        Future.microtask(() {
+          navigator.push(
+            MaterialPageRoute<void>(
+              builder: (_) => EditorScreen(
+                videoPath: path,
+                caption: caption,
+              ),
             ),
           );
+        });
       }
     });
 
