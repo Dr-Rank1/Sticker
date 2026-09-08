@@ -42,56 +42,53 @@ Future<void> main() async {
   }
   installAppErrorHandlers();
 
-  await runZonedGuarded(
-    () async {
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        await enableHighestDisplayMode();
-        await checkForImmediatePlayStoreUpdate();
-        try {
-          await Workmanager().initialize(callbackDispatcher);
-          await Workmanager().registerPeriodicTask(
-            cleanupTaskName,
-            cleanupTaskName,
-            frequency: const Duration(hours: 24),
-            existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-            constraints: Constraints(
-              networkType: NetworkType.notRequired,
-              requiresDeviceIdle: true,
-            ),
-          );
-        } catch (error, stack) {
-          appLogger.e(
-            'Failed to schedule cache cleanup',
-            error: error,
-            stackTrace: stack,
-          );
-        }
-      }
-      final repository = await StickerRepository.open();
-      final settings = await HiveSettingsStore.open();
-      var initialShare = const <SharedMediaFile>[];
+  try {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      await enableHighestDisplayMode();
+      await checkForImmediatePlayStoreUpdate();
       try {
-        initialShare = await ReceiveSharingIntent.instance.getInitialMedia();
-        await ReceiveSharingIntent.instance.reset();
-      } catch (error) {
-        appLogger.d('Share intent initial media unavailable: $error');
+        await Workmanager().initialize(callbackDispatcher);
+        await Workmanager().registerPeriodicTask(
+          cleanupTaskName,
+          cleanupTaskName,
+          frequency: const Duration(hours: 24),
+          existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+          constraints: Constraints(
+            networkType: NetworkType.notRequired,
+            requiresDeviceIdle: true,
+          ),
+        );
+      } catch (error, stack) {
+        appLogger.e(
+          'Failed to schedule cache cleanup',
+          error: error,
+          stackTrace: stack,
+        );
       }
-      runApp(
-        ProviderScope(
-          overrides: [
-            packRepositoryProvider.overrideWithValue(repository),
-            settingsStoreProvider.overrideWithValue(settings),
-          ],
-          child: StikkApp(initialSharedMedia: initialShare),
-        ),
-      );
-    },
-    (error, stack) {
-      appLogger.e('App startup failed', error: error, stackTrace: stack);
-      crashReporter.recordError(error, stack, fatal: true);
-      runApp(const _StartupErrorApp());
-    },
-  );
+    }
+    final repository = await StickerRepository.open();
+    final settings = await HiveSettingsStore.open();
+    var initialShare = const <SharedMediaFile>[];
+    try {
+      initialShare = await ReceiveSharingIntent.instance.getInitialMedia();
+      await ReceiveSharingIntent.instance.reset();
+    } catch (error) {
+      appLogger.d('Share intent initial media unavailable: $error');
+    }
+    runApp(
+      ProviderScope(
+        overrides: [
+          packRepositoryProvider.overrideWithValue(repository),
+          settingsStoreProvider.overrideWithValue(settings),
+        ],
+        child: StikkApp(initialSharedMedia: initialShare),
+      ),
+    );
+  } catch (error, stack) {
+    appLogger.e('App startup failed', error: error, stackTrace: stack);
+    crashReporter.recordError(error, stack, fatal: true);
+    runApp(const _StartupErrorApp());
+  }
 }
 
 class _StartupErrorApp extends StatelessWidget {
@@ -272,7 +269,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
     }
 
     return MaterialApp(
-      title: 'Stikk',
+      title: 'Stickr',
       navigatorKey: _navigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,

@@ -91,7 +91,7 @@ void main() {
     expect(find.text('Storage'), findsOneWidget);
     expect(
       find.text(
-        'See what Stikk uses on this device and remove disposable working files.',
+        'See what Stickr uses on this device and remove disposable working files.',
       ),
       findsOneWidget,
     );

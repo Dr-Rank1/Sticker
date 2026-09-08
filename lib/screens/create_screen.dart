@@ -176,7 +176,7 @@ class _FreeForeverNote extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Stikk is 100% free. No accounts, no paywalls.',
+              'Stickr is 100% free. No accounts, no paywalls.',
               style: Theme.of(context).textTheme.titleSmall
                   ?.copyWith(color: colors.accentDim),
             ),

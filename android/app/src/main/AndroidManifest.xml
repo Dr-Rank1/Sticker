@@ -17,7 +17,7 @@
     <!-- WorkManager: keep the idle cleanup worker scheduled. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
-        android:label="Stikk"
+        android:label="Stickr"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
@@ -57,14 +57,14 @@
                 <data android:scheme="https"/>
                 <data android:host="vm.tiktok.com"/>
             </intent-filter>
-            <!-- Share -> More -> Stikk from TikTok and other apps. -->
-            <intent-filter android:label="Stikk">
+            <!-- Share -> More -> Stickr from TikTok and other apps. -->
+            <intent-filter android:label="Stickr">
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
             </intent-filter>
             <!-- Open a .stikk pack from email, files, or another app. -->
-            <intent-filter android:label="Stikk">
+            <intent-filter android:label="Stickr">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
@@ -73,7 +73,7 @@
                 <data android:host="*"/>
                 <data android:mimeType="application/vnd.stikk.pack"/>
             </intent-filter>
-            <intent-filter android:label="Stikk">
+            <intent-filter android:label="Stickr">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
@@ -85,7 +85,7 @@
                 <data android:pathPattern=".*\\..*\\..*\\.stikk"/>
                 <data android:mimeType="*/*"/>
             </intent-filter>
-            <intent-filter android:label="Stikk">
+            <intent-filter android:label="Stickr">
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="application/vnd.stikk.pack"/>

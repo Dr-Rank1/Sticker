@@ -60,7 +60,7 @@ class MediaPermissionDialog extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Stikk only reads files you pick so you can cut out stickers and export them to WhatsApp. Nothing is uploaded.',
+              'Stickr only reads files you pick so you can cut out stickers and export them to WhatsApp. Nothing is uploaded.',
               textAlign: TextAlign.center,
               style: textTheme.bodyMedium,
             ),
@@ -155,7 +155,7 @@ Future<bool> ensureCameraPermission(
       return AlertDialog(
         title: const Text('Use your camera'),
         content: const Text(
-          'Stikk uses the camera so you can snap a photo and turn it into a sticker.',
+          'Stickr uses the camera so you can snap a photo and turn it into a sticker.',
         ),
         actions: [
           TextButton(

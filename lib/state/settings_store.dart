@@ -33,6 +33,8 @@ class HiveSettingsStore implements SettingsStore {
   static Future<HiveSettingsStore> open({String? hivePath}) async {
     if (hivePath != null) {
       Hive.init(hivePath);
+    } else {
+      await Hive.initFlutter();
     }
     final box = Hive.isBoxOpen(boxName)
         ? Hive.box<dynamic>(boxName)

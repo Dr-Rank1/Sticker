@@ -1,11 +1,11 @@
 {
-    "name": "Stikk",
-    "short_name": "Stikk",
+    "name": "Stickr",
+    "short_name": "Stickr",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#00C48C",
     "theme_color": "#00C48C",
-    "description": "A free WhatsApp sticker maker inspired by Stikk.",
+    "description": "A free WhatsApp sticker maker.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

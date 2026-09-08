@@ -11,7 +11,7 @@ class AppErrorFallback extends StatelessWidget {
 
   static const title = 'Something went wrong';
   static const message =
-      'Stikk hit an unexpected problem. You can keep using the rest of the app.';
+      'Stickr hit an unexpected problem. You can keep using the rest of the app.';
 
   @override
   Widget build(BuildContext context) {

@@ -162,4 +162,4 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
 }
 
 const commentPackName = 'Comment stickers';
-const commentPackAuthor = 'Stikk';
+const commentPackAuthor = 'Stickr';
