@@ -106,6 +106,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           expect(call.method, WhatsAppExportService.addStickerPackMethod);
+          expect(call.arguments['identifier'], 'pack_123');
           expect(call.arguments['name'], 'Moods');
           expect(call.arguments['publisher'], 'Ian');
           expect(call.arguments['stickerPaths'], [
@@ -113,6 +114,8 @@ void main() {
             's1.webp',
             's2.webp',
           ]);
+          expect(call.arguments['trayIconPath'], 'tray.png');
+          expect(call.arguments['animated'], isTrue);
           return true;
         });
 

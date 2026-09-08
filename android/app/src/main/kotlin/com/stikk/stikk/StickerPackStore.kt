@@ -7,16 +7,33 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * Stages sticker packs under filesDir/sticker_packs so [StickerContentProvider]
- * can serve tray PNGs, WebP stickers, and pack metadata to WhatsApp.
+ * Stages WhatsApp sticker packs under the app documents directory so
+ * [StickerContentProvider] can map METADATA / STICKERS queries onto local
+ * `.webp` files with [android.os.ParcelFileDescriptor].
+ *
+ * Flutter already writes user stickers through `getApplicationDocumentsDirectory()`
+ * (`app_flutter` on Android). Export copies live next to that tree so WhatsApp
+ * never depends on a third-party Flutter plugin to serve bytes.
  */
 object StickerPackStore {
     const val TRAY_FILE_NAME = "tray.png"
 
     private const val ROOT_DIR = "sticker_packs"
     private const val CONTENTS_FILE = "contents.json"
+    private const val FLUTTER_DOCUMENTS_DIR = "app_flutter"
 
-    fun root(context: Context): File = File(context.filesDir, ROOT_DIR)
+    fun documentsDir(context: Context): File {
+        val flutterDocs = File(context.applicationInfo.dataDir, FLUTTER_DOCUMENTS_DIR)
+        if (flutterDocs.isDirectory || flutterDocs.mkdirs()) return flutterDocs
+        return context.filesDir
+    }
+
+    fun root(context: Context): File {
+        val documentsRoot = File(documentsDir(context), ROOT_DIR)
+        val legacyRoot = File(context.filesDir, ROOT_DIR)
+        if (!documentsRoot.exists() && legacyRoot.exists()) return legacyRoot
+        return documentsRoot
+    }
 
     fun packDir(context: Context, identifier: String): File = File(root(context), identifier)
 
@@ -51,7 +68,12 @@ object StickerPackStore {
         val stickerFiles = stickerPaths.mapIndexed { index, path ->
             val fileName = "sticker_$index.webp"
             copyRequired(File(path), File(dir, fileName))
-            fileName
+            JSONObject().apply {
+                put("image_file", fileName)
+                put("source_path", path)
+                put("emojis", JSONArray().put("✨"))
+                put("accessibility_text", "")
+            }
         }
 
         val packs = loadPacks(context).filterNot { it.optString("identifier") == id }.toMutableList()
@@ -69,20 +91,7 @@ object StickerPackStore {
             put("license_agreement_website", "")
             put("android_play_store_link", "")
             put("ios_app_store_link", "")
-            put(
-                "stickers",
-                JSONArray().also { array ->
-                    stickerFiles.forEach { fileName ->
-                        array.put(
-                            JSONObject().apply {
-                                put("image_file", fileName)
-                                put("emojis", JSONArray().put("✨"))
-                                put("accessibility_text", "")
-                            },
-                        )
-                    }
-                },
-            )
+            put("stickers", JSONArray().also { array -> stickerFiles.forEach(array::put) })
         }
 
         val payload = JSONObject().put(
@@ -91,8 +100,13 @@ object StickerPackStore {
         )
         contentsFile(context).writeText(payload.toString())
 
+        val authority = BuildConfig.CONTENT_PROVIDER_AUTHORITY
         context.contentResolver.notifyChange(
-            Uri.parse("content://${BuildConfig.CONTENT_PROVIDER_AUTHORITY}/metadata"),
+            Uri.parse("content://$authority/metadata"),
+            null,
+        )
+        context.contentResolver.notifyChange(
+            Uri.parse("content://$authority/stickers/$id"),
             null,
         )
         return id
@@ -109,8 +123,31 @@ object StickerPackStore {
         return loadPacks(context).firstOrNull { it.optString("identifier") == identifier }
     }
 
+    /**
+     * Maps a WhatsApp `stickers_asset/{id}/{file}` request onto a local WebP/PNG
+     * in the documents directory. Falls back to the original Flutter file if the
+     * staged copy is missing but still inside the app sandbox.
+     */
     fun resolveAsset(context: Context, identifier: String, fileName: String): File? {
         if (!isSafeName(identifier) || !isSafeName(fileName)) return null
+        val pack = findPack(context, identifier) ?: return null
+
+        val staged = fileInPackDir(context, identifier, fileName)
+        if (staged != null) return staged
+
+        if (fileName == pack.optString("tray_image_file")) return null
+        val stickers = pack.optJSONArray("stickers") ?: return null
+        for (i in 0 until stickers.length()) {
+            val sticker = stickers.getJSONObject(i)
+            if (sticker.optString("image_file") != fileName) continue
+            val source = sticker.optString("source_path")
+            if (source.isBlank()) return null
+            return sandboxedFile(context, File(source))
+        }
+        return null
+    }
+
+    private fun fileInPackDir(context: Context, identifier: String, fileName: String): File? {
         val pack = findPack(context, identifier) ?: return null
         val allowed = mutableSetOf(pack.optString("tray_image_file"))
         val stickers = pack.optJSONArray("stickers")
@@ -128,11 +165,29 @@ object StickerPackStore {
         return file
     }
 
+    private fun sandboxedFile(context: Context, candidate: File): File? {
+        if (!candidate.isFile) return null
+        val canonical = try {
+            candidate.canonicalFile
+        } catch (_: Exception) {
+            return null
+        }
+        val dataDir = File(context.applicationInfo.dataDir).canonicalFile
+        val path = canonical.path
+        if (!path.startsWith(dataDir.path + File.separator) && path != dataDir.path) {
+            return null
+        }
+        return canonical
+    }
+
     private fun copyRequired(source: File, destination: File) {
         if (!source.isFile) {
             throw IllegalArgumentException("Missing sticker file: ${source.path}")
         }
         source.copyTo(destination, overwrite = true)
+        if (!destination.isFile || destination.length() == 0L) {
+            throw IllegalStateException("Failed to stage sticker file: ${destination.path}")
+        }
     }
 
     private fun isSafeName(value: String): Boolean {

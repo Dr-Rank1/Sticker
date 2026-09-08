@@ -26,6 +26,10 @@ class WhatsAppExportService {
 
   static const channelName = 'com.stickerapp/whatsapp_export';
   static const addStickerPackMethod = 'addStickerPack';
+  static const contentProviderAuthority =
+      'com.stikk.stikk.stickercontentprovider';
+  static const enableStickerPackAction =
+      'com.whatsapp.intent.action.ENABLE_STICKER_PACK';
   static final whatsAppUri = Uri.parse('whatsapp://send');
 
   final MethodChannel _channel;

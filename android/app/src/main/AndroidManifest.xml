@@ -51,23 +51,19 @@
             android:value="2" />
 
         <!-- WhatsApp Sticker ContentProvider.
-             WhatsApp queries this exported provider for pack metadata, tray icons,
-             and WebP sticker files. The authority must match the identifier sent
-             through the ENABLE_STICKER_PACK intent. readPermission limits reads
-             to WhatsApp's sticker permission. -->
+             WhatsApp queries this exported provider for pack metadata, tray
+             icons, and locally saved WebP files. The authority must start with
+             the applicationId and match the ENABLE_STICKER_PACK extra. -->
         <provider
             android:name=".StickerContentProvider"
-            android:authorities="${contentProviderAuthority}"
+            android:authorities="${applicationId}.stickercontentprovider"
             android:enabled="true"
             android:exported="true"
             android:grantUriPermissions="true"
             android:readPermission="com.whatsapp.sticker.READ"/>
     </application>
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
-
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- Android 11+ package visibility. WhatsApp and WhatsApp Business must be
+         queryable so ENABLE_STICKER_PACK can resolve. -->
     <queries>
         <package android:name="com.whatsapp"/>
         <package android:name="com.whatsapp.w4b"/>

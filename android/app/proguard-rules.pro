@@ -15,6 +15,7 @@
 # remain readable so WhatsApp can query pack metadata and WebP assets.
 -keep class com.stikk.stikk.StickerContentProvider { *; }
 -keep class com.stikk.stikk.StickerPackStore { *; }
+-keep class com.stikk.stikk.MainActivity { *; }
 -keep class com.stikk.stikk.BuildConfig { *; }
 -keepclassmembers class com.stikk.stikk.StickerContentProvider {
     public static final java.lang.String *;

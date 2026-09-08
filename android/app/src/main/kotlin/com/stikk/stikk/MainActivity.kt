@@ -3,6 +3,7 @@ package com.stikk.stikk
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -12,14 +13,21 @@ class MainActivity : FlutterActivity() {
 
     private var pendingResult: MethodChannel.Result? = null
 
+    private val addPackLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        deliverAddPackResult(result.resultCode, result.data)
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                METHOD_ADD_STICKER_PACK -> addStickerPack(call, result)
-                else -> result.notImplemented()
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    METHOD_ADD_STICKER_PACK -> addStickerPack(call, result)
+                    else -> result.notImplemented()
+                }
             }
-        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -79,10 +87,12 @@ class MainActivity : FlutterActivity() {
     private fun launchEnableStickerPack(identifier: String, name: String): Boolean {
         val intent = stickerPackIntent(identifier, name)
         return try {
-            @Suppress("DEPRECATION")
-            startActivityForResult(intent, REQUEST_CODE_ADD_PACK)
+            addPackLauncher.launch(intent)
             true
         } catch (_: ActivityNotFoundException) {
+            tryLaunch(intent.setPackage(WHATSAPP_PACKAGE)) ||
+                tryLaunch(intent.setPackage(WHATSAPP_BUSINESS_PACKAGE))
+        } catch (_: Exception) {
             tryLaunch(intent.setPackage(WHATSAPP_PACKAGE)) ||
                 tryLaunch(intent.setPackage(WHATSAPP_BUSINESS_PACKAGE))
         }
@@ -90,27 +100,22 @@ class MainActivity : FlutterActivity() {
 
     private fun tryLaunch(intent: Intent): Boolean {
         return try {
-            @Suppress("DEPRECATION")
-            startActivityForResult(intent, REQUEST_CODE_ADD_PACK)
+            addPackLauncher.launch(intent)
             true
-        } catch (_: ActivityNotFoundException) {
+        } catch (_: Exception) {
             false
         }
     }
 
     private fun stickerPackIntent(identifier: String, name: String): Intent {
-        return Intent().apply {
-            action = ACTION_ENABLE_STICKER_PACK
+        return Intent(ACTION_ENABLE_STICKER_PACK).apply {
             putExtra(EXTRA_STICKER_PACK_ID, identifier)
             putExtra(EXTRA_STICKER_PACK_AUTHORITY, BuildConfig.CONTENT_PROVIDER_AUTHORITY)
             putExtra(EXTRA_STICKER_PACK_NAME, name)
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQUEST_CODE_ADD_PACK) return
+    private fun deliverAddPackResult(resultCode: Int, data: Intent?) {
         val pending = pendingResult ?: return
         pendingResult = null
 
@@ -157,7 +162,5 @@ class MainActivity : FlutterActivity() {
         const val ERROR_ALREADY_IN_PROGRESS = "ALREADY_IN_PROGRESS"
         const val ERROR_INVALID_ARGUMENTS = "INVALID_ARGUMENTS"
         const val ERROR_FILE_COPY_FAILED = "FILE_COPY_FAILED"
-
-        private const val REQUEST_CODE_ADD_PACK = 200
     }
 }
