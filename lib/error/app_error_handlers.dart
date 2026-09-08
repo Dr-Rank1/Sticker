@@ -6,8 +6,13 @@ import 'app_error_fallback.dart';
 
 /// Installs process-wide handlers so uncaught Flutter and async errors
 /// never present the red error screen in a running app.
+///
+/// Existing [FlutterError.onError] and [PlatformDispatcher.instance.onError]
+/// callbacks (Crashlytics in `main`) are preserved and invoked after logging.
 void installAppErrorHandlers({AppLogger? logger}) {
   final log = logger ?? appLogger;
+  final previousFlutterOnError = FlutterError.onError;
+  final previousPlatformOnError = PlatformDispatcher.instance.onError;
 
   FlutterError.onError = (details) {
     log.e(
@@ -15,14 +20,15 @@ void installAppErrorHandlers({AppLogger? logger}) {
       error: details.exception,
       stackTrace: details.stack,
     );
-    if (kDebugMode) {
+    previousFlutterOnError?.call(details);
+    if (kDebugMode && previousFlutterOnError == null) {
       FlutterError.presentError(details);
     }
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
     log.e('Uncaught async error', error: error, stackTrace: stack);
-    return true;
+    return previousPlatformOnError?.call(error, stack) ?? true;
   };
 
   ErrorWidget.builder = (details) {

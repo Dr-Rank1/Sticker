@@ -37,3 +37,7 @@
 # WorkManager background cleanup
 -keep class androidx.work.** { *; }
 -dontwarn androidx.work.**
+
+# Firebase Crashlytics
+-keepattributes SourceFile,LineNumberTable
+-keep public class * extends java.lang.Exception

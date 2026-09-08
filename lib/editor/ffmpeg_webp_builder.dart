@@ -6,6 +6,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../crashlytics/crash_reporter.dart';
 import '../logging/app_logger.dart';
 import 'editor_models.dart';
 
@@ -160,6 +161,11 @@ class FFmpegWebpBuilder {
     }
 
     _cancelled = false;
+    final inputSize = input.lengthSync();
+    crashReporter.log('FFmpeg started with input size: $inputSize');
+    await crashReporter.setCustomKey('ffmpeg_input_bytes', inputSize);
+    await crashReporter.setCustomKey('ffmpeg_has_overlay', overlayPng != null);
+    await crashReporter.setCustomKey('ffmpeg_os', defaultTargetPlatform.name);
     final temp = await _tempDirectory();
     final leftovers = <File>[];
     File? kept;
@@ -187,6 +193,10 @@ class FFmpegWebpBuilder {
         );
 
         try {
+          crashReporter.log(
+            'FFmpeg encode attempt quality=$quality input size: $inputSize',
+          );
+          await crashReporter.setCustomKey('ffmpeg_quality', quality);
           final code = await _execute(
             args,
             onProgress: (raw) {
@@ -229,6 +239,7 @@ class FFmpegWebpBuilder {
           rethrow;
         } catch (error, stack) {
           lastError = error;
+          crashReporter.log('FFmpeg encode failed quality=$quality: $error');
           appLogger.w(
             'FFmpeg WebP attempt failed; retrying with stronger compression',
             error: error,

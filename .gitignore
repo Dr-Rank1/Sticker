@@ -55,3 +55,7 @@ libisar.so
 # Google Play service account JSON (keep only on CI or a local secrets path)
 **/play-store-credentials.json
 
+# Firebase credentials (commit *.example only; generate locally with FlutterFire)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+

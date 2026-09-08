@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../crashlytics/crash_reporter.dart';
 import '../logging/app_logger.dart';
 import 'tiktok_comment_service.dart';
 
@@ -106,6 +107,8 @@ class ApifyService {
     required String postUrl,
   }) async {
     _ensureConfigured();
+    crashReporter.log('Apify scraper started for $postUrl');
+    await crashReporter.setCustomKey('apify_post_url', postUrl);
     final input = scraperInput(postUrl: postUrl);
 
     try {
@@ -155,6 +158,8 @@ class ApifyService {
           .where(hasStickerOrImageUrl)
           .toList(growable: false);
       appLogger.d('Apify returned ${items.length} comment stickers.');
+      crashReporter.log('Apify returned ${items.length} comment stickers.');
+      await crashReporter.setCustomKey('apify_item_count', items.length);
       return items;
     } on ApifyException {
       rethrow;
@@ -172,6 +177,10 @@ class ApifyService {
   Future<List<CommentSticker>> fetchCommentStickers(String postUrl) async {
     final items = await runTikTokCommentScraper(postUrl: postUrl);
     if (items.isEmpty) return const [];
+    crashReporter.log(
+      'Apify parsing ${items.length} dataset items on a background isolate',
+    );
+    await crashReporter.setCustomKey('apify_parse_count', items.length);
     return Isolate.run(() => parseApifyItems(items));
   }
 

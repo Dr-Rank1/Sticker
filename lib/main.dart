@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'crashlytics/crash_reporter.dart';
 import 'display/display_refresh.dart';
 import 'error/app_error_fallback.dart';
 import 'error/app_error_handlers.dart';
@@ -29,6 +31,14 @@ import 'widgets/main_scaffold.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final firebaseReady = await initializeFirebase();
+  if (firebaseReady) {
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
   installAppErrorHandlers();
 
   await runZonedGuarded(
@@ -76,6 +86,7 @@ Future<void> main() async {
     },
     (error, stack) {
       appLogger.e('App startup failed', error: error, stackTrace: stack);
+      crashReporter.recordError(error, stack, fatal: true);
       runApp(const _StartupErrorApp());
     },
   );
