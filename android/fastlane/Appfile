@@ -1,0 +1,6 @@
+# Google Play package id. Replace the placeholder before the first upload.
+package_name("com.yourdomain.stikk")
+
+# Service account JSON downloaded from Google Play Console.
+# Path is relative to the android/ directory (where Fastlane is invoked).
+json_key_file("fastlane/play-store-credentials.json")

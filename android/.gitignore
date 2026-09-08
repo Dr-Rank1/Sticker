@@ -12,3 +12,10 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Google Play Fastlane credentials and generated reports
+fastlane/play-store-credentials.json
+fastlane/report.xml
+fastlane/README.md
+fastlane/.env*
+

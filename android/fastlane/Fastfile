@@ -1,0 +1,66 @@
+# frozen_string_literal: true
+
+default_platform(:android)
+
+PROJECT_ROOT = File.expand_path("../..", __dir__)
+PUBSPEC_PATH = File.join(PROJECT_ROOT, "pubspec.yaml")
+AAB_PATH = File.join(
+  PROJECT_ROOT,
+  "build/app/outputs/bundle/release/app-release.aab",
+)
+DEBUG_INFO_DIR = "build/debug-info"
+
+platform :android do
+  desc "Clean, bump versionCode, build an obfuscated App Bundle, and upload to Internal testing"
+  lane :beta do
+    UI.message("Cleaning the Flutter build directory")
+    Dir.chdir(PROJECT_ROOT) do
+      sh("flutter", "clean")
+    end
+
+    version_code = increment_flutter_version_code
+    UI.success("Android versionCode is now #{version_code}")
+
+    UI.message("Building the release Android App Bundle")
+    Dir.chdir(PROJECT_ROOT) do
+      sh(
+        "flutter",
+        "build",
+        "appbundle",
+        "--release",
+        "--obfuscate",
+        "--split-debug-info=#{DEBUG_INFO_DIR}",
+      )
+    end
+
+    unless File.exist?(AAB_PATH)
+      UI.user_error!("App Bundle was not produced at #{AAB_PATH}")
+    end
+
+    upload_to_play_store(
+      track: "internal",
+      aab: AAB_PATH,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
+
+def increment_flutter_version_code
+  contents = File.read(PUBSPEC_PATH)
+  match = contents.match(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/)
+  unless match
+    UI.user_error!("Could not find a Flutter version (x.y.z+build) in pubspec.yaml")
+  end
+
+  version_name = match[1]
+  version_code = match[2].to_i + 1
+  updated = contents.sub(
+    /^version:\s*\d+\.\d+\.\d+\+\d+\s*$/,
+    "version: #{version_name}+#{version_code}",
+  )
+  File.write(PUBSPEC_PATH, updated)
+  version_code
+end

@@ -51,3 +51,7 @@ app.*.map.json
 isar.dll
 isar.dylib
 libisar.so
+
+# Google Play service account JSON (keep only on CI or a local secrets path)
+**/play-store-credentials.json
+
