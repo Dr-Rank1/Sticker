@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../accessibility/accessible_tap.dart';
 import '../discover/discover_screen.dart';
 import '../screens/community_screen.dart';
 import '../screens/create_screen.dart';
@@ -126,7 +127,10 @@ class StikkBottomBar extends StatelessWidget {
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Container(
-        height: 70,
+        constraints: BoxConstraints(
+          minHeight: 70,
+          maxHeight: AppTheme.scaled(context, 78).clamp(70.0, 96.0),
+        ),
         decoration: BoxDecoration(
           color: colors.navBar,
           borderRadius: BorderRadius.circular(AppTheme.radiusXl),
@@ -203,9 +207,12 @@ class _NavItem extends StatelessWidget {
     final colors = context.colors;
     final color = selected ? colors.accent : colors.navInactive;
 
-    return InkWell(
-      onTap: onTap,
+    return AccessibleTap(
+      label: label,
+      hint: selected ? 'Current tab' : 'Switches to the $label tab',
+      selected: selected,
       borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+      onTap: onTap,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -213,6 +220,8 @@ class _NavItem extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w600,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../accessibility/accessible_tap.dart';
 import '../memes/meme_template_sheet.dart';
 import '../photos/photo_import_sheet.dart';
 import '../theme/app_colors.dart';
@@ -107,9 +108,11 @@ class _CreateSourceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         side: BorderSide(color: colors.border),
       ),
-      child: InkWell(
-        onTap: onTap,
+      child: AccessibleTap(
+        label: title,
+        hint: subtitle,
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Row(
@@ -128,10 +131,17 @@ class _CreateSourceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],

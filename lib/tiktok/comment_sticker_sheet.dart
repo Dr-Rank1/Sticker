@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../editor/ffmpeg_sticker_service.dart';
+import '../haptics/haptic_service.dart';
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
 import '../packs/pack_models.dart';
@@ -198,16 +198,26 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           .saveStaticStickerToLibrary(ready.path);
       if (!mounted) return;
 
-      HapticFeedback.mediumImpact();
+      hapticService.success();
       _showMessage('Sticker formatted and saved to Library!');
     } on TikTokCommentException catch (error) {
-      if (mounted) _showMessage(error.message);
+      if (mounted) {
+        hapticService.error();
+        _showMessage(error.message);
+      }
     } on StickerExportException catch (error) {
-      if (mounted) _showMessage(error.message);
+      if (mounted) {
+        hapticService.error();
+        _showMessage(error.message);
+      }
     } on PackException catch (error) {
-      if (mounted) _showMessage(error.message);
+      if (mounted) {
+        hapticService.error();
+        _showMessage(error.message);
+      }
     } catch (_) {
       if (mounted) {
+        hapticService.error();
         _showMessage('Couldn’t save that sticker. Please try another one.');
       }
     } finally {

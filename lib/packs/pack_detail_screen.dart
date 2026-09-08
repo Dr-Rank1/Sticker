@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../haptics/haptic_service.dart';
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
 import '../logging/app_logger.dart';
@@ -76,12 +77,20 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
           IconButton(
             key: const Key('share-pack'),
             tooltip: 'Share pack',
-            onPressed: _sharing ? null : () => _sharePack(pack),
+            onPressed: _sharing
+                ? null
+                : () {
+                    hapticService.buttonTap();
+                    _sharePack(pack);
+                  },
             icon: const Icon(Icons.share_outlined),
           ),
           IconButton(
             tooltip: 'Edit pack',
-            onPressed: () => showCreatePackSheet(context, existing: pack),
+            onPressed: () {
+              hapticService.buttonTap();
+              showCreatePackSheet(context, existing: pack);
+            },
             icon: const Icon(Icons.edit_outlined),
           ),
           IconButton(
@@ -148,16 +157,24 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                         color: colors.surfaceMuted,
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onLongPress: () => _confirmRemoveSticker(
-                            context,
-                            ref,
-                            pack,
-                            sticker,
-                          ),
-                          child: StickerGridImage(
-                            filePath: sticker.filePath,
-                            fit: BoxFit.cover,
+                        child: Semantics(
+                          button: true,
+                          label: 'Sticker in ${pack.name}',
+                          hint: 'Double tap and hold to remove this sticker',
+                          child: InkWell(
+                            onLongPress: () {
+                              hapticService.buttonTap();
+                              _confirmRemoveSticker(
+                                context,
+                                ref,
+                                pack,
+                                sticker,
+                              );
+                            },
+                            child: StickerGridImage(
+                              filePath: sticker.filePath,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       );
@@ -189,6 +206,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                       onPressed: pack.isFull
                           ? null
                           : () {
+                              hapticService.buttonTap();
                               ref
                                   .read(navigationProvider.notifier)
                                   .select(AppTab.create);
@@ -245,7 +263,9 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
   }
 
   void _handleExportTap(StickerPack pack) {
+    hapticService.buttonTap();
     if (!pack.meetsMinimum) {
+      hapticService.error();
       _shakeController.forward(from: 0);
       _showFeedback(
         'WhatsApp requires at least 3 stickers in a pack. Add ${WhatsAppPackRules.minStickers - pack.stickers.length} more to continue.',
@@ -253,6 +273,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
       return;
     }
     if (!pack.canExportToWhatsApp) {
+      hapticService.error();
       _showFeedback(pack.exportBlockReason);
       return;
     }
@@ -263,11 +284,15 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
     setState(() => _sharing = true);
     try {
       await ref.read(packsProvider.notifier).sharePack(pack.id);
+      if (!mounted) return;
+      hapticService.success();
     } on PackException catch (error) {
       if (!mounted) return;
+      hapticService.error();
       _showFeedback(error.message);
     } catch (error) {
       if (!mounted) return;
+      hapticService.error();
       _showFeedback('Could not share this pack.');
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -282,6 +307,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
           .read(whatsAppExportServiceProvider)
           .exportToWhatsApp(saved);
       if (!mounted) return;
+      hapticService.success();
       _showFeedback(result.message);
       try {
         await ref
@@ -296,13 +322,16 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
       }
     } on WhatsAppNotInstalledException {
       if (!mounted) return;
+      hapticService.error();
       setState(() => _exporting = false);
       await _showWhatsAppInstallSheet();
     } on PackException catch (error) {
       if (!mounted) return;
+      hapticService.error();
       _showFeedback(error.message);
     } catch (error) {
       if (!mounted) return;
+      hapticService.error();
       _showFeedback('$error');
     } finally {
       if (mounted) setState(() => _exporting = false);

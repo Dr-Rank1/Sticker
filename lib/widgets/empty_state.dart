@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../haptics/haptic_service.dart';
 import '../theme/app_colors.dart';
 
 class EmptyState extends StatelessWidget {
@@ -52,7 +53,13 @@ class EmptyState extends StatelessWidget {
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 24),
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+              FilledButton(
+                onPressed: () {
+                  hapticService.buttonTap();
+                  onAction!();
+                },
+                child: Text(actionLabel!),
+              ),
             ],
           ],
         ),

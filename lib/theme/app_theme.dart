@@ -16,6 +16,31 @@ class AppTheme {
   static const double radiusLg = 24;
   static const double radiusXl = 32;
 
+  /// Lower bound for system font scaling so compact layouts stay usable.
+  static const double minTextScale = 0.85;
+
+  /// Upper bound so large accessibility fonts do not clip chrome.
+  static const double maxTextScale = 1.6;
+
+  static TextScaler textScalerOf(BuildContext context) {
+    return MediaQuery.textScalerOf(context)
+        .clamp(minScaleFactor: minTextScale, maxScaleFactor: maxTextScale);
+  }
+
+  static double scaled(BuildContext context, double size) {
+    return textScalerOf(context).scale(size);
+  }
+
+  /// Clamps [MediaQuery.textScalerOf] so Material text styles grow without
+  /// overflowing fixed chrome such as the custom bottom bar.
+  static Widget appBuilder(BuildContext context, Widget? child) {
+    final media = MediaQuery.of(context);
+    return MediaQuery(
+      data: media.copyWith(textScaler: textScalerOf(context)),
+      child: child ?? const SizedBox.shrink(),
+    );
+  }
+
   static ThemeData get light => _build(Brightness.light, AppColors.light);
 
   static ThemeData get dark => _build(Brightness.dark, AppColors.dark);
@@ -42,8 +67,9 @@ class AppTheme {
       shadow: colors.shadow,
       scrim: Colors.black,
       inverseSurface: isDark ? AppColors.light.surface : AppColors.dark.surface,
-      onInverseSurface:
-          isDark ? AppColors.light.textPrimary : AppColors.dark.textPrimary,
+      onInverseSurface: isDark
+          ? AppColors.light.textPrimary
+          : AppColors.dark.textPrimary,
       inversePrimary: colors.accentDim,
       surfaceTint: Colors.transparent,
     );
@@ -96,9 +122,7 @@ class AppTheme {
           color: colors.accentDim,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         side: BorderSide.none,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

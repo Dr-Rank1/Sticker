@@ -278,6 +278,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
       themeMode: themeMode,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      builder: AppTheme.appBuilder,
       home: AnimatedSwitcher(
         duration: const Duration(milliseconds: 280),
         child: home,

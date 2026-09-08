@@ -34,24 +34,22 @@ class TrimTimeline extends StatelessWidget {
             children: [
               Text(
                 _format(start),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                style: Theme.of(context).textTheme.labelMedium
+                    ?.copyWith(color: Colors.white70),
               ),
               const Spacer(),
               Text(
                 _format(end - start),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: colors.accent,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: colors.accent,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const Spacer(),
               Text(
                 _format(end),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                style: Theme.of(context).textTheme.labelMedium
+                    ?.copyWith(color: Colors.white70),
               ),
             ],
           ),
@@ -63,21 +61,27 @@ class TrimTimeline extends StatelessWidget {
             builder: (context, constraints) {
               final width = constraints.maxWidth;
               final total = duration <= 0 ? 1.0 : duration;
-              return GestureDetector(
-                onHorizontalDragStart: (details) {
-                  onChangeStart();
-                  _drag(details.localPosition.dx, width, total);
-                },
-                onHorizontalDragUpdate: (details) =>
-                    _drag(details.localPosition.dx, width, total),
-                onHorizontalDragEnd: (_) => onChangeEnd(),
-                child: CustomPaint(
-                  size: Size(width, 56),
-                  painter: _TimelinePainter(
-                    start: start / total,
-                    end: end / total,
-                    playhead: (playhead / total).clamp(0.0, 1.0),
-                    accent: colors.accent,
+              return Semantics(
+                button: true,
+                label: 'Clip trim range',
+                hint: 'Drag the handles to set the start and end of the clip',
+                value: '${_format(start)} to ${_format(end)}',
+                child: GestureDetector(
+                  onHorizontalDragStart: (details) {
+                    onChangeStart();
+                    _drag(details.localPosition.dx, width, total);
+                  },
+                  onHorizontalDragUpdate: (details) =>
+                      _drag(details.localPosition.dx, width, total),
+                  onHorizontalDragEnd: (_) => onChangeEnd(),
+                  child: CustomPaint(
+                    size: Size(width, 56),
+                    painter: _TimelinePainter(
+                      start: start / total,
+                      end: end / total,
+                      playhead: (playhead / total).clamp(0.0, 1.0),
+                      accent: colors.accent,
+                    ),
                   ),
                 ),
               );

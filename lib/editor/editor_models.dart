@@ -153,6 +153,19 @@ class StickerLayer {
     _ => StickerFontCatalog.defaultFont,
   };
 
+  String get semanticsLabel => switch (widget) {
+    TextLayerWidget(:final text) =>
+      text.trim().isEmpty ? 'Text sticker' : 'Text sticker, $text',
+    EmojiLayerWidget() => 'Emoji sticker',
+    ImageLayerWidget() => 'Image sticker',
+  };
+
+  String get semanticsHint => selectedHint;
+
+  static const selectedHint =
+      'Drag to move, pinch to scale, and rotate with two fingers';
+  static const unselectedHint = 'Double tap to select this sticker';
+
   StickerLayer copyWith({
     StickerLayerWidget? widget,
     Matrix4? transform,

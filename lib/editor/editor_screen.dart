@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
+import '../haptics/haptic_service.dart';
 import '../packs/save_to_pack_sheet.dart';
 import '../state/navigation_controller.dart';
 import '../storage/storage_utility.dart';
@@ -174,6 +175,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       if (!mounted) return;
 
       if (pack != null) {
+        hapticService.success();
         ref.read(navigationProvider.notifier).select(AppTab.library);
         Navigator.of(context).pop(saved.path);
         messenger
@@ -184,6 +186,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             ),
           );
       } else {
+        hapticService.success();
         Navigator.of(context).pop(saved.path);
         messenger
           ..hideCurrentSnackBar()
@@ -204,6 +207,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           ? error.message
           : 'Could not save that sticker. Please try again.';
       _editor.setSaving(saving: false, error: cancelled ? null : message);
+      if (!cancelled) hapticService.error();
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(message)));
@@ -487,18 +491,34 @@ class _EditorAppBar extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: onClose,
+            tooltip: 'Close editor',
+            onPressed: () {
+              hapticService.buttonTap();
+              onClose();
+            },
             icon: const Icon(Icons.close_rounded, color: Colors.white),
           ),
           IconButton(
-            onPressed: canUndo ? onUndo : null,
+            tooltip: 'Undo',
+            onPressed: canUndo
+                ? () {
+                    hapticService.buttonTap();
+                    onUndo();
+                  }
+                : null,
             icon: Icon(
               Icons.undo_rounded,
               color: canUndo ? Colors.white : Colors.white24,
             ),
           ),
           IconButton(
-            onPressed: canRedo ? onRedo : null,
+            tooltip: 'Redo',
+            onPressed: canRedo
+                ? () {
+                    hapticService.buttonTap();
+                    onRedo();
+                  }
+                : null,
             icon: Icon(
               Icons.redo_rounded,
               color: canRedo ? Colors.white : Colors.white24,
@@ -506,7 +526,12 @@ class _EditorAppBar extends StatelessWidget {
           ),
           const Spacer(),
           FilledButton(
-            onPressed: onSave,
+            onPressed: onSave == null
+                ? null
+                : () {
+                    hapticService.buttonTap();
+                    onSave!();
+                  },
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             ),

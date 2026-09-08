@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../haptics/haptic_service.dart';
 import '../theme/app_theme.dart';
 import 'pack_models.dart';
 import 'pack_providers.dart';
@@ -65,13 +66,14 @@ class _PackFormSheetState extends ConsumerState<_PackFormSheet> {
               author: _author.text,
             );
       if (!mounted) return;
+      hapticService.success();
       Navigator.pop(context, pack);
     } catch (error) {
       if (!mounted) return;
+      hapticService.error();
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 
@@ -116,7 +118,12 @@ class _PackFormSheetState extends ConsumerState<_PackFormSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _saving ? null : _submit,
+              onPressed: _saving
+                  ? null
+                  : () {
+                      hapticService.buttonTap();
+                      _submit();
+                    },
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

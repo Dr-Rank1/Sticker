@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../accessibility/accessible_tap.dart';
+import '../haptics/haptic_service.dart';
 import '../packs/pack_detail_screen.dart';
 import '../packs/pack_form_sheet.dart';
 import '../packs/pack_models.dart';
@@ -49,7 +51,10 @@ class LibraryScreen extends ConsumerWidget {
                   ),
                   IconButton(
                     tooltip: 'New pack',
-                    onPressed: () => showCreatePackSheet(context),
+                    onPressed: () {
+                      hapticService.buttonTap();
+                      showCreatePackSheet(context);
+                    },
                     icon: const Icon(Icons.add_rounded),
                     style: IconButton.styleFrom(
                       backgroundColor: colors.surface,
@@ -62,6 +67,7 @@ class LibraryScreen extends ConsumerWidget {
                     key: const Key('open-settings'),
                     tooltip: 'Settings',
                     onPressed: () {
+                      hapticService.buttonTap();
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const SettingsScreen(),
@@ -127,11 +133,15 @@ class LibraryScreen extends ConsumerWidget {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                 sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 0.82,
+                    childAspectRatio:
+                        0.82 /
+                        AppTheme.textScalerOf(context)
+                            .scale(1)
+                            .clamp(1.0, 1.35),
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _PackCard(pack: packs[index]),
@@ -163,7 +173,12 @@ class _PackCard extends StatelessWidget {
         side: BorderSide(color: colors.border),
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
+      child: AccessibleTap(
+        label: pack.name,
+        hint: pack.canExportToWhatsApp
+            ? 'Opens this pack. Ready for WhatsApp, ${pack.countLabel}.'
+            : 'Opens this pack. ${pack.exportBlockReason}',
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -218,6 +233,8 @@ class _PackCard extends StatelessWidget {
                   pack.canExportToWhatsApp
                       ? 'Ready · ${pack.countLabel}'
                       : pack.countLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: pack.canExportToWhatsApp
                         ? colors.accentDim
