@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../editor/ffmpeg_sticker_service.dart';
+import '../images/sticker_grid_cache.dart';
+import '../images/sticker_grid_image.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
 import '../theme/app_colors.dart';
@@ -324,10 +325,13 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
         mainAxisSpacing: 12,
       ),
       itemCount: _visible.length,
+      findChildIndexCallback: (key) =>
+          findStickerGridChildIndex(key, _visible.map((sticker) => sticker.id)),
       itemBuilder: (context, index) {
         final sticker = _visible[index];
         final selected = _selectedId == sticker.id;
         return Material(
+          key: ValueKey(sticker.id),
           color: colors.surfaceMuted,
           clipBehavior: Clip.antiAlias,
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -339,7 +343,10 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8),
-                  child: _StickerThumb(sticker: sticker),
+                  child: StickerGridImage(
+                    filePath: sticker.localPath,
+                    imageUrl: sticker.imageUrl,
+                  ),
                 ),
                 if (selected)
                   ColoredBox(
@@ -351,30 +358,6 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           ),
         );
       },
-    );
-  }
-}
-
-class _StickerThumb extends StatelessWidget {
-  const _StickerThumb({required this.sticker});
-
-  final CommentSticker sticker;
-
-  @override
-  Widget build(BuildContext context) {
-    final path = sticker.localPath;
-    if (path != null && File(path).existsSync()) {
-      return Image.file(
-        File(path),
-        fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
-      );
-    }
-    return CachedNetworkImage(
-      imageUrl: sticker.imageUrl,
-      fit: BoxFit.contain,
-      placeholder: (_, _) => const Center(child: CircularProgressIndicator()),
-      errorWidget: (_, _, _) => const Icon(Icons.broken_image_outlined),
     );
   }
 }

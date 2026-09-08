@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import '../images/sticker_grid_cache.dart';
+import '../images/sticker_grid_image.dart';
 import '../packs/save_to_pack_sheet.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -158,21 +160,32 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             child: _searching
                 ? const Center(child: CircularProgressIndicator())
                 : _results.isNotEmpty
-                ? MasonryGridView.count(
+                ? MasonryGridView.custom(
                     key: const Key('discover-masonry-grid'),
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
-                    crossAxisCount: 2,
+                    gridDelegate:
+                        const SliverSimpleGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                        ),
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    itemCount: _results.length,
-                    itemBuilder: (context, index) {
-                      final sticker = _results[index];
-                      return _StickerTile(
-                        sticker: sticker,
-                        downloading: _downloadingIds.contains(sticker.id),
-                        onTap: () => _downloadAndSave(sticker),
-                      );
-                    },
+                    childrenDelegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final sticker = _results[index];
+                        return _StickerTile(
+                          key: ValueKey(sticker.id),
+                          sticker: sticker,
+                          downloading: _downloadingIds.contains(sticker.id),
+                          onTap: () => _downloadAndSave(sticker),
+                        );
+                      },
+                      childCount: _results.length,
+                      findChildIndexCallback: (key) =>
+                          findStickerGridChildIndex(
+                            key,
+                            _results.map((sticker) => sticker.id),
+                          ),
+                    ),
                   )
                 : _DiscoverEmptyState(
                     error: _error,
@@ -187,6 +200,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 
 class _StickerTile extends StatelessWidget {
   const _StickerTile({
+    super.key,
     required this.sticker,
     required this.downloading,
     required this.onTap,
@@ -216,21 +230,7 @@ class _StickerTile extends StatelessWidget {
             children: [
               ColoredBox(
                 color: colors.surfaceMuted,
-                child: Image.network(
-                  sticker.webpUrl,
-                  fit: BoxFit.contain,
-                  gaplessPlayback: true,
-                  errorBuilder: (_, _, _) => Icon(
-                    Icons.broken_image_outlined,
-                    color: colors.textTertiary,
-                  ),
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    );
-                  },
-                ),
+                child: StickerGridImage(imageUrl: sticker.webpUrl),
               ),
               if (downloading)
                 ColoredBox(

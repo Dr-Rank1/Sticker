@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'display/display_refresh.dart';
 import 'error/app_error_fallback.dart';
 import 'error/app_error_handlers.dart';
 import 'logging/app_logger.dart';
@@ -32,6 +33,7 @@ Future<void> main() async {
   await runZonedGuarded(
     () async {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        await enableHighestDisplayMode();
         try {
           await Workmanager().initialize(callbackDispatcher);
           await Workmanager().registerPeriodicTask(

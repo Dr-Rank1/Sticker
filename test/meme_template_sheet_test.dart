@@ -18,7 +18,11 @@ void main() {
       '${Directory.systemTemp.path}/stikk_meme_ui_${DateTime.now().microsecondsSinceEpoch}',
     )..createSync(recursive: true);
     addTearDown(() {
-      if (temporary.existsSync()) temporary.deleteSync(recursive: true);
+      try {
+        if (temporary.existsSync()) temporary.deleteSync(recursive: true);
+      } on FileSystemException {
+        // The editor can keep the prepared PNG open on Windows until dispose.
+      }
     });
     final memeService = _FakeMemeService(temporary);
     final imageService = _FakeImageService(temporary);

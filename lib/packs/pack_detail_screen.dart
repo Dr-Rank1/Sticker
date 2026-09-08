@@ -1,9 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../images/sticker_grid_cache.dart';
+import '../images/sticker_grid_image.dart';
 import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -126,6 +126,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                     ),
                   )
                 : GridView.builder(
+                    key: const Key('pack-sticker-grid'),
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
@@ -134,9 +135,14 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                           mainAxisSpacing: 10,
                         ),
                     itemCount: pack.stickers.length,
+                    findChildIndexCallback: (key) => findStickerGridChildIndex(
+                      key,
+                      pack.stickers.map((sticker) => sticker.id),
+                    ),
                     itemBuilder: (context, index) {
                       final sticker = pack.stickers[index];
                       return Material(
+                        key: ValueKey(sticker.id),
                         color: colors.surfaceMuted,
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         clipBehavior: Clip.antiAlias,
@@ -147,7 +153,10 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                             pack,
                             sticker,
                           ),
-                          child: _StickerImage(path: sticker.filePath),
+                          child: StickerGridImage(
+                            filePath: sticker.filePath,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       );
                     },
@@ -433,20 +442,5 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
     await ref
         .read(packsProvider.notifier)
         .removeSticker(packId: pack.id, stickerId: sticker.id);
-  }
-}
-
-class _StickerImage extends StatelessWidget {
-  const _StickerImage({required this.path});
-
-  final String path;
-
-  @override
-  Widget build(BuildContext context) {
-    final file = File(path);
-    if (!file.existsSync()) {
-      return const Center(child: Icon(Icons.broken_image_outlined));
-    }
-    return Image.file(file, fit: BoxFit.cover);
   }
 }

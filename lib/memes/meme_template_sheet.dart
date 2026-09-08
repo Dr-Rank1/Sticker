@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../editor/editor_screen.dart';
 import '../editor/ffmpeg_sticker_service.dart';
+import '../images/sticker_grid_cache.dart';
 import '../photos/photo_import_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -257,10 +258,15 @@ class _MemeTemplateSheetState extends ConsumerState<MemeTemplateSheet> {
         childAspectRatio: 0.72,
       ),
       itemCount: _templates.length,
+      findChildIndexCallback: (key) => findStickerGridChildIndex(
+        key,
+        _templates.map((template) => template.id),
+      ),
       itemBuilder: (context, index) {
         final template = _templates[index];
         final selected = _selectedId == template.id;
         return Material(
+          key: ValueKey(template.id),
           color: colors.surfaceMuted,
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(

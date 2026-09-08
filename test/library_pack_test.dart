@@ -62,6 +62,13 @@ void main() {
     expect(find.byType(PackDetailScreen), findsOneWidget);
     expect(find.byKey(const Key('add-to-whatsapp')), findsOneWidget);
     expect(find.byKey(const Key('share-pack')), findsOneWidget);
+    expect(find.byKey(const Key('pack-sticker-grid')), findsOneWidget);
+    final grid = tester.widget<GridView>(
+      find.byKey(const Key('pack-sticker-grid')),
+    );
+    final delegate = grid.childrenDelegate as SliverChildBuilderDelegate;
+    expect(delegate.findChildIndexCallback, isNotNull);
+    expect(delegate.findChildIndexCallback!(const ValueKey('s0')), 0);
   });
 
   testWidgets('Add to WhatsApp shakes and explains the 3-sticker minimum', (

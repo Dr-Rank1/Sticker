@@ -70,6 +70,18 @@ void main() {
     expect(find.byKey(const Key('comment-sticker-grid')), findsOneWidget);
     expect(find.byType(GridView), findsOneWidget);
     expect(find.byType(CachedNetworkImage), findsNWidgets(2));
+    final grid = tester.widget<GridView>(
+      find.byKey(const Key('comment-sticker-grid')),
+    );
+    final delegate = grid.childrenDelegate as SliverChildBuilderDelegate;
+    expect(delegate.findChildIndexCallback, isNotNull);
+    expect(delegate.findChildIndexCallback!(const ValueKey('1_0')), 0);
+    expect(delegate.findChildIndexCallback!(const ValueKey('2_0')), 1);
+    final thumb = tester.widget<CachedNetworkImage>(
+      find.byType(CachedNetworkImage).first,
+    );
+    expect(thumb.memCacheWidth, 256);
+    expect(thumb.memCacheHeight, 256);
     expect(find.byKey(const Key('comment-sticker-progress')), findsOneWidget);
     expect(find.text('2 / 2'), findsOneWidget);
     expect(find.byType(InkWell), findsWidgets);
