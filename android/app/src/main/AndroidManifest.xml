@@ -12,6 +12,10 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <!-- Storage: Android 14+ selected-photos access. -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
+    <!-- WorkManager: restart periodic cache cleanup after reboot. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- WorkManager: keep the idle cleanup worker scheduled. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
         android:label="Stikk"
         android:name="${applicationName}"

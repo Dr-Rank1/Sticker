@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'package:workmanager/workmanager.dart';
 
 import 'error/app_error_fallback.dart';
 import 'error/app_error_handlers.dart';
@@ -14,6 +16,7 @@ import 'packs/pack_providers.dart';
 import 'packs/sticker_repository.dart';
 import 'state/settings_store.dart';
 import 'state/theme_controller.dart';
+import 'storage/cache_cleanup_worker.dart';
 import 'theme/app_theme.dart';
 import 'tiktok/comment_sticker_sheet.dart';
 import 'tiktok/tiktok_share_intent.dart';
@@ -26,6 +29,27 @@ Future<void> main() async {
 
   await runZonedGuarded(
     () async {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          await Workmanager().initialize(callbackDispatcher);
+          await Workmanager().registerPeriodicTask(
+            cleanupTaskName,
+            cleanupTaskName,
+            frequency: const Duration(hours: 24),
+            existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+            constraints: Constraints(
+              networkType: NetworkType.notRequired,
+              requiresDeviceIdle: true,
+            ),
+          );
+        } catch (error, stack) {
+          appLogger.e(
+            'Failed to schedule cache cleanup',
+            error: error,
+            stackTrace: stack,
+          );
+        }
+      }
       final repository = await StickerRepository.open();
       final settings = await HiveSettingsStore.open();
       var initialShare = const <SharedMediaFile>[];

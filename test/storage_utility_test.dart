@@ -65,6 +65,34 @@ void main() {
     },
   );
 
+  test('cleanupTemporaryMedia deletes nested mp4 and png files and leaves webp', () async {
+    final nested = Directory(
+      '${temporary.path}${Platform.pathSeparator}stikk_work${Platform.pathSeparator}raw',
+    )..createSync(recursive: true);
+    final video = File('${nested.path}${Platform.pathSeparator}clip.mp4')
+      ..writeAsBytesSync(List.filled(40, 1));
+    final overlay = File('${temporary.path}${Platform.pathSeparator}frame.PNG')
+      ..writeAsBytesSync(List.filled(20, 1));
+    final tempWebp = File(
+      '${temporary.path}${Platform.pathSeparator}staged.webp',
+    )..writeAsBytesSync(List.filled(10, 1));
+    final saved = File(
+      '${documents.path}${Platform.pathSeparator}pack_sticker.webp',
+    )..writeAsBytesSync(List.filled(80, 1));
+    final savedPng = File('${documents.path}${Platform.pathSeparator}tray.png')
+      ..writeAsBytesSync(List.filled(15, 1));
+
+    final result = await utility.cleanupTemporaryMedia();
+
+    expect(result.filesDeleted, 2);
+    expect(result.bytesFreed, 60);
+    expect(video.existsSync(), isFalse);
+    expect(overlay.existsSync(), isFalse);
+    expect(tempWebp.existsSync(), isTrue);
+    expect(saved.existsSync(), isTrue);
+    expect(savedPng.existsSync(), isTrue);
+  });
+
   test(
     'post-save cleanup cannot delete files outside the temporary directory',
     () async {

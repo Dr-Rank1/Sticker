@@ -33,3 +33,7 @@
 # Hive
 -keep class hive.** { *; }
 -dontwarn hive.**
+
+# WorkManager background cleanup
+-keep class androidx.work.** { *; }
+-dontwarn androidx.work.**

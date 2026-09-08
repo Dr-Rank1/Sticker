@@ -57,6 +57,7 @@ dependencies:
   receive_sharing_intent: ^1.9.0
   isar: ^3.1.0+1
   isar_flutter_libs: ^3.1.0+1
+  workmanager: ^0.10.0
 
 dev_dependencies:
   flutter_test:

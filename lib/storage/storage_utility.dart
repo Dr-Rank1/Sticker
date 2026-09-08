@@ -68,7 +68,44 @@ class StorageUtility {
     return bytes;
   }
 
-  /// Clears only files and folders created by Stikk in the OS temp directory.
+  /// Recursively deletes disposable `.mp4` and `.png` files from the OS
+  /// temporary directory. Final `.webp` stickers in documents are not scanned.
+  Future<CacheClearResult> cleanupTemporaryMedia() async {
+    final temporary = await _temporaryDirectory();
+    if (!await temporary.exists()) {
+      return const CacheClearResult(bytesFreed: 0, filesDeleted: 0);
+    }
+
+    var bytesFreed = 0;
+    var filesDeleted = 0;
+    try {
+      await for (final entity in temporary.list(
+        recursive: true,
+        followLinks: false,
+      )) {
+        if (entity is! File) continue;
+        if (!isTemporaryMediaFile(entity.path)) continue;
+        try {
+          final bytes = await entity.length();
+          await entity.delete();
+          bytesFreed += bytes;
+          filesDeleted += 1;
+        } on FileSystemException {
+          // A file can disappear or stay locked while cleanup is running.
+        }
+      }
+    } on FileSystemException {
+      // Return the deletions completed before the OS revoked an entry.
+    }
+    return CacheClearResult(bytesFreed: bytesFreed, filesDeleted: filesDeleted);
+  }
+
+  /// Working video and overlay files written under the temporary directory.
+  static bool isTemporaryMediaFile(String path) {
+    final name = path.split(Platform.pathSeparator).last.toLowerCase();
+    return name.endsWith('.mp4') || name.endsWith('.png');
+  }
+
   Future<CacheClearResult> clearCache() async {
     final temporary = await _temporaryDirectory();
     if (!await temporary.exists()) {
