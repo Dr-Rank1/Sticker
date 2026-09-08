@@ -13,9 +13,75 @@ import 'apify_service.dart';
 import 'comment_sticker_formatter.dart';
 import 'tiktok_comment_service.dart';
 
+/// Overlay shown while Apify polls. The main scaffold stays underneath.
+Future<void> showCommentScanDialog(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const CommentScanLoadingDialog(),
+  );
+}
+
+class CommentScanLoadingDialog extends StatelessWidget {
+  const CommentScanLoadingDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const AlertDialog(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Scanning comments for stickers...'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Runs Apify behind the loading dialog, then opens the sticker grid sheet.
+Future<void> scanAndShowCommentStickers(
+  BuildContext context,
+  WidgetRef ref, {
+  required String videoUrl,
+}) async {
+  showCommentScanDialog(context);
+
+  List<CommentSticker> stickers = const [];
+  String? errorMessage;
+  try {
+    stickers = await ref
+        .read(apifyServiceProvider)
+        .fetchCommentStickers(videoUrl);
+  } on ApifyException catch (error) {
+    errorMessage = error.message;
+  } catch (_) {
+    errorMessage = 'Couldn’t scan those comments. Please try again.';
+  }
+
+  if (!context.mounted) return;
+  Navigator.of(context, rootNavigator: true).pop();
+
+  if (!context.mounted) return;
+  if (errorMessage != null) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    return;
+  }
+
+  await showCommentStickerSheet(context, stickers: stickers);
+}
+
 Future<void> showCommentStickerSheet(
   BuildContext context, {
-  required String videoUrl,
+  required List<CommentSticker> stickers,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -25,15 +91,15 @@ Future<void> showCommentStickerSheet(
     backgroundColor: Colors.transparent,
     builder: (_) => FractionallySizedBox(
       heightFactor: 0.9,
-      child: CommentStickerSheet(videoUrl: videoUrl),
+      child: CommentStickerSheet(stickers: stickers),
     ),
   );
 }
 
 class CommentStickerSheet extends ConsumerStatefulWidget {
-  const CommentStickerSheet({super.key, required this.videoUrl});
+  const CommentStickerSheet({super.key, required this.stickers});
 
-  final String videoUrl;
+  final List<CommentSticker> stickers;
 
   @override
   ConsumerState<CommentStickerSheet> createState() =>
@@ -41,45 +107,7 @@ class CommentStickerSheet extends ConsumerStatefulWidget {
 }
 
 class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
-  List<CommentSticker> _stickers = const [];
-  bool _loading = true;
-  String? _error;
   String? _selectedId;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(_scan);
-  }
-
-  Future<void> _scan() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final stickers = await ref
-          .read(apifyServiceProvider)
-          .fetchCommentStickers(widget.videoUrl);
-      if (!mounted) return;
-      setState(() {
-        _stickers = stickers;
-        _loading = false;
-      });
-    } on ApifyException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = error.message;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Couldn’t scan those comments. Please try again.';
-      });
-    }
-  }
 
   Future<void> _select(CommentSticker sticker) async {
     if (_selectedId != null) return;
@@ -192,29 +220,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
 
   Widget _buildContent() {
     final colors = context.colors;
-    if (_loading) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Scanning comments for stickers...'),
-          ],
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return _MessageState(
-        icon: Icons.cloud_off_rounded,
-        message: _error!,
-        actionLabel: 'Try again',
-        onAction: _scan,
-      );
-    }
-
-    if (_stickers.isEmpty) {
+    if (widget.stickers.isEmpty) {
       return const _MessageState(
         icon: Icons.search_off_rounded,
         message: 'No image stickers were found in the scanned comments.',
@@ -222,15 +228,16 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
     }
 
     return GridView.builder(
+      key: const Key('comment-sticker-grid'),
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: _stickers.length,
+      itemCount: widget.stickers.length,
       itemBuilder: (context, index) {
-        final sticker = _stickers[index];
+        final sticker = widget.stickers[index];
         final selected = _selectedId == sticker.id;
         return Material(
           color: colors.surfaceMuted,
@@ -270,14 +277,10 @@ class _MessageState extends StatelessWidget {
   const _MessageState({
     required this.icon,
     required this.message,
-    this.actionLabel,
-    this.onAction,
   });
 
   final IconData icon;
   final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -290,13 +293,6 @@ class _MessageState extends StatelessWidget {
             Icon(icon, size: 46, color: context.colors.textTertiary),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
-            if (onAction != null) ...[
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: onAction,
-                child: Text(actionLabel ?? 'Retry'),
-              ),
-            ],
           ],
         ),
       ),

@@ -66,7 +66,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold>
       // cannot trigger the same scan.
       await Clipboard.setData(const ClipboardData(text: ''));
       if (!mounted) return;
-      await showCommentStickerSheet(context, videoUrl: url);
+      await scanAndShowCommentStickers(context, ref, videoUrl: url);
     } on PlatformException {
       // Clipboard access may be denied by the OS or device privacy settings.
     } finally {
