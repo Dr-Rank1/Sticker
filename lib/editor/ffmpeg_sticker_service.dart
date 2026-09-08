@@ -1,38 +1,15 @@
-import 'dart:async';
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-
 import 'editor_models.dart';
+import 'ffmpeg_webp_builder.dart';
 
-class StickerExportException implements Exception {
-  const StickerExportException(this.message);
-  final String message;
-  @override
-  String toString() => message;
-}
+export 'ffmpeg_webp_builder.dart'
+    show StickerExportCancelled, StickerExportException, StickerExportResult;
 
-class StickerExportResult {
-  const StickerExportResult({
-    required this.file,
-    required this.bytes,
-    required this.quality,
-    required this.fps,
-  });
-
-  final File file;
-  final int bytes;
-  final int quality;
-  final int fps;
-}
-
-/// Builds and runs the WhatsApp sticker FFmpeg pipeline.
+/// Video-sticker export facade used by the editor.
 ///
-/// The original `ffmpeg_kit_flutter` package is unmaintained; this service uses
-/// the drop-in `FFmpegKit` API from `ffmpeg_kit_flutter_new`.
+/// Command generation, the GPL WebP filter graph, cancel, and temp-file
+/// cleanup live in [FFmpegWebpBuilder].
 class FfmpegStickerService {
   FfmpegStickerService({
     Future<Directory> Function()? tempDirectory,
@@ -41,26 +18,20 @@ class FfmpegStickerService {
       void Function(double progress) onProgress,
     )?
     runCommand,
-  }) : _tempDirectory = tempDirectory ?? getTemporaryDirectory,
-       // ignore: prefer_initializing_formals
-       _runCommand = runCommand;
+    Future<void> Function()? cancelSessions,
+    FFmpegWebpBuilder? builder,
+  }) : _builder =
+           builder ??
+           FFmpegWebpBuilder(
+             tempDirectory: tempDirectory,
+             runCommand: runCommand,
+             cancelSessions: cancelSessions,
+           );
 
-  static const List<({int fps, int quality})> _qualityLadder = [
-    (fps: 12, quality: 50),
-    (fps: 10, quality: 40),
-    (fps: 8, quality: 30),
-    (fps: 8, quality: 20),
-    (fps: 6, quality: 15),
-  ];
+  final FFmpegWebpBuilder _builder;
 
-  final Future<Directory> Function() _tempDirectory;
-  final Future<int> Function(
-    List<String> args,
-    void Function(double progress) onProgress,
-  )?
-  _runCommand;
+  Future<void> cancel() => _builder.cancel();
 
-  /// Public so tests can assert WhatsApp constraints without running FFmpeg.
   List<String> buildArguments({
     required String inputPath,
     required String outputPath,
@@ -71,40 +42,16 @@ class FfmpegStickerService {
     required int quality,
     String? overlayPngPath,
   }) {
-    final filter = buildFilterGraph(
-      speed: speed,
-      fps: fps,
-      hasOverlay: overlayPngPath != null,
+    // Speed/fps from the editor timeline are applied at preview time.
+    // WhatsApp export is always 15fps and at most 3 seconds.
+    return _builder.buildCommand(
+      sourceMp4: inputPath,
+      outputPath: outputPath,
+      overlayPng: overlayPngPath,
+      startSeconds: startSeconds,
+      durationSeconds: durationSeconds,
+      quality: quality,
     );
-
-    return [
-      '-y',
-      '-ss',
-      startSeconds.toStringAsFixed(3),
-      '-t',
-      durationSeconds.toStringAsFixed(3),
-      '-i',
-      inputPath,
-      if (overlayPngPath != null) ...['-i', overlayPngPath],
-      '-filter_complex',
-      filter,
-      '-an',
-      '-vsync',
-      '0',
-      '-c:v',
-      'libwebp',
-      '-loop',
-      '0',
-      '-quality',
-      '$quality',
-      '-preset',
-      'default',
-      '-compression_level',
-      '6',
-      '-s',
-      '${WhatsAppStickerSpec.size}x${WhatsAppStickerSpec.size}',
-      outputPath,
-    ];
   }
 
   String buildFilterGraph({
@@ -112,12 +59,7 @@ class FfmpegStickerService {
     required int fps,
     required bool hasOverlay,
   }) {
-    final safeSpeed = speed <= 0 ? 1.0 : speed;
-    final size = WhatsAppStickerSpec.size;
-    final video =
-        '[0:v]setpts=PTS/$safeSpeed,fps=$fps,scale=$size:$size:force_original_aspect_ratio=increase:flags=lanczos,crop=$size:$size,setsar=1';
-    if (!hasOverlay) return video;
-    return '$video[vid];[1:v]format=rgba,scale=$size:$size[ov];[vid][ov]overlay=0:0:format=auto';
+    return _builder.buildFilterGraph(hasOverlay: hasOverlay);
   }
 
   Future<StickerExportResult> exportSticker({
@@ -125,132 +67,16 @@ class FfmpegStickerService {
     required EditorDocument document,
     String? overlayPngPath,
     void Function(double progress)? onProgress,
-  }) async {
-    if (kIsWeb) {
-      throw const StickerExportException(
-        'Saving stickers needs the mobile or desktop app.',
-      );
-    }
-
-    final input = File(inputPath);
-    if (!input.existsSync()) {
-      throw const StickerExportException(
-        'The source video is no longer available.',
-      );
-    }
-
-    var duration =
-        document.trimDuration / (document.speed <= 0 ? 1 : document.speed);
-    if (duration > WhatsAppStickerSpec.maxDurationSeconds) {
-      duration = WhatsAppStickerSpec.maxDurationSeconds;
-    }
-    final sourceDuration =
-        duration * (document.speed <= 0 ? 1 : document.speed);
-
-    final temp = await _tempDirectory();
-    Object? lastError;
-
-    for (var i = 0; i < _qualityLadder.length; i++) {
-      final attempt = _qualityLadder[i];
-      final output = File(
-        '${temp.path}${Platform.pathSeparator}stikk_${DateTime.now().millisecondsSinceEpoch}_${attempt.fps}q${attempt.quality}.webp',
-      );
-      if (output.existsSync()) {
-        output.deleteSync();
-      }
-
-      final args = buildArguments(
-        inputPath: inputPath,
-        outputPath: output.path,
-        startSeconds: document.trimStart,
-        durationSeconds: sourceDuration,
-        speed: document.speed,
-        fps: attempt.fps,
-        quality: attempt.quality,
-        overlayPngPath: overlayPngPath,
-      );
-
-      try {
-        final code = await _execute(
-          args,
-          onProgress: (raw) {
-            final overall = (i + raw.clamp(0, 1)) / _qualityLadder.length;
-            onProgress?.call(overall.clamp(0, 0.99));
-          },
-        );
-        if (code != ReturnCode.success) {
-          lastError = StickerExportException(
-            'FFmpeg failed while creating the sticker (code $code).',
-          );
-          await _deleteIfPresent(output);
-          continue;
-        }
-        if (!output.existsSync() || output.lengthSync() == 0) {
-          lastError = const StickerExportException(
-            'FFmpeg did not write a sticker file.',
-          );
-          await _deleteIfPresent(output);
-          continue;
-        }
-        final bytes = output.lengthSync();
-        if (bytes <= WhatsAppStickerSpec.maxBytes) {
-          onProgress?.call(1);
-          return StickerExportResult(
-            file: output,
-            bytes: bytes,
-            quality: attempt.quality,
-            fps: attempt.fps,
-          );
-        }
-        lastError = StickerExportException(
-          'Sticker was ${(bytes / 1024).round()}KB. Trying a smaller encode...',
-        );
-        await _deleteIfPresent(output);
-      } catch (error) {
-        lastError = error;
-        await _deleteIfPresent(output);
-      }
-    }
-
-    throw StickerExportException(
-      lastError?.toString() ??
-          'Could not keep the sticker under 500KB. Try a shorter clip.',
+  }) {
+    final duration = document.trimDuration > FFmpegWebpBuilder.clipSeconds
+        ? FFmpegWebpBuilder.clipSeconds
+        : document.trimDuration;
+    return _builder.assemble(
+      sourceMp4: inputPath,
+      overlayPng: overlayPngPath,
+      startSeconds: document.trimStart,
+      durationSeconds: duration,
+      onProgress: onProgress,
     );
-  }
-
-  Future<void> _deleteIfPresent(File file) async {
-    try {
-      if (await file.exists()) await file.delete();
-    } on FileSystemException {
-      // The OS may already have evicted temporary output.
-    }
-  }
-
-  Future<int> _execute(
-    List<String> args, {
-    required void Function(double progress) onProgress,
-  }) async {
-    final runCommand = _runCommand;
-    if (runCommand != null) {
-      return runCommand(args, onProgress);
-    }
-
-    final done = Completer<void>();
-    final session = await FFmpegKit.executeWithArgumentsAsync(
-      args,
-      (completed) {
-        if (!done.isCompleted) done.complete();
-      },
-      null,
-      (stats) {
-        final millis = stats.getTime();
-        if (millis > 0) {
-          onProgress((millis / 10000).clamp(0.0, 0.99));
-        }
-      },
-    );
-    await done.future;
-    final returnCode = await session.getReturnCode();
-    return returnCode?.getValue() ?? -1;
   }
 }

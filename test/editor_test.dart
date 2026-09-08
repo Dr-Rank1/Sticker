@@ -77,21 +77,31 @@ void main() {
       final args = service.buildArguments(
         inputPath: 'in.mp4',
         outputPath: 'out.webp',
-        startSeconds: 0.5,
-        durationSeconds: 2,
+        startSeconds: 0,
+        durationSeconds: 3,
         speed: 1,
-        fps: 10,
-        quality: 40,
+        fps: 15,
+        quality: 50,
         overlayPngPath: 'overlay.png',
       );
 
+      expect(args[args.indexOf('-ss') + 1], '00:00:00');
+      expect(args[args.indexOf('-t') + 1], '00:00:03');
       expect(args[args.indexOf('-loop') + 1], '0');
-      expect(args[args.indexOf('-s') + 1], '512x512');
+      expect(args[args.indexOf('-q:v') + 1], '50');
+      expect(args[args.indexOf('-compression_level') + 1], '4');
       expect(args, contains('libwebp'));
       expect(args, contains('overlay.png'));
+      expect(args, contains('-an'));
       expect(
-        service.buildFilterGraph(speed: 1, fps: 10, hasOverlay: true),
-        contains('crop=512:512'),
+        service.buildFilterGraph(speed: 1, fps: 15, hasOverlay: true),
+        contains(
+          'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=white@0.0',
+        ),
+      );
+      expect(
+        service.buildFilterGraph(speed: 1, fps: 15, hasOverlay: true),
+        contains('overlay=0:0'),
       );
     });
 

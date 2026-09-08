@@ -55,6 +55,7 @@ class ImageStickerService {
       void Function(double progress) onProgress,
     )?
     runCommand,
+    Future<void> Function()? cancelSessions,
   }) : _tempDirectory = tempDirectory ?? getTemporaryDirectory,
        _backgroundRemovalService =
            backgroundRemovalService ??
@@ -63,7 +64,9 @@ class ImageStickerService {
              temporaryDirectory: tempDirectory,
            ),
        // ignore: prefer_initializing_formals
-       _runCommand = runCommand;
+       _runCommand = runCommand,
+       // ignore: prefer_initializing_formals
+       _cancelSessions = cancelSessions;
 
   static const List<int> _qualityLadder = [80, 65, 50, 40, 30, 20];
 
@@ -74,6 +77,18 @@ class ImageStickerService {
     void Function(double progress) onProgress,
   )?
   _runCommand;
+  final Future<void> Function()? _cancelSessions;
+  var _cancelled = false;
+
+  Future<void> cancel() async {
+    _cancelled = true;
+    final hook = _cancelSessions;
+    if (hook != null) {
+      await hook();
+      return;
+    }
+    await FFmpegKit.cancel();
+  }
 
   /// Decode, optionally cut out the subject, auto-crop, and fit onto a 512 canvas.
   Future<ImagePrepareResult> prepareForEditor(
@@ -172,68 +187,90 @@ class ImageStickerService {
     );
     await composedPng.writeAsBytes(img.encodePng(composed));
 
+    _cancelled = false;
+    final leftovers = <File>[composedPng];
+    File? kept;
     Object? lastError;
-    for (var i = 0; i < _qualityLadder.length; i++) {
-      final quality = _qualityLadder[i];
-      final output = File(
-        '${temp.path}${Platform.pathSeparator}stikk_static_${DateTime.now().millisecondsSinceEpoch}_q$quality.webp',
-      );
-      if (output.existsSync()) {
-        output.deleteSync();
+    try {
+      for (var i = 0; i < _qualityLadder.length; i++) {
+        if (_cancelled) throw const StickerExportCancelled();
+        final quality = _qualityLadder[i];
+        final output = File(
+          '${temp.path}${Platform.pathSeparator}stikk_static_${DateTime.now().millisecondsSinceEpoch}_q$quality.webp',
+        );
+        leftovers.add(output);
+        if (output.existsSync()) {
+          output.deleteSync();
+        }
+
+        try {
+          final code = await _execute(
+            buildStaticArguments(
+              inputPath: composedPng.path,
+              outputPath: output.path,
+              quality: quality,
+            ),
+            onProgress: (raw) {
+              final overall = (i + raw.clamp(0, 1)) / _qualityLadder.length;
+              onProgress?.call(overall.clamp(0, 0.99));
+            },
+          );
+          if (_cancelled || code == ReturnCode.cancel) {
+            throw const StickerExportCancelled();
+          }
+          if (code != ReturnCode.success) {
+            lastError = StickerExportException(
+              'FFmpeg failed while creating the sticker (code $code).',
+            );
+            continue;
+          }
+          if (!output.existsSync() || output.lengthSync() == 0) {
+            lastError = const StickerExportException(
+              'FFmpeg did not write a sticker file.',
+            );
+            continue;
+          }
+          final bytes = output.lengthSync();
+          if (bytes <= WhatsAppStickerSpec.maxStaticBytes) {
+            onProgress?.call(1);
+            kept = output;
+            leftovers.remove(output);
+            leftovers.remove(composedPng);
+            await _deleteIfPresent(composedPng);
+            return StickerExportResult(
+              file: output,
+              bytes: bytes,
+              quality: quality,
+              fps: 1,
+            );
+          }
+          lastError = StickerExportException(
+            'Sticker was ${(bytes / 1024).round()}KB. Trying a smaller encode...',
+          );
+        } on StickerExportCancelled {
+          rethrow;
+        } catch (error) {
+          lastError = error;
+        }
       }
 
-      try {
-        final code = await _execute(
-          buildStaticArguments(
-            inputPath: composedPng.path,
-            outputPath: output.path,
-            quality: quality,
-          ),
-          onProgress: (raw) {
-            final overall = (i + raw.clamp(0, 1)) / _qualityLadder.length;
-            onProgress?.call(overall.clamp(0, 0.99));
-          },
-        );
-        if (code != ReturnCode.success) {
-          lastError = StickerExportException(
-            'FFmpeg failed while creating the sticker (code $code).',
-          );
-          await _deleteIfPresent(output);
-          continue;
+      throw StickerExportException(
+        lastError?.toString() ??
+            'Could not keep the sticker under 100KB. Try a simpler photo.',
+      );
+    } finally {
+      if (kept == null) {
+        for (final file in leftovers) {
+          await _deleteIfPresent(file);
         }
-        if (!output.existsSync() || output.lengthSync() == 0) {
-          lastError = const StickerExportException(
-            'FFmpeg did not write a sticker file.',
-          );
-          await _deleteIfPresent(output);
-          continue;
+      } else {
+        for (final file in leftovers) {
+          if (file.path != kept.path) {
+            await _deleteIfPresent(file);
+          }
         }
-        final bytes = output.lengthSync();
-        if (bytes <= WhatsAppStickerSpec.maxStaticBytes) {
-          onProgress?.call(1);
-          await _deleteIfPresent(composedPng);
-          return StickerExportResult(
-            file: output,
-            bytes: bytes,
-            quality: quality,
-            fps: 1,
-          );
-        }
-        lastError = StickerExportException(
-          'Sticker was ${(bytes / 1024).round()}KB. Trying a smaller encode...',
-        );
-        await _deleteIfPresent(output);
-      } catch (error) {
-        lastError = error;
-        await _deleteIfPresent(output);
       }
     }
-
-    await _deleteIfPresent(composedPng);
-    throw StickerExportException(
-      lastError?.toString() ??
-          'Could not keep the sticker under 100KB. Try a simpler photo.',
-    );
   }
 
   Future<void> _deleteIfPresent(File file) async {

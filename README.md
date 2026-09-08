@@ -151,7 +151,7 @@ The project uses:
 - Riverpod for application state and dependency injection.
 - Hive for local pack and settings persistence.
 - Dio for TikWM, Tenor, Imgflip, ScrapeBadger, Apify, and file downloads.
-- FFmpeg Kit for animated and static WebP encoding.
+- FFmpeg Kit Full-GPL (`ffmpeg_kit_flutter_new`, including `libwebp`) for animated and static WebP encoding.
 - ML Kit selfie segmentation for on-device background removal.
 - `image` for pixel processing, transparent canvases, resize, crop, and padding.
 - Google Fonts for dynamically downloaded editor fonts.

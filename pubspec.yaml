@@ -39,6 +39,8 @@ dependencies:
   dio: ^5.11.1
   path_provider: ^2.1.6
   video_player: ^2.14.0
+  # Full-GPL FFmpeg Kit with libwebp (maintained successor to
+  # ffmpeg_kit_flutter_full_gpl). Required for animated WebP encoding.
   ffmpeg_kit_flutter_new: ^4.6.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0

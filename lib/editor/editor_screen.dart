@@ -91,6 +91,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     super.dispose();
   }
 
+  void _cancelSave() {
+    ref.read(ffmpegStickerServiceProvider).cancel();
+    ref.read(imageStickerServiceProvider).cancel();
+  }
+
   Future<void> _save() async {
     final messenger = ScaffoldMessenger.of(context);
     if (!widget.isStatic) {
@@ -103,9 +108,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
     try {
       final document = ref.read(editorProvider).document;
-      final temp = await getTemporaryDirectory();
       File? overlay;
       if (document.overlays.isNotEmpty) {
+        final temp = await getTemporaryDirectory();
         await WidgetsBinding.instance.endOfFrame;
         if (!mounted) return;
         overlay = await CanvasExporter.captureToFile(
@@ -192,10 +197,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       }
     } catch (error) {
       if (!mounted) return;
-      final message = error is StickerExportException
+      final cancelled = error is StickerExportCancelled;
+      final message = cancelled
+          ? error.message
+          : error is StickerExportException
           ? error.message
           : 'Could not save that sticker. Please try again.';
-      _editor.setSaving(saving: false, error: message);
+      _editor.setSaving(saving: false, error: cancelled ? null : message);
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(message)));
@@ -340,31 +348,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                               onDelete: (_) => _editor.deleteSelected(),
                             ),
                             if (editorState.saving)
-                              ColoredBox(
-                                color: Colors.black54,
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SizedBox(
-                                        width: 160,
-                                        child: LinearProgressIndicator(
-                                          value: editorState.saveProgress == 0
-                                              ? null
-                                              : editorState.saveProgress,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'Making your sticker…',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(color: Colors.white),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              _EditorSavingOverlay(
+                                progress: editorState.saveProgress,
+                                onCancel: _cancelSave,
                               ),
                           ],
                         ),
@@ -429,6 +415,45 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EditorSavingOverlay extends StatelessWidget {
+  const _EditorSavingOverlay({required this.progress, required this.onCancel});
+
+  final double progress;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black54,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 160,
+              child: LinearProgressIndicator(
+                value: progress == 0 ? null : progress,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Making your sticker…',
+              style: Theme.of(context).textTheme.titleSmall
+                  ?.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              key: const Key('editor-cancel-export'),
+              onPressed: onCancel,
+              child: const Text('Cancel'),
+            ),
+          ],
         ),
       ),
     );
