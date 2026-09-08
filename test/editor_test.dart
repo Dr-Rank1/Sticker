@@ -41,6 +41,23 @@ void main() {
       editor.undo();
       expect(container.read(editorProvider).document.speed, 1);
     });
+
+    test('font changes update the selected text overlay and are undoable', () {
+      final editor = container.read(editorProvider.notifier);
+      editor.addText('Hello');
+
+      editor.setSelectedTextFont('Anton');
+      expect(
+        container.read(editorProvider).document.selected?.fontName,
+        'Anton',
+      );
+
+      editor.undo();
+      expect(
+        container.read(editorProvider).document.selected?.fontName,
+        'Roboto',
+      );
+    });
   });
 
   group('FfmpegStickerService', () {

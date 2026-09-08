@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../memes/meme_template_sheet.dart';
 import '../photos/photo_import_sheet.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -46,6 +47,13 @@ class CreateScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _CreateSourceCard(
+                icon: Icons.add_photo_alternate_rounded,
+                title: 'Start from Meme',
+                subtitle: 'Pick a popular template and add your own text.',
+                onTap: () => showMemeTemplateSheet(context),
+              ),
+              const SizedBox(height: 12),
+              _CreateSourceCard(
                 icon: Icons.videocam_rounded,
                 title: 'From TikTok',
                 subtitle: 'Paste a link and pick the perfect clip.',
@@ -59,7 +67,9 @@ class CreateScreen extends StatelessWidget {
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('From a video is coming in the next phase.'),
+                      content: Text(
+                        'From a video is coming in the next phase.',
+                      ),
                     ),
                   );
                 },
@@ -127,10 +137,7 @@ class _CreateSourceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: colors.textTertiary,
-              ),
+              Icon(Icons.chevron_right_rounded, color: colors.textTertiary),
             ],
           ),
         ),
@@ -160,9 +167,8 @@ class _FreeForeverNote extends StatelessWidget {
           Expanded(
             child: Text(
               'Stikk is 100% free. No accounts, no paywalls.',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: colors.accentDim,
-                  ),
+              style: Theme.of(context).textTheme.titleSmall
+                  ?.copyWith(color: colors.accentDim),
             ),
           ),
         ],

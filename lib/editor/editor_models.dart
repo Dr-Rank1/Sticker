@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'sticker_fonts.dart';
+
 enum OverlayKind { text, emoji }
 
 @immutable
@@ -8,6 +10,7 @@ class StickerOverlay {
     required this.id,
     required this.kind,
     required this.content,
+    this.fontName = StickerFontCatalog.defaultFont,
     this.nx = 0.5,
     this.ny = 0.5,
     this.scale = 1,
@@ -17,6 +20,7 @@ class StickerOverlay {
   final String id;
   final OverlayKind kind;
   final String content;
+  final String fontName;
 
   /// Normalized center (0–1) on the 512×512 canvas.
   final double nx;
@@ -25,6 +29,7 @@ class StickerOverlay {
   final double rotation;
 
   StickerOverlay copyWith({
+    String? fontName,
     double? nx,
     double? ny,
     double? scale,
@@ -34,6 +39,7 @@ class StickerOverlay {
       id: id,
       kind: kind,
       content: content,
+      fontName: fontName ?? this.fontName,
       nx: nx ?? this.nx,
       ny: ny ?? this.ny,
       scale: scale ?? this.scale,

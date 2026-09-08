@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'editor_models.dart';
+import 'sticker_fonts.dart';
 
 /// Renders text and emoji overlays into a transparent 512×512 PNG so FFmpeg
 /// can composite them onto the trimmed video.
@@ -15,8 +16,17 @@ class OverlayComposer {
   }) async {
     if (overlays.isEmpty) return null;
 
+    await StickerFontCatalog.ensureLoaded(
+      overlays
+          .where((overlay) => overlay.kind == OverlayKind.text)
+          .map((overlay) => overlay.fontName),
+    );
+
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()));
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
+    );
 
     for (final overlay in overlays) {
       final center = Offset(overlay.nx * size, overlay.ny * size);
@@ -27,18 +37,14 @@ class OverlayComposer {
         ..scale(overlay.scale);
 
       if (overlay.kind == OverlayKind.emoji) {
-        _paintText(
-          canvas,
-          overlay.content,
-          fontSize: 64,
-          outlined: false,
-        );
+        _paintText(canvas, overlay.content, fontSize: 64, outlined: false);
       } else {
         _paintText(
           canvas,
           overlay.content,
           fontSize: 42,
           outlined: true,
+          fontName: overlay.fontName,
         );
       }
       canvas.restore();
@@ -63,6 +69,7 @@ class OverlayComposer {
     String text, {
     required double fontSize,
     required bool outlined,
+    String fontName = StickerFontCatalog.defaultFont,
   }) {
     TextPainter painter(TextStyle style) {
       final result = TextPainter(
@@ -75,26 +82,32 @@ class OverlayComposer {
 
     if (outlined) {
       final stroke = painter(
-        TextStyle(
-          fontSize: fontSize,
-          fontWeight: FontWeight.w800,
-          height: 1.1,
-          foreground: Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 8
-            ..strokeJoin = StrokeJoin.round
-            ..color = Colors.black,
+        StickerFontCatalog.styleFor(
+          fontName,
+          TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 8
+              ..strokeJoin = StrokeJoin.round
+              ..color = Colors.black,
+          ),
         ),
       );
       stroke.paint(canvas, Offset(-stroke.width / 2, -stroke.height / 2));
     }
 
     final fill = painter(
-      TextStyle(
-        fontSize: fontSize,
-        fontWeight: FontWeight.w800,
-        height: 1.1,
-        color: Colors.white,
+      StickerFontCatalog.styleFor(
+        fontName,
+        TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.w800,
+          height: 1.1,
+          color: Colors.white,
+        ),
       ),
     );
     fill.paint(canvas, Offset(-fill.width / 2, -fill.height / 2));

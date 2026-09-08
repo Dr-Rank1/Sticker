@@ -11,10 +11,12 @@ import '../state/navigation_controller.dart';
 import '../storage/storage_utility.dart';
 import '../theme/app_colors.dart';
 import 'editor_controller.dart';
+import 'editor_models.dart';
 import 'ffmpeg_sticker_service.dart';
 import 'overlay_composer.dart';
 import 'widgets/editor_toolbar.dart';
 import 'widgets/overlay_canvas.dart';
+import 'widgets/text_font_picker.dart';
 import 'widgets/trim_timeline.dart';
 import '../photos/photo_import_controller.dart';
 
@@ -376,6 +378,18 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Column(
                   children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: document.selected?.kind == OverlayKind.text
+                          ? Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: TextFontPicker(
+                                selectedFont: document.selected!.fontName,
+                                onSelected: _editor.setSelectedTextFont,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     EditorToolbar(
                       speed: document.speed,
                       showSpeeds: _showSpeeds,

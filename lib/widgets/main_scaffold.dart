@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../discover/discover_screen.dart';
 import '../screens/community_screen.dart';
 import '../screens/create_screen.dart';
 import '../screens/library_screen.dart';
@@ -38,6 +39,7 @@ class MainScaffold extends ConsumerWidget {
           children: const [
             LibraryScreen(),
             CreateScreen(),
+            DiscoverScreen(),
             CommunityScreen(),
           ],
         ),
@@ -71,125 +73,60 @@ class StikkBottomBar extends StatelessWidget {
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: SizedBox(
-        height: 84,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
+      child: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: colors.navBar,
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+          border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow,
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
           children: [
-            Container(
-              height: 64,
-              decoration: BoxDecoration(
-                color: colors.navBar,
-                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-                border: Border.all(color: colors.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.shadow,
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _NavItem(
-                      key: const Key('nav-library'),
-                      icon: Icons.grid_view_rounded,
-                      label: 'Library',
-                      selected: current == AppTab.library,
-                      onTap: () => onSelect(AppTab.library),
-                    ),
-                  ),
-                  const SizedBox(width: 72),
-                  Expanded(
-                    child: _NavItem(
-                      key: const Key('nav-community'),
-                      icon: Icons.public_rounded,
-                      label: 'Community',
-                      selected: current == AppTab.community,
-                      onTap: () => onSelect(AppTab.community),
-                    ),
-                  ),
-                ],
+            Expanded(
+              child: _NavItem(
+                key: const Key('nav-library'),
+                icon: Icons.grid_view_rounded,
+                label: 'Library',
+                selected: current == AppTab.library,
+                onTap: () => onSelect(AppTab.library),
               ),
             ),
-            Positioned(
-              top: -4,
-              child: _CreateFab(
+            Expanded(
+              child: _NavItem(
                 key: const Key('nav-create'),
+                icon: Icons.add_circle_rounded,
+                label: 'Create',
                 selected: current == AppTab.create,
                 onTap: () => onSelect(AppTab.create),
               ),
             ),
+            Expanded(
+              child: _NavItem(
+                key: const Key('nav-discover'),
+                icon: Icons.auto_awesome_rounded,
+                label: 'Discover',
+                selected: current == AppTab.discover,
+                onTap: () => onSelect(AppTab.discover),
+              ),
+            ),
+            Expanded(
+              child: _NavItem(
+                key: const Key('nav-community'),
+                icon: Icons.public_rounded,
+                label: 'Community',
+                selected: current == AppTab.community,
+                onTap: () => onSelect(AppTab.community),
+              ),
+            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _CreateFab extends StatelessWidget {
-  const _CreateFab({
-    super.key,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  colors.accent,
-                  colors.accentDim,
-                ],
-              ),
-              border: selected
-                  ? Border.all(color: colors.accentOn, width: 3)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                  color: colors.accent.withValues(alpha: 0.4),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.add_rounded,
-              color: colors.accentOn,
-              size: 32,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Create',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: selected ? colors.accent : colors.navInactive,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                ),
-          ),
-        ],
       ),
     );
   }
@@ -225,9 +162,9 @@ class _NavItem extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                ),
+              color: color,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            ),
           ),
         ],
       ),

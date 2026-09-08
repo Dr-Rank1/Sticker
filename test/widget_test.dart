@@ -43,6 +43,12 @@ void main() {
     expect(find.text('Library'), findsWidgets);
     expect(find.text('No packs yet'), findsOneWidget);
 
+    await tester.tap(find.byKey(const Key('nav-discover')));
+    await tester.pump();
+
+    expect(find.text('Discover'), findsWidgets);
+    expect(find.byKey(const Key('discover-search-field')), findsOneWidget);
+
     await tester.tap(find.byKey(const Key('nav-community')));
     await tester.pump();
     await tester.pump();

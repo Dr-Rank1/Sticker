@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:stikk/editor/image_sticker_service.dart';
 import 'package:stikk/photos/photo_import_controller.dart';
+import 'package:stikk/photos/photo_import_sheet.dart';
 import 'package:stikk/screens/create_screen.dart';
 
 void main() {
@@ -29,8 +31,11 @@ void main() {
 
     expect(find.byKey(const Key('photo-gallery-button')), findsOneWidget);
     expect(find.byKey(const Key('photo-camera-button')), findsOneWidget);
-    expect(find.byKey(const Key('photo-auto-crop-toggle')), findsOneWidget);
-    expect(find.text('Auto crop'), findsOneWidget);
+    expect(
+      find.byKey(const Key('photo-remove-background-toggle')),
+      findsOneWidget,
+    );
+    expect(find.text('Remove Background'), findsOneWidget);
   });
 
   test('gallery pick prepares a 512 photo for the editor', () async {
@@ -51,8 +56,7 @@ void main() {
             required ImageSource source,
             double? maxWidth,
             int? imageQuality,
-          }) async =>
-              XFile(file.path),
+          }) async => XFile(file.path),
         ),
         imageStickerServiceProvider.overrideWithValue(
           ImageStickerService(
@@ -69,10 +73,87 @@ void main() {
 
     expect(state.phase, PhotoImportPhase.completed);
     expect(state.preparedPath, isNotNull);
-    final prepared = img.decodeImage(File(state.preparedPath!).readAsBytesSync());
+    final prepared = img.decodeImage(
+      File(state.preparedPath!).readAsBytesSync(),
+    );
     expect(prepared!.width, 512);
     expect(prepared.height, 512);
   });
+
+  testWidgets('shows an animated local scanner during background removal', (
+    tester,
+  ) async {
+    final temporary = Directory(
+      '${Directory.systemTemp.path}/stikk_scan_${DateTime.now().microsecondsSinceEpoch}',
+    )..createSync(recursive: true);
+    addTearDown(() {
+      if (temporary.existsSync()) temporary.deleteSync(recursive: true);
+    });
+    final sourceFile = File('${temporary.path}/source.png')
+      ..writeAsBytesSync([1, 2, 3]);
+    final preparedFile = File('${temporary.path}/prepared.png')
+      ..writeAsBytesSync([1, 2, 3]);
+    final pending = Completer<ImagePrepareResult>();
+    final container = ProviderContainer(
+      overrides: [
+        photoPickerProvider.overrideWithValue(
+          ({
+            required ImageSource source,
+            double? maxWidth,
+            int? imageQuality,
+          }) async => XFile(sourceFile.path),
+        ),
+        imageStickerServiceProvider.overrideWithValue(
+          _PendingImageService(temporary, pending),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: Scaffold(body: PhotoImportSheet())),
+      ),
+    );
+    await tester.pump();
+
+    final operation = container
+        .read(photoImportProvider.notifier)
+        .importFromGallery();
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('background-removal-scanner')), findsOneWidget);
+    expect(find.text('Scanning locally'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(find.byKey(const Key('background-removal-scanner')), findsOneWidget);
+
+    pending.complete(
+      ImagePrepareResult(
+        file: preparedFile,
+        backgroundRemoved: true,
+        autoCropped: true,
+      ),
+    );
+    await operation;
+    await tester.pumpWidget(const SizedBox.shrink());
+    container.dispose();
+  });
+}
+
+class _PendingImageService extends ImageStickerService {
+  _PendingImageService(Directory temporary, this.pending)
+    : super(tempDirectory: () async => temporary);
+
+  final Completer<ImagePrepareResult> pending;
+
+  @override
+  Future<ImagePrepareResult> prepareForEditor(
+    File source, {
+    bool removeBackground = true,
+  }) {
+    return pending.future;
+  }
 }
 
 class _NullSegmenter implements SubjectSegmenter {

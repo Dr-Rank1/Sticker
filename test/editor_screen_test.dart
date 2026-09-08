@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:stikk/editor/editor_screen.dart';
+import 'package:stikk/editor/widgets/text_font_picker.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 void main() {
@@ -17,9 +18,7 @@ void main() {
   testWidgets('editor shows looping canvas and toolbars', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
-          home: EditorScreen(videoPath: 'clip.mp4'),
-        ),
+        child: MaterialApp(home: EditorScreen(videoPath: 'clip.mp4')),
       ),
     );
     await tester.pump();
@@ -44,6 +43,33 @@ void main() {
     expect(find.text('Save'), findsOneWidget);
     expect(find.text('Text'), findsOneWidget);
     expect(find.text('Speed'), findsNothing);
+  });
+
+  testWidgets('text overlays expose dynamic font previews', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: EditorScreen(imagePath: 'missing-sticker.png'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Text'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'Meme text');
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await tester.pump();
+
+    expect(find.byType(TextFontPicker), findsOneWidget);
+    expect(find.byKey(const Key('font-option-Roboto')), findsOneWidget);
+    expect(find.byKey(const Key('font-option-Anton')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('font-option-Anton')));
+    await tester.pump();
+
+    final picker = tester.widget<TextFontPicker>(find.byType(TextFontPicker));
+    expect(picker.selectedFont, 'Anton');
   });
 }
 

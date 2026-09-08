@@ -42,8 +42,7 @@ class EditorState {
   }
 }
 
-final editorProvider =
-    NotifierProvider<EditorController, EditorState>(
+final editorProvider = NotifierProvider<EditorController, EditorState>(
   EditorController.new,
   isAutoDispose: true,
 );
@@ -102,11 +101,7 @@ class EditorController extends Notifier<EditorState> {
       state.document.copyWith(
         overlays: [
           ...state.document.overlays,
-          StickerOverlay(
-            id: id,
-            kind: OverlayKind.text,
-            content: trimmed,
-          ),
+          StickerOverlay(id: id, kind: OverlayKind.text, content: trimmed),
         ],
         selectedId: id,
       ),
@@ -150,6 +145,27 @@ class EditorController extends Notifier<EditorState> {
             if (overlay.id != id) overlay,
         ],
         clearSelection: true,
+      ),
+    );
+  }
+
+  void setSelectedTextFont(String fontName) {
+    final selected = state.document.selected;
+    if (selected == null ||
+        selected.kind != OverlayKind.text ||
+        selected.fontName == fontName) {
+      return;
+    }
+    _commit(
+      state.document.copyWith(
+        overlays: [
+          for (final overlay in state.document.overlays)
+            if (overlay.id == selected.id)
+              overlay.copyWith(fontName: fontName)
+            else
+              overlay,
+        ],
+        selectedId: selected.id,
       ),
     );
   }
@@ -235,7 +251,7 @@ class EditorController extends Notifier<EditorState> {
     return overlays
         .map(
           (o) =>
-              '${o.id}:${o.content}:${o.nx.toStringAsFixed(3)}:${o.ny.toStringAsFixed(3)}:${o.scale.toStringAsFixed(3)}:${o.rotation.toStringAsFixed(3)}',
+              '${o.id}:${o.content}:${o.fontName}:${o.nx.toStringAsFixed(3)}:${o.ny.toStringAsFixed(3)}:${o.scale.toStringAsFixed(3)}:${o.rotation.toStringAsFixed(3)}',
         )
         .join('|');
   }

@@ -5,69 +5,15 @@ import 'dart:math' as math;
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
+import 'background_removal_service.dart';
 import 'editor_models.dart';
 import 'ffmpeg_sticker_service.dart';
 
-/// Foreground confidence mask from on-device segmentation.
-class SubjectMask {
-  const SubjectMask({
-    required this.width,
-    required this.height,
-    required this.confidences,
-  });
-
-  final int width;
-  final int height;
-  final List<double> confidences;
-
-  bool get hasSubject => confidences.any((value) => value >= 0.5);
-
-  double confidenceAt(int x, int y) {
-    if (width <= 0 || height <= 0 || confidences.isEmpty) return 0;
-    final cx = x.clamp(0, width - 1);
-    final cy = y.clamp(0, height - 1);
-    final index = cy * width + cx;
-    if (index < 0 || index >= confidences.length) return 0;
-    return confidences[index];
-  }
-}
-
-abstract class SubjectSegmenter {
-  Future<SubjectMask?> segment(File image);
-}
-
-/// Google ML Kit selfie segmentation. Runs entirely on device.
-class MlKitSelfieSegmenter implements SubjectSegmenter {
-  @override
-  Future<SubjectMask?> segment(File image) async {
-    if (kIsWeb) return null;
-    if (!(Platform.isAndroid || Platform.isIOS)) return null;
-
-    final segmenter = SelfieSegmenter(
-      mode: SegmenterMode.single,
-      enableRawSizeMask: true,
-    );
-    try {
-      final mask = await segmenter.processImage(
-        InputImage.fromFilePath(image.path),
-      );
-      if (mask == null || mask.confidences.isEmpty) return null;
-      return SubjectMask(
-        width: mask.width,
-        height: mask.height,
-        confidences: mask.confidences,
-      );
-    } catch (_) {
-      return null;
-    } finally {
-      await segmenter.close();
-    }
-  }
-}
+export 'background_removal_service.dart'
+    show MlKitSelfieSegmenter, SubjectMask, SubjectSegmenter;
 
 class ImagePrepareResult {
   const ImagePrepareResult({
@@ -102,21 +48,27 @@ class PixelBounds {
 class ImageStickerService {
   ImageStickerService({
     SubjectSegmenter? segmenter,
+    BackgroundRemovalService? backgroundRemovalService,
     Future<Directory> Function()? tempDirectory,
     Future<int> Function(
       List<String> args,
       void Function(double progress) onProgress,
     )?
     runCommand,
-  }) : _segmenter = segmenter ?? MlKitSelfieSegmenter(),
-       _tempDirectory = tempDirectory ?? getTemporaryDirectory,
+  }) : _tempDirectory = tempDirectory ?? getTemporaryDirectory,
+       _backgroundRemovalService =
+           backgroundRemovalService ??
+           BackgroundRemovalService(
+             segmenter: segmenter,
+             temporaryDirectory: tempDirectory,
+           ),
        // ignore: prefer_initializing_formals
        _runCommand = runCommand;
 
   static const List<int> _qualityLadder = [80, 65, 50, 40, 30, 20];
 
-  final SubjectSegmenter _segmenter;
   final Future<Directory> Function() _tempDirectory;
+  final BackgroundRemovalService _backgroundRemovalService;
   final Future<int> Function(
     List<String> args,
     void Function(double progress) onProgress,
@@ -145,20 +97,24 @@ class ImageStickerService {
 
     if (removeBackground) {
       final probe = await _writePng(image, prefix: 'stikk_seg');
-      SubjectMask? mask;
+      BackgroundRemovalResult? removal;
       try {
-        mask = await _segmenter.segment(probe);
+        removal = await _backgroundRemovalService.removeBackground(probe);
+        if (removal != null) {
+          final segmented = decodePhoto(await removal.file.readAsBytes());
+          if (segmented != null) {
+            image = segmented;
+            final cropped = autoCropToSubject(image);
+            if (cropped != null) {
+              image = cropped;
+              autoCropped = true;
+            }
+            backgroundRemoved = true;
+          }
+        }
       } finally {
         await _deleteIfPresent(probe);
-      }
-      if (mask != null && mask.hasSubject) {
-        image = applySubjectMask(image, mask);
-        final cropped = autoCropToSubject(image);
-        if (cropped != null) {
-          image = cropped;
-          autoCropped = true;
-        }
-        backgroundRemoved = true;
+        if (removal != null) await _deleteIfPresent(removal.file);
       }
     }
 
@@ -335,27 +291,13 @@ class ImageStickerService {
   img.Image applySubjectMask(
     img.Image source,
     SubjectMask mask, {
-    double threshold = 0.4,
+    double threshold = 0.35,
   }) {
-    final image = source.numChannels == 4
-        ? img.Image.from(source)
-        : source.convert(numChannels: 4);
-
-    for (final pixel in image) {
-      final mx = ((pixel.x + 0.5) * mask.width / image.width).floor();
-      final my = ((pixel.y + 0.5) * mask.height / image.height).floor();
-      final confidence = mask.confidenceAt(mx, my);
-      if (confidence < threshold) {
-        pixel.a = 0;
-      } else {
-        final feather = ((confidence - threshold) / (1 - threshold)).clamp(
-          0.0,
-          1.0,
-        );
-        pixel.a = (pixel.a * (0.35 + 0.65 * feather)).round().clamp(0, 255);
-      }
-    }
-    return image;
+    return _backgroundRemovalService.applySubjectMask(
+      source,
+      mask,
+      threshold: threshold,
+    );
   }
 
   PixelBounds? opaqueBounds(img.Image image, {int alphaThreshold = 16}) {

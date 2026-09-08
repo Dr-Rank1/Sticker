@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../editor_models.dart';
+import '../sticker_fonts.dart';
 import '../../theme/app_colors.dart';
 
 class OverlayCanvas extends StatelessWidget {
@@ -94,10 +95,14 @@ class _OverlayItemState extends State<_OverlayItem> {
           final origin = _gestureOrigin ?? overlay;
           _panDelta += details.focalPointDelta;
           final next = origin.copyWith(
-            nx: (origin.nx + _panDelta.dx / widget.canvasSize.width)
-                .clamp(0.08, 0.92),
-            ny: (origin.ny + _panDelta.dy / widget.canvasSize.height)
-                .clamp(0.08, 0.92),
+            nx: (origin.nx + _panDelta.dx / widget.canvasSize.width).clamp(
+              0.08,
+              0.92,
+            ),
+            ny: (origin.ny + _panDelta.dy / widget.canvasSize.height).clamp(
+              0.08,
+              0.92,
+            ),
             scale: (origin.scale * details.scale).clamp(0.4, 4.0),
             rotation: origin.rotation + details.rotation,
           );
@@ -121,8 +126,14 @@ class _OverlayItemState extends State<_OverlayItem> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: overlay.kind == OverlayKind.emoji
-                    ? Text(overlay.content, style: const TextStyle(fontSize: 56))
-                    : _OutlinedText(overlay.content),
+                    ? Text(
+                        overlay.content,
+                        style: const TextStyle(fontSize: 56),
+                      )
+                    : _OutlinedText(
+                        overlay.content,
+                        fontName: overlay.fontName,
+                      ),
               ),
             ),
           ),
@@ -133,17 +144,19 @@ class _OverlayItemState extends State<_OverlayItem> {
 }
 
 class _OutlinedText extends StatelessWidget {
-  const _OutlinedText(this.text);
+  const _OutlinedText(this.text, {required this.fontName});
 
   final String text;
+  final String fontName;
 
   @override
   Widget build(BuildContext context) {
-    const style = TextStyle(
+    const base = TextStyle(
       fontSize: 34,
       fontWeight: FontWeight.w800,
       height: 1.1,
     );
+    final style = StickerFontCatalog.styleFor(fontName, base);
     return Stack(
       children: [
         Text(

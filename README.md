@@ -2,6 +2,19 @@
 
 A free WhatsApp sticker maker inspired by Stikk.
 
+## Tenor API setup
+
+Discover uses the Tenor V2 API without committing a secret to the repository.
+Create a free key in a Google Cloud project by following the
+[Tenor quickstart](https://developers.google.com/tenor/guides/quickstart), then
+run or build Stikk with:
+
+```sh
+flutter run --dart-define=TENOR_API_KEY=your_key
+```
+
+The app requests only sticker results in the transparent WebP format.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

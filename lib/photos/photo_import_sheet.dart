@@ -121,15 +121,17 @@ class _PhotoImportSheetState extends ConsumerState<PhotoImportSheet> {
               ),
               const SizedBox(height: 16),
               SwitchListTile(
-                key: const Key('photo-auto-crop-toggle'),
+                key: const Key('photo-remove-background-toggle'),
                 contentPadding: EdgeInsets.zero,
                 value: importState.removeBackground,
                 onChanged: importState.isBusy
                     ? null
-                    : ref.read(photoImportProvider.notifier).setRemoveBackground,
-                title: Text('Auto crop', style: textTheme.titleMedium),
+                    : ref
+                          .read(photoImportProvider.notifier)
+                          .setRemoveBackground,
+                title: Text('Remove Background', style: textTheme.titleMedium),
                 subtitle: Text(
-                  'Remove the background with on-device AI.',
+                  'Private, on-device ML with no API limits.',
                   style: textTheme.bodySmall,
                 ),
               ),
@@ -185,24 +187,131 @@ class _PhotoProgress extends StatelessWidget {
                   state.phase == PhotoImportPhase.picking
                       ? 'Opening photos...'
                       : state.removeBackground
-                          ? 'Cutting out the subject...'
-                          : 'Preparing your photo...',
+                      ? 'Cutting out the subject...'
+                      : 'Preparing your photo...',
                   style: textTheme.titleSmall,
                 ),
                 const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    key: const Key('photo-prepare-progress'),
-                    minHeight: 8,
-                    backgroundColor: colors.surfaceMuted,
-                    color: colors.accent,
+                if (state.phase == PhotoImportPhase.processing &&
+                    state.removeBackground)
+                  const _BackgroundScanIndicator()
+                else
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      key: const Key('photo-prepare-progress'),
+                      minHeight: 8,
+                      backgroundColor: colors.surfaceMuted,
+                      color: colors.accent,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 8),
               ],
             )
           : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _BackgroundScanIndicator extends StatefulWidget {
+  const _BackgroundScanIndicator();
+
+  @override
+  State<_BackgroundScanIndicator> createState() =>
+      _BackgroundScanIndicatorState();
+}
+
+class _BackgroundScanIndicatorState extends State<_BackgroundScanIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return RepaintBoundary(
+      key: const Key('background-removal-scanner'),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        child: SizedBox(
+          height: 82,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(
+                    color: colors.surfaceMuted,
+                    child: Icon(
+                      Icons.person_rounded,
+                      size: 54,
+                      color: colors.textTertiary.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) {
+                      final y = _controller.value * (constraints.maxHeight - 4);
+                      return Positioned(
+                        left: 0,
+                        right: 0,
+                        top: y,
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: colors.accent,
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.accent.withValues(alpha: 0.65),
+                                blurRadius: 12,
+                                spreadRadius: 3,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    left: 10,
+                    bottom: 8,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.surface.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          'Scanning locally',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
