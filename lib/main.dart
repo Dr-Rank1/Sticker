@@ -21,6 +21,7 @@ import 'packs/sticker_repository.dart';
 import 'packs/stikk_file_intent.dart';
 import 'state/settings_store.dart';
 import 'state/theme_controller.dart';
+import 'store/play_store_update_service.dart';
 import 'storage/cache_cleanup_worker.dart';
 import 'theme/app_theme.dart';
 import 'tiktok/comment_sticker_sheet.dart';
@@ -45,6 +46,7 @@ Future<void> main() async {
     () async {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         await enableHighestDisplayMode();
+        await checkForImmediatePlayStoreUpdate();
         try {
           await Workmanager().initialize(callbackDispatcher);
           await Workmanager().registerPeriodicTask(

@@ -4,7 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
+import '../logging/app_logger.dart';
 import '../state/navigation_controller.dart';
+import '../store/review_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../tiktok/tiktok_import_sheet.dart';
@@ -281,6 +283,17 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
           .exportToWhatsApp(saved);
       if (!mounted) return;
       _showFeedback(result.message);
+      try {
+        await ref
+            .read(reviewServiceProvider)
+            .recordSuccessfulWhatsAppExport(packId: saved.id);
+      } catch (error, stack) {
+        appLogger.w(
+          'In-app review prompt failed',
+          error: error,
+          stackTrace: stack,
+        );
+      }
     } on WhatsAppNotInstalledException {
       if (!mounted) return;
       setState(() => _exporting = false);
