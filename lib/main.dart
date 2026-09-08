@@ -22,6 +22,7 @@ import 'state/theme_controller.dart';
 import 'storage/cache_cleanup_worker.dart';
 import 'theme/app_theme.dart';
 import 'tiktok/comment_sticker_sheet.dart';
+import 'tiktok/tiktok_app_links.dart';
 import 'tiktok/tiktok_share_intent.dart';
 import 'tiktok/tiktok_url.dart';
 import 'widgets/main_scaffold.dart';
@@ -104,6 +105,7 @@ class StikkApp extends ConsumerStatefulWidget {
 class _StikkAppState extends ConsumerState<StikkApp> {
   StreamSubscription<List<SharedMediaFile>>? _shareSub;
   StreamSubscription<String>? _stikkSub;
+  StreamSubscription<Uri>? _appLinksSub;
   String? _sharedTikTokUrl;
   final _navigatorKey = GlobalKey<NavigatorState>();
 
@@ -116,6 +118,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
     if (_sharedTikTokUrl != null) unawaited(_consumeClipboard());
     _listenForSharedTikTokUrls();
     _listenForStikkFiles();
+    _listenForTikTokAppLinks();
   }
 
   void _listenForSharedTikTokUrls() {
@@ -149,6 +152,24 @@ class _StikkAppState extends ConsumerState<StikkApp> {
       return;
     }
     final url = extractTikTokUrlFromSharedMedia(files);
+    if (url == null || url == _sharedTikTokUrl) return;
+    unawaited(_consumeClipboard());
+    if (!mounted) return;
+    setState(() => _sharedTikTokUrl = url);
+  }
+
+  void _listenForTikTokAppLinks() {
+    final links = ref.read(tikTokAppLinksProvider);
+    _appLinksSub = links.uriLinkStream().listen(
+      _handleAppLink,
+      onError: (Object error) {
+        appLogger.d('App link stream unavailable: $error');
+      },
+    );
+  }
+
+  void _handleAppLink(Uri uri) {
+    final url = extractTikTokUrlFromUri(uri);
     if (url == null || url == _sharedTikTokUrl) return;
     unawaited(_consumeClipboard());
     if (!mounted) return;
@@ -214,6 +235,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
   void dispose() {
     _shareSub?.cancel();
     _stikkSub?.cancel();
+    _appLinksSub?.cancel();
     super.dispose();
   }
 

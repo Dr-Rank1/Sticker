@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:stikk/main.dart';
 import 'package:stikk/state/settings_store.dart';
 import 'package:stikk/storage/storage_utility.dart';
+import 'package:stikk/tiktok/tiktok_app_links.dart';
 import 'package:stikk/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
@@ -30,6 +31,7 @@ ProviderScope appWithOnboardingDone() {
         ),
       ),
       tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
+      tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
     ],
     child: const StikkApp(),
   );

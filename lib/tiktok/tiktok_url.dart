@@ -17,6 +17,9 @@ String? extractTikTokUrl(String? text) {
 /// Backward-compatible alias used by the clipboard auto-scan flow.
 String? extractTikTokClipboardUrl(String? text) => extractTikTokUrl(text);
 
+/// Reads a TikTok video URL out of an Android App Link [Uri].
+String? extractTikTokUrlFromUri(Uri uri) => extractTikTokUrl(uri.toString());
+
 /// Reads TikTok links out of [receive_sharing_intent] payloads.
 String? extractTikTokUrlFromSharedMedia(List<SharedMediaFile> files) {
   for (final file in files) {

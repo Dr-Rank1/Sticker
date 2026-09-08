@@ -7,6 +7,7 @@ import 'package:stikk/main.dart';
 import 'package:stikk/onboarding/onboarding_screen.dart';
 import 'package:stikk/permissions/media_permission_service.dart';
 import 'package:stikk/state/settings_store.dart';
+import 'package:stikk/tiktok/tiktok_app_links.dart';
 import 'package:stikk/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
@@ -24,6 +25,7 @@ void main() {
       ProviderScope(
         overrides: [
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
+          tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
         child: const StikkApp(),
       ),
@@ -69,6 +71,7 @@ void main() {
         overrides: [
           mediaPermissionServiceProvider.overrideWithValue(service),
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
+          tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
         child: const StikkApp(),
       ),
@@ -103,6 +106,7 @@ void main() {
             ),
           ),
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
+          tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
         child: const StikkApp(),
       ),

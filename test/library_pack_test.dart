@@ -10,6 +10,7 @@ import 'package:stikk/packs/pack_providers.dart';
 import 'package:stikk/packs/pack_repository.dart';
 import 'package:stikk/packs/whatsapp_export_service.dart';
 import 'package:stikk/state/settings_store.dart';
+import 'package:stikk/tiktok/tiktok_app_links.dart';
 import 'package:stikk/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
@@ -47,6 +48,7 @@ void main() {
             InMemorySettingsStore(onboardingComplete: true),
           ),
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
+          tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
         child: const StikkApp(),
       ),
@@ -193,6 +195,7 @@ void main() {
             tikTokShareIntentProvider.overrideWithValue(
               FakeTikTokShareIntent(),
             ),
+            tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
           ],
           child: const StikkApp(),
         ),

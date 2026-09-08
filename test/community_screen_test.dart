@@ -10,6 +10,7 @@ import 'package:stikk/main.dart';
 import 'package:stikk/packs/pack_providers.dart';
 import 'package:stikk/packs/pack_repository.dart';
 import 'package:stikk/state/settings_store.dart';
+import 'package:stikk/tiktok/tiktok_app_links.dart';
 import 'package:stikk/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
@@ -35,6 +36,7 @@ ProviderScope communityApp({
       if (repository != null)
         packRepositoryProvider.overrideWithValue(repository),
       tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
+      tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
     ],
     child: const StikkApp(),
   );

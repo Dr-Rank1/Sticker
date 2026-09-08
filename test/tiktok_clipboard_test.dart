@@ -48,4 +48,21 @@ void main() {
       isNull,
     );
   });
+
+  test('extracts TikTok URLs from Android App Link URIs', () {
+    expect(
+      extractTikTokUrlFromUri(
+        Uri.parse('https://www.tiktok.com/@creator/video/7393468652906925317'),
+      ),
+      'https://www.tiktok.com/@creator/video/7393468652906925317',
+    );
+    expect(
+      extractTikTokUrlFromUri(Uri.parse('https://vm.tiktok.com/ZMappLink/')),
+      'https://vm.tiktok.com/ZMappLink/',
+    );
+    expect(
+      extractTikTokUrlFromUri(Uri.parse('https://example.com/video/1')),
+      isNull,
+    );
+  });
 }

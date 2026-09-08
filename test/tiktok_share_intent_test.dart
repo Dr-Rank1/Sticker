@@ -13,6 +13,7 @@ import 'package:stikk/tiktok/apify_service.dart';
 import 'package:stikk/tiktok/comment_sticker_isolate.dart';
 import 'package:stikk/tiktok/comment_sticker_sheet.dart';
 import 'package:stikk/tiktok/tiktok_comment_service.dart';
+import 'package:stikk/tiktok/tiktok_app_links.dart';
 import 'package:stikk/tiktok/tiktok_share_intent.dart';
 import 'package:stikk/widgets/main_scaffold.dart';
 
@@ -156,6 +157,7 @@ void main() {
       ProviderScope(
         overrides: [
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
+          tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
         child: StikkApp(
           initialSharedMedia: [
@@ -172,12 +174,73 @@ void main() {
     expect(find.text('Paste TikTok links'), findsOneWidget);
     expect(find.byKey(const Key('shared-tiktok-scan-page')), findsNothing);
   });
+
+  testWidgets('TikTok app link skips home and opens the Apify scan', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    await tester.pumpWidget(
+      _shareApp(
+        apify: _FakeApifyService(gate: gate),
+        appLinks: FakeTikTokAppLinks(
+          initialUri: Uri.parse(
+            'https://www.tiktok.com/@creator/video/7393468652906925317',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('shared-tiktok-scan-page')), findsOneWidget);
+    expect(find.text('Scanning comments for stickers...'), findsOneWidget);
+    expect(find.byType(MainScaffold), findsNothing);
+  });
+
+  testWidgets('vm.tiktok.com app link while running starts the scan', (
+    tester,
+  ) async {
+    final links = StreamController<Uri>.broadcast();
+    addTearDown(links.close);
+    await tester.pumpWidget(
+      _shareApp(
+        apify: _FakeApifyService(),
+        appLinks: FakeTikTokAppLinks(uris: links.stream),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(MainScaffold), findsOneWidget);
+
+    links.add(Uri.parse('https://vm.tiktok.com/ZMappLink/'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('shared-tiktok-scan-page')), findsOneWidget);
+    expect(find.byType(MainScaffold), findsNothing);
+  });
+
+  testWidgets('non-TikTok app links stay on the home screen', (tester) async {
+    await tester.pumpWidget(
+      _shareApp(
+        apify: _FakeApifyService(),
+        appLinks: FakeTikTokAppLinks(
+          initialUri: Uri.parse('https://example.com/not-tiktok'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(MainScaffold), findsOneWidget);
+    expect(find.byKey(const Key('shared-tiktok-scan-page')), findsNothing);
+  });
 }
 
 Widget _shareApp({
   required ApifyService apify,
   List<SharedMediaFile> initialSharedMedia = const [],
   TikTokShareIntent? shareIntent,
+  TikTokAppLinks? appLinks,
 }) {
   return ProviderScope(
     overrides: [
@@ -193,6 +256,9 @@ Widget _shareApp({
       ),
       tikTokShareIntentProvider.overrideWithValue(
         shareIntent ?? FakeTikTokShareIntent(),
+      ),
+      tikTokAppLinksProvider.overrideWithValue(
+        appLinks ?? FakeTikTokAppLinks(),
       ),
     ],
     child: StikkApp(initialSharedMedia: initialSharedMedia),

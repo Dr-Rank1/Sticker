@@ -41,6 +41,22 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Open TikTok URLs from SMS, Chrome, and other apps. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="tiktok.com"/>
+                <data android:host="www.tiktok.com"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="vm.tiktok.com"/>
+            </intent-filter>
             <!-- Share -> More -> Stikk from TikTok and other apps. -->
             <intent-filter android:label="Stikk">
                 <action android:name="android.intent.action.SEND"/>
