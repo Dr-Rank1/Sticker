@@ -7,14 +7,27 @@ import 'package:stikk/main.dart';
 import 'package:stikk/onboarding/onboarding_screen.dart';
 import 'package:stikk/permissions/media_permission_service.dart';
 import 'package:stikk/state/settings_store.dart';
+import 'package:stikk/tiktok/tiktok_share_intent.dart';
+
+import 'tiktok_share_intent_support.dart';
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+    mockShareIntent();
   });
 
-  testWidgets('onboarding carousel shows the three feature screens', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: StikkApp()));
+  testWidgets('onboarding carousel shows the three feature screens', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
+        ],
+        child: const StikkApp(),
+      ),
+    );
     await tester.pump();
 
     expect(find.text('Paste TikTok links'), findsOneWidget);
@@ -33,7 +46,9 @@ void main() {
     expect(find.text('Get started'), findsOneWidget);
   });
 
-  testWidgets('Get started explains storage access before entering the app', (tester) async {
+  testWidgets('Get started explains storage access before entering the app', (
+    tester,
+  ) async {
     var requested = false;
     final service = MediaPermissionService(
       platform: TargetPlatform.android,
@@ -53,6 +68,7 @@ void main() {
       ProviderScope(
         overrides: [
           mediaPermissionServiceProvider.overrideWithValue(service),
+          tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
         ],
         child: const StikkApp(),
       ),
@@ -64,10 +80,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('Allow access to photos & videos'), findsOneWidget);
-    expect(
-      find.textContaining('Nothing is uploaded'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Nothing is uploaded'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('permission-allow')));
     await tester.pump();
@@ -89,6 +102,7 @@ void main() {
               requestPermissions: (_) async => {},
             ),
           ),
+          tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
         ],
         child: const StikkApp(),
       ),

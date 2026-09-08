@@ -49,8 +49,9 @@ Future<void> scanAndShowCommentStickers(
   BuildContext context,
   WidgetRef ref, {
   required String videoUrl,
+  bool showLoadingDialog = true,
 }) async {
-  showCommentScanDialog(context);
+  if (showLoadingDialog) showCommentScanDialog(context);
 
   List<CommentSticker> stickers = const [];
   String? errorMessage;
@@ -65,7 +66,9 @@ Future<void> scanAndShowCommentStickers(
   }
 
   if (!context.mounted) return;
-  Navigator.of(context, rootNavigator: true).pop();
+  if (showLoadingDialog) {
+    Navigator.of(context, rootNavigator: true).pop();
+  }
 
   if (!context.mounted) return;
   if (errorMessage != null) {
@@ -393,6 +396,59 @@ class _MessageState extends StatelessWidget {
             Icon(icon, size: 46, color: context.colors.textTertiary),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-screen Apify scan shown when a TikTok URL arrives from Android Share.
+class SharedTikTokScanPage extends ConsumerStatefulWidget {
+  const SharedTikTokScanPage({
+    super.key,
+    required this.videoUrl,
+    this.onFinished,
+  });
+
+  final String videoUrl;
+  final VoidCallback? onFinished;
+
+  @override
+  ConsumerState<SharedTikTokScanPage> createState() =>
+      _SharedTikTokScanPageState();
+}
+
+class _SharedTikTokScanPageState extends ConsumerState<SharedTikTokScanPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scan());
+  }
+
+  Future<void> _scan() async {
+    if (!mounted) return;
+    await scanAndShowCommentStickers(
+      context,
+      ref,
+      videoUrl: widget.videoUrl,
+      showLoadingDialog: false,
+    );
+    if (!mounted) return;
+    widget.onFinished?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      key: Key('shared-tiktok-scan-page'),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Scanning comments for stickers...'),
           ],
         ),
       ),

@@ -22,6 +22,11 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
     private fun addStickerPack(call: MethodCall, result: MethodChannel.Result) {
         if (pendingResult != null) {
             result.error(ERROR_ALREADY_IN_PROGRESS, "Another export is already running.", null)

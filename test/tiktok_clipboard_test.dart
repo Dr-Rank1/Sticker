@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'package:stikk/tiktok/tiktok_url.dart';
 import 'package:stikk/widgets/main_scaffold.dart';
 
 void main() {
@@ -23,5 +25,27 @@ void main() {
   test('ignores non-TikTok clipboard content', () {
     expect(extractTikTokClipboardUrl('https://example.com/video/123'), isNull);
     expect(extractTikTokClipboardUrl(null), isNull);
+  });
+
+  test('extracts TikTok URLs from shared media payloads', () {
+    expect(
+      extractTikTokUrlFromSharedMedia([
+        SharedMediaFile(
+          path: 'Check this https://vm.tiktok.com/ZMshare/ out',
+          type: SharedMediaType.text,
+          mimeType: 'text/plain',
+        ),
+      ]),
+      'https://vm.tiktok.com/ZMshare/',
+    );
+    expect(
+      extractTikTokUrlFromSharedMedia([
+        SharedMediaFile(
+          path: 'https://example.com/not-tiktok',
+          type: SharedMediaType.text,
+        ),
+      ]),
+      isNull,
+    );
   });
 }

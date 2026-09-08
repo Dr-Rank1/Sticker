@@ -10,6 +10,9 @@ import 'package:stikk/main.dart';
 import 'package:stikk/packs/pack_providers.dart';
 import 'package:stikk/packs/pack_repository.dart';
 import 'package:stikk/state/settings_store.dart';
+import 'package:stikk/tiktok/tiktok_share_intent.dart';
+
+import 'tiktok_share_intent_support.dart';
 
 CommunityCatalog loadBundledCatalog() {
   return CommunityCatalog.fromJsonString(
@@ -31,6 +34,7 @@ ProviderScope communityApp({
       communityDownloadDelayProvider.overrideWithValue(downloadDelay),
       if (repository != null)
         packRepositoryProvider.overrideWithValue(repository),
+      tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
     ],
     child: const StikkApp(),
   );
@@ -45,6 +49,7 @@ Future<void> openCommunity(WidgetTester tester) async {
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+    mockShareIntent();
   });
 
   testWidgets('community feed shows trending pack cards', (tester) async {
@@ -82,7 +87,9 @@ void main() {
     await tester.pump();
     await openCommunity(tester);
 
-    await tester.tap(find.byKey(const Key('community-pack-comm_anime_reactions')));
+    await tester.tap(
+      find.byKey(const Key('community-pack-comm_anime_reactions')),
+    );
     await tester.pump();
     await tester.pump();
 
@@ -106,7 +113,9 @@ void main() {
     await tester.pump();
     await openCommunity(tester);
 
-    await tester.tap(find.byKey(const Key('community-pack-comm_anime_reactions')));
+    await tester.tap(
+      find.byKey(const Key('community-pack-comm_anime_reactions')),
+    );
     await tester.pump();
     await tester.pump();
 
@@ -114,7 +123,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('Downloading…'), findsOneWidget);
-    expect(find.byKey(const Key('download-community-pack-loading')), findsOneWidget);
+    expect(
+      find.byKey(const Key('download-community-pack-loading')),
+      findsOneWidget,
+    );
 
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump();

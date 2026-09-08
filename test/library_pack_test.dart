@@ -10,10 +10,14 @@ import 'package:stikk/packs/pack_providers.dart';
 import 'package:stikk/packs/pack_repository.dart';
 import 'package:stikk/packs/whatsapp_export_service.dart';
 import 'package:stikk/state/settings_store.dart';
+import 'package:stikk/tiktok/tiktok_share_intent.dart';
+
+import 'tiktok_share_intent_support.dart';
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+    mockShareIntent();
   });
 
   testWidgets('library shows saved packs and opens detail', (tester) async {
@@ -42,6 +46,7 @@ void main() {
           settingsStoreProvider.overrideWithValue(
             InMemorySettingsStore(onboardingComplete: true),
           ),
+          tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
         ],
         child: const StikkApp(),
       ),

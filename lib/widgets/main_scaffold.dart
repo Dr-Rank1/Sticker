@@ -11,17 +11,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../tiktok/comment_sticker_sheet.dart';
 import '../tiktok/tiktok_import_sheet.dart';
+import '../tiktok/tiktok_url.dart';
 
-final _tiktokClipboardUrlPattern = RegExp(
-  r'https?://(?:(?:www|m|vm|vt)\.)?tiktok\.com/[^\s]+',
-  caseSensitive: false,
-);
-
-String? extractTikTokClipboardUrl(String? text) {
-  if (text == null) return null;
-  final match = _tiktokClipboardUrlPattern.firstMatch(text.trim())?.group(0);
-  return match?.replaceFirst(RegExp(r'''[.,!?;:'")\]}]+$'''), '');
-}
+export '../tiktok/tiktok_url.dart' show extractTikTokClipboardUrl;
 
 class MainScaffold extends ConsumerStatefulWidget {
   const MainScaffold({super.key});
