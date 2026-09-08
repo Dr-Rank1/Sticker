@@ -26,6 +26,7 @@ class PackDetailScreen extends ConsumerStatefulWidget {
 class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
     with SingleTickerProviderStateMixin {
   bool _exporting = false;
+  bool _sharing = false;
   late final AnimationController _shakeController;
   late final Animation<double> _shake;
 
@@ -70,6 +71,12 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
       appBar: AppBar(
         title: Text(pack.name),
         actions: [
+          IconButton(
+            key: const Key('share-pack'),
+            tooltip: 'Share pack',
+            onPressed: _sharing ? null : () => _sharePack(pack),
+            icon: const Icon(Icons.share_outlined),
+          ),
           IconButton(
             tooltip: 'Edit pack',
             onPressed: () => showCreatePackSheet(context, existing: pack),
@@ -239,6 +246,21 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
       return;
     }
     _addToWhatsApp(pack);
+  }
+
+  Future<void> _sharePack(StickerPack pack) async {
+    setState(() => _sharing = true);
+    try {
+      await ref.read(packsProvider.notifier).sharePack(pack.id);
+    } on PackException catch (error) {
+      if (!mounted) return;
+      _showFeedback(error.message);
+    } catch (error) {
+      if (!mounted) return;
+      _showFeedback('Could not share this pack.');
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
   }
 
   Future<void> _addToWhatsApp(StickerPack pack) async {

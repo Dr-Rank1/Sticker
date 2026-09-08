@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'export_service.dart';
 import 'pack_models.dart';
 import 'pack_repository.dart';
 
@@ -18,6 +19,10 @@ final packByIdProvider = Provider.family<StickerPack?, String>((ref, id) {
     if (pack.id == id) return pack;
   }
   return null;
+});
+
+final exportServiceProvider = Provider<ExportService>((ref) {
+  return ExportService(repository: ref.watch(packRepositoryProvider));
 });
 
 class PacksController extends AsyncNotifier<List<StickerPack>> {
@@ -99,6 +104,16 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
     final saved = await _repo.save(pack);
     await refresh();
     return saved;
+  }
+
+  Future<void> sharePack(String packId) async {
+    await ref.read(exportServiceProvider).sharePack(packId);
+  }
+
+  Future<StickerPack> importStikkFile(String archivePath) async {
+    final pack = await ref.read(exportServiceProvider).importPack(archivePath);
+    await refresh();
+    return pack;
   }
 
   /// Finds or creates the static "Comment stickers" pack and adds a WebP.

@@ -12,8 +12,10 @@ import 'error/app_error_handlers.dart';
 import 'logging/app_logger.dart';
 import 'onboarding/onboarding_controller.dart';
 import 'onboarding/onboarding_screen.dart';
+import 'packs/pack_models.dart';
 import 'packs/pack_providers.dart';
 import 'packs/sticker_repository.dart';
+import 'packs/stikk_file_intent.dart';
 import 'state/settings_store.dart';
 import 'state/theme_controller.dart';
 import 'storage/cache_cleanup_worker.dart';
@@ -99,7 +101,9 @@ class StikkApp extends ConsumerStatefulWidget {
 
 class _StikkAppState extends ConsumerState<StikkApp> {
   StreamSubscription<List<SharedMediaFile>>? _shareSub;
+  StreamSubscription<String>? _stikkSub;
   String? _sharedTikTokUrl;
+  final _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
@@ -109,6 +113,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
     );
     if (_sharedTikTokUrl != null) unawaited(_consumeClipboard());
     _listenForSharedTikTokUrls();
+    _listenForStikkFiles();
   }
 
   void _listenForSharedTikTokUrls() {
@@ -136,11 +141,58 @@ class _StikkAppState extends ConsumerState<StikkApp> {
   }
 
   void _handleSharedMedia(List<SharedMediaFile> files) {
+    final stikkPath = extractStikkPathFromSharedMedia(files);
+    if (stikkPath != null) {
+      unawaited(_importStikkFile(stikkPath));
+      return;
+    }
     final url = extractTikTokUrlFromSharedMedia(files);
     if (url == null || url == _sharedTikTokUrl) return;
     unawaited(_consumeClipboard());
     if (!mounted) return;
     setState(() => _sharedTikTokUrl = url);
+  }
+
+  void _listenForStikkFiles() {
+    final intent = ref.read(stikkFileIntentProvider);
+    _stikkSub = intent.fileStream().listen(
+      _importStikkFile,
+      onError: (Object error) {
+        appLogger.d('Stikk file stream unavailable: $error');
+      },
+    );
+    unawaited(_loadInitialStikkFile(intent));
+  }
+
+  Future<void> _loadInitialStikkFile(StikkFileIntent intent) async {
+    try {
+      final path = await intent.getInitialFile();
+      if (path != null) await _importStikkFile(path);
+    } catch (error) {
+      appLogger.d('Stikk file intent unavailable: $error');
+    }
+  }
+
+  Future<void> _importStikkFile(String path) async {
+    try {
+      final pack = await ref.read(packsProvider.notifier).importStikkFile(path);
+      _showMessage('Imported ${pack.name}.');
+    } on PackException catch (error) {
+      _showMessage(error.message);
+    } catch (error) {
+      appLogger.e('Failed to import .stikk pack', error: error);
+      _showMessage('Could not import this pack.');
+    }
+  }
+
+  void _showMessage(String message) {
+    final ctx = _navigatorKey.currentContext;
+    if (ctx == null) return;
+    ScaffoldMessenger.of(ctx)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
   }
 
   Future<void> _consumeClipboard() async {
@@ -159,6 +211,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
   @override
   void dispose() {
     _shareSub?.cancel();
+    _stikkSub?.cancel();
     super.dispose();
   }
 
@@ -183,6 +236,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
 
     return MaterialApp(
       title: 'Stikk',
+      navigatorKey: _navigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       theme: AppTheme.light,

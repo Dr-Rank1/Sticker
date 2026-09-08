@@ -61,6 +61,7 @@ void main() {
 
     expect(find.byType(PackDetailScreen), findsOneWidget);
     expect(find.byKey(const Key('add-to-whatsapp')), findsOneWidget);
+    expect(find.byKey(const Key('share-pack')), findsOneWidget);
   });
 
   testWidgets('Add to WhatsApp shakes and explains the 3-sticker minimum', (

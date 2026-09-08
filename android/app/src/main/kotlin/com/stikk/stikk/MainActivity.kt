@@ -3,15 +3,20 @@ package com.stikk.stikk
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 class MainActivity : FlutterActivity() {
 
     private var pendingResult: MethodChannel.Result? = null
+    private var stikkChannel: MethodChannel? = null
+    private var pendingStikkPath: String? = null
 
     private val addPackLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -28,11 +33,32 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        stikkChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            STIKK_CHANNEL,
+        ).apply {
+            setMethodCallHandler { call, result ->
+                when (call.method) {
+                    METHOD_GET_INITIAL_STIKK -> {
+                        result.success(pendingStikkPath)
+                        pendingStikkPath = null
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
+        val initialStikk = extractStikkPath(intent)
+        if (initialStikk != null) {
+            pendingStikkPath = initialStikk
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        val path = extractStikkPath(intent) ?: return
+        pendingStikkPath = path
+        stikkChannel?.invokeMethod(METHOD_ON_STIKK_FILE, path)
     }
 
     private fun addStickerPack(call: MethodCall, result: MethodChannel.Result) {
@@ -143,9 +169,62 @@ class MainActivity : FlutterActivity() {
         super.onDestroy()
     }
 
+    private fun extractStikkPath(intent: Intent?): String? {
+        if (intent == null) return null
+        val uri = when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> extraStream(intent)
+            else -> null
+        } ?: return null
+        if (!looksLikeStikk(intent, uri)) return null
+        return copyUriToCache(uri)
+    }
+
+    private fun looksLikeStikk(intent: Intent, uri: Uri): Boolean {
+        // VIEW filters only match .stikk files or our pack MIME type.
+        if (intent.action == Intent.ACTION_VIEW) return true
+        val mime = (intent.type ?: contentResolver.getType(uri) ?: "").lowercase()
+        if (mime.contains("stikk") ||
+            mime == "application/zip" ||
+            mime == "application/octet-stream"
+        ) {
+            return true
+        }
+        val path = (uri.lastPathSegment ?: uri.toString()).lowercase()
+        return path.contains(".stikk")
+    }
+
+    private fun extraStream(intent: Intent): Uri? {
+        return if (Build.VERSION.SDK_INT >= 33) {
+            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+        }
+    }
+
+    private fun copyUriToCache(uri: Uri): String? {
+        if (uri.scheme == "file") {
+            val path = uri.path
+            if (!path.isNullOrBlank() && File(path).exists()) return path
+        }
+        return try {
+            val out = File(cacheDir, "import_${System.currentTimeMillis()}.stikk")
+            contentResolver.openInputStream(uri)?.use { input ->
+                out.outputStream().use { output -> input.copyTo(output) }
+            } ?: return null
+            out.absolutePath
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     companion object {
         const val CHANNEL = "com.stickerapp/whatsapp_export"
         const val METHOD_ADD_STICKER_PACK = "addStickerPack"
+        const val STIKK_CHANNEL = "com.stikk.stikk/stikk_files"
+        const val METHOD_GET_INITIAL_STIKK = "getInitialStikkFile"
+        const val METHOD_ON_STIKK_FILE = "onStikkFile"
 
         const val ACTION_ENABLE_STICKER_PACK = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
         const val EXTRA_STICKER_PACK_ID = "sticker_pack_id"
