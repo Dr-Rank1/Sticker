@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stikk/tiktok/apify_service.dart';
@@ -36,11 +38,7 @@ void main() {
             },
           });
         }
-        expect(query, {
-          'token': 'test-token',
-          'format': 'json',
-          'clean': true,
-        });
+        expect(query, {'token': 'test-token', 'format': 'json', 'clean': true});
         return _response([
           {'commentId': '1', 'text': 'hello'},
           {
@@ -48,10 +46,7 @@ void main() {
             'authorNickname': 'Ian',
             'images': ['https://example.com/a.webp'],
           },
-          {
-            'commentId': '3',
-            'imageUrl': null,
-          },
+          {'commentId': '3', 'imageUrl': null},
         ]);
       },
     );
@@ -109,6 +104,23 @@ void main() {
     expect(stickers.single.commentId, '2');
     expect(stickers.single.author, 'Ian');
     expect(stickers.single.imageUrl, 'https://example.com/a.webp');
+  });
+
+  test('parseApifyItems runs inside Isolate.run', () async {
+    final items = [
+      for (var i = 0; i < 40; i++)
+        {
+          'commentId': '$i',
+          'authorNickname': 'User$i',
+          'images': ['https://example.com/$i.webp'],
+        },
+    ];
+
+    final stickers = await Isolate.run(() => parseApifyItems(items));
+
+    expect(stickers, hasLength(40));
+    expect(stickers.first.imageUrl, 'https://example.com/0.webp');
+    expect(stickers.last.commentId, '39');
   });
 
   test('stops polling when the Actor fails', () async {

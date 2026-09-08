@@ -21,12 +21,44 @@ class CommentSticker {
     required this.commentId,
     required this.imageUrl,
     required this.author,
+    this.localPath,
   });
 
   final String id;
   final String commentId;
   final String imageUrl;
   final String author;
+  final String? localPath;
+
+  CommentSticker copyWith({String? localPath}) {
+    return CommentSticker(
+      id: id,
+      commentId: commentId,
+      imageUrl: imageUrl,
+      author: author,
+      localPath: localPath ?? this.localPath,
+    );
+  }
+
+  Map<String, String> toJson() {
+    return {
+      'id': id,
+      'commentId': commentId,
+      'imageUrl': imageUrl,
+      'author': author,
+      if (localPath != null) 'localPath': localPath!,
+    };
+  }
+
+  factory CommentSticker.fromJson(Map<String, dynamic> json) {
+    return CommentSticker(
+      id: json['id']?.toString() ?? '',
+      commentId: json['commentId']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      author: json['author']?.toString() ?? '',
+      localPath: json['localPath']?.toString(),
+    );
+  }
 
   static List<CommentSticker> fromComment(Map<String, dynamic> comment) {
     final commentId = comment['id']?.toString() ?? '';

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +25,8 @@ class ApifyNetworkException extends ApifyException {
 
 class ApifyLimitException extends ApifyException {
   const ApifyLimitException([
-    super.message = 'Apify’s request limit was reached. Please try again later.',
+    super.message =
+        'Apify’s request limit was reached. Please try again later.',
   ]);
 }
 
@@ -169,13 +171,8 @@ class ApifyService {
 
   Future<List<CommentSticker>> fetchCommentStickers(String postUrl) async {
     final items = await runTikTokCommentScraper(postUrl: postUrl);
-    final found = <String, CommentSticker>{};
-    for (final item in items) {
-      for (final sticker in stickersFromItem(item)) {
-        found.putIfAbsent(sticker.imageUrl, () => sticker);
-      }
-    }
-    return found.values.toList(growable: false);
+    if (items.isEmpty) return const [];
+    return Isolate.run(() => parseApifyItems(items));
   }
 
   Map<String, dynamic> scraperInput({required String postUrl}) {
@@ -249,11 +246,7 @@ class ApifyService {
   Future<Response<dynamic>> _post(String path, Object? data) {
     final customPost = apiPost;
     if (customPost != null) return customPost(path, data);
-    return _dio.post<dynamic>(
-      path,
-      data: data,
-      queryParameters: _tokenQuery(),
-    );
+    return _dio.post<dynamic>(path, data: data, queryParameters: _tokenQuery());
   }
 
   Future<Response<dynamic>> _get(
@@ -267,10 +260,7 @@ class ApifyService {
   }
 
   Map<String, dynamic> _tokenQuery([Map<String, dynamic>? extra]) {
-    return <String, dynamic>{
-      'token': _token,
-      if (extra != null) ...extra,
-    };
+    return <String, dynamic>{'token': _token, if (extra != null) ...extra};
   }
 
   String _statusOf(Map<String, dynamic> run) {
@@ -362,6 +352,19 @@ bool _isHttpUrl(String value) {
   return uri != null &&
       (uri.scheme == 'http' || uri.scheme == 'https') &&
       uri.host.isNotEmpty;
+}
+
+/// Isolate-safe conversion of Apify dataset rows into unique comment stickers.
+List<CommentSticker> parseApifyItems(List<dynamic> items) {
+  final found = <String, CommentSticker>{};
+  for (final raw in items) {
+    final item = _asMap(raw);
+    if (item == null) continue;
+    for (final sticker in ApifyService.stickersFromItem(item)) {
+      found.putIfAbsent(sticker.imageUrl, () => sticker);
+    }
+  }
+  return found.values.toList(growable: false);
 }
 
 final apifyServiceProvider = Provider<ApifyService>((ref) {

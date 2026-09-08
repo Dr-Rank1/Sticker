@@ -15,6 +15,7 @@ import 'package:stikk/state/settings_store.dart';
 import 'package:stikk/theme/app_theme.dart';
 import 'package:stikk/tiktok/apify_service.dart';
 import 'package:stikk/tiktok/comment_sticker_formatter.dart';
+import 'package:stikk/tiktok/comment_sticker_isolate.dart';
 import 'package:stikk/tiktok/comment_sticker_sheet.dart';
 import 'package:stikk/tiktok/tiktok_comment_service.dart';
 import 'package:stikk/widgets/main_scaffold.dart';
@@ -69,6 +70,8 @@ void main() {
     expect(find.byKey(const Key('comment-sticker-grid')), findsOneWidget);
     expect(find.byType(GridView), findsOneWidget);
     expect(find.byType(CachedNetworkImage), findsNWidgets(2));
+    expect(find.byKey(const Key('comment-sticker-progress')), findsOneWidget);
+    expect(find.text('2 / 2'), findsOneWidget);
     expect(find.byType(InkWell), findsWidgets);
     expect(apify.lastUrl, contains('7393468652906925317'));
   });
@@ -175,6 +178,73 @@ void main() {
     expect(packs.single.stickers, hasLength(1));
     expect(packs.single.stickers.single.animated, isFalse);
   });
+
+  testWidgets('grid populates as download progress arrives over the port', (
+    tester,
+  ) async {
+    final controller = StreamController<CommentStickerProgress>();
+    addTearDown(controller.close);
+    const first = CommentSticker(
+      id: '1_0',
+      commentId: '1',
+      imageUrl: 'https://example.com/sticker.webp',
+      author: 'Ian',
+    );
+    const second = CommentSticker(
+      id: '2_0',
+      commentId: '2',
+      imageUrl: 'https://example.com/reply.webp',
+      author: 'Ada',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          commentStickerCacheDirectoryProvider.overrideWithValue(
+            () async => Directory.systemTemp,
+          ),
+          commentStickerPipelineProvider.overrideWithValue(
+            _ScriptedCommentStickerPipeline(controller.stream),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(
+            body: CommentStickerSheet(
+              stickers: [first, second],
+              prefetchDownloads: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('comment-sticker-grid')), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.text('0 / 2'), findsOneWidget);
+
+    controller.add(
+      const CommentStickerProgress(downloaded: 1, total: 2, sticker: first),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('comment-sticker-grid')), findsOneWidget);
+    expect(find.byKey(const Key('comment-sticker-1_0')), findsOneWidget);
+    expect(find.byKey(const Key('comment-sticker-2_0')), findsNothing);
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    controller.add(
+      const CommentStickerProgress(downloaded: 2, total: 2, sticker: second),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('comment-sticker-1_0')), findsOneWidget);
+    expect(find.byKey(const Key('comment-sticker-2_0')), findsOneWidget);
+    expect(find.byType(CachedNetworkImage), findsNWidgets(2));
+    expect(find.text('2 / 2'), findsOneWidget);
+  });
 }
 
 Widget _app(ApifyService apify) {
@@ -184,11 +254,14 @@ Widget _app(ApifyService apify) {
       settingsStoreProvider.overrideWithValue(
         InMemorySettingsStore(onboardingComplete: true),
       ),
+      commentStickerCacheDirectoryProvider.overrideWithValue(
+        () async => Directory.systemTemp,
+      ),
+      commentStickerPipelineProvider.overrideWithValue(
+        ImmediateCommentStickerPipeline(),
+      ),
     ],
-    child: MaterialApp(
-      theme: AppTheme.light,
-      home: const MainScaffold(),
-    ),
+    child: MaterialApp(theme: AppTheme.light, home: const MainScaffold()),
   );
 }
 
@@ -232,21 +305,28 @@ void _mockClipboardReader(
   });
 }
 
+class _ScriptedCommentStickerPipeline implements CommentStickerPipeline {
+  _ScriptedCommentStickerPipeline(this._stream);
+
+  final Stream<CommentStickerProgress> _stream;
+
+  @override
+  Stream<CommentStickerProgress> download({
+    required List<CommentSticker> stickers,
+    required String directory,
+  }) => _stream;
+}
+
 class _FakeApifyService extends ApifyService {
-  _FakeApifyService({
-    this.stickers = const [],
-    this.error,
-    this.gate,
-  }) : super(
-         token: 'test-token',
-         delay: (_) async {},
-         apiPost: (_, _) async => Response<dynamic>(
-           requestOptions: RequestOptions(path: '/'),
-         ),
-         apiGet: (_, _) async => Response<dynamic>(
-           requestOptions: RequestOptions(path: '/'),
-         ),
-       );
+  _FakeApifyService({this.stickers = const [], this.error, this.gate})
+    : super(
+        token: 'test-token',
+        delay: (_) async {},
+        apiPost: (_, _) async =>
+            Response<dynamic>(requestOptions: RequestOptions(path: '/')),
+        apiGet: (_, _) async =>
+            Response<dynamic>(requestOptions: RequestOptions(path: '/')),
+      );
 
   final List<CommentSticker> stickers;
   final Object? error;
@@ -267,9 +347,8 @@ class _FakeApifyService extends ApifyService {
 class _FakeCommentService extends TikTokCommentService {
   _FakeCommentService(this.file)
     : super(
-        apiGet: (_, _) async => Response<dynamic>(
-          requestOptions: RequestOptions(path: '/'),
-        ),
+        apiGet: (_, _) async =>
+            Response<dynamic>(requestOptions: RequestOptions(path: '/')),
       );
 
   final File file;

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../editor/ffmpeg_sticker_service.dart';
 import '../packs/pack_models.dart';
@@ -12,6 +14,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'apify_service.dart';
 import 'comment_sticker_formatter.dart';
+import 'comment_sticker_isolate.dart';
 import 'tiktok_comment_service.dart';
 
 /// Overlay shown while Apify polls. The main scaffold stays underneath.
@@ -77,12 +80,17 @@ Future<void> scanAndShowCommentStickers(
     return;
   }
 
-  await showCommentStickerSheet(context, stickers: stickers);
+  await showCommentStickerSheet(
+    context,
+    stickers: stickers,
+    prefetchDownloads: true,
+  );
 }
 
 Future<void> showCommentStickerSheet(
   BuildContext context, {
   required List<CommentSticker> stickers,
+  bool prefetchDownloads = false,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -92,15 +100,26 @@ Future<void> showCommentStickerSheet(
     backgroundColor: Colors.transparent,
     builder: (_) => FractionallySizedBox(
       heightFactor: 0.9,
-      child: CommentStickerSheet(stickers: stickers),
+      child: CommentStickerSheet(
+        stickers: stickers,
+        prefetchDownloads: prefetchDownloads,
+      ),
     ),
   );
 }
 
+final commentStickerCacheDirectoryProvider =
+    Provider<Future<Directory> Function()>((ref) => getTemporaryDirectory);
+
 class CommentStickerSheet extends ConsumerStatefulWidget {
-  const CommentStickerSheet({super.key, required this.stickers});
+  const CommentStickerSheet({
+    super.key,
+    required this.stickers,
+    this.prefetchDownloads = false,
+  });
 
   final List<CommentSticker> stickers;
+  final bool prefetchDownloads;
 
   @override
   ConsumerState<CommentStickerSheet> createState() =>
@@ -109,6 +128,50 @@ class CommentStickerSheet extends ConsumerStatefulWidget {
 
 class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
   String? _selectedId;
+  final List<CommentSticker> _visible = [];
+  var _downloaded = 0;
+  var _total = 0;
+  StreamSubscription<CommentStickerProgress>? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _total = widget.stickers.length;
+    if (widget.prefetchDownloads && widget.stickers.isNotEmpty) {
+      _startPrefetch();
+    } else {
+      _visible.addAll(widget.stickers);
+      _downloaded = _visible.length;
+    }
+  }
+
+  Future<void> _startPrefetch() async {
+    final directory = await ref.read(commentStickerCacheDirectoryProvider)();
+    if (!mounted) return;
+    _subscription = ref
+        .read(commentStickerPipelineProvider)
+        .download(stickers: widget.stickers, directory: directory.path)
+        .listen(_onProgress);
+  }
+
+  void _onProgress(CommentStickerProgress progress) {
+    if (!mounted) return;
+    setState(() {
+      _downloaded = progress.downloaded;
+      _total = progress.total;
+      final sticker = progress.sticker;
+      if (sticker != null &&
+          !_visible.any((item) => item.imageUrl == sticker.imageUrl)) {
+        _visible.add(sticker);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
 
   Future<void> _select(CommentSticker sticker) async {
     if (_selectedId != null) return;
@@ -116,9 +179,11 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
     File? downloaded;
     File? ready;
     try {
-      downloaded = await ref
-          .read(tikTokCommentServiceProvider)
-          .downloadSticker(sticker);
+      downloaded = sticker.localPath != null
+          ? File(sticker.localPath!)
+          : await ref
+                .read(tikTokCommentServiceProvider)
+                .downloadSticker(sticker);
       ready = await ref
           .read(commentStickerFormatterProvider)
           .makeWhatsAppReady(downloaded);
@@ -193,9 +258,24 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        'Comment stickers',
-                        style: Theme.of(context).textTheme.headlineSmall,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Comment stickers',
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          if (widget.prefetchDownloads && _total > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '$_downloaded / $_total',
+                                key: const Key('comment-sticker-progress'),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: colors.textSecondary),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     IconButton(
@@ -219,7 +299,13 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
 
   Widget _buildContent() {
     final colors = context.colors;
-    if (widget.stickers.isEmpty) {
+    if (_visible.isEmpty &&
+        widget.prefetchDownloads &&
+        _total > 0 &&
+        _downloaded < _total) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_visible.isEmpty) {
       return const _MessageState(
         icon: Icons.search_off_rounded,
         message: 'No image stickers were found in the scanned comments.',
@@ -234,9 +320,9 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: widget.stickers.length,
+      itemCount: _visible.length,
       itemBuilder: (context, index) {
-        final sticker = widget.stickers[index];
+        final sticker = _visible[index];
         final selected = _selectedId == sticker.id;
         return Material(
           color: colors.surfaceMuted,
@@ -250,14 +336,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8),
-                  child: CachedNetworkImage(
-                    imageUrl: sticker.imageUrl,
-                    fit: BoxFit.contain,
-                    placeholder: (_, _) =>
-                        const Center(child: CircularProgressIndicator()),
-                    errorWidget: (_, _, _) =>
-                        const Icon(Icons.broken_image_outlined),
-                  ),
+                  child: _StickerThumb(sticker: sticker),
                 ),
                 if (selected)
                   ColoredBox(
@@ -273,11 +352,32 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
   }
 }
 
+class _StickerThumb extends StatelessWidget {
+  const _StickerThumb({required this.sticker});
+
+  final CommentSticker sticker;
+
+  @override
+  Widget build(BuildContext context) {
+    final path = sticker.localPath;
+    if (path != null && File(path).existsSync()) {
+      return Image.file(
+        File(path),
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: sticker.imageUrl,
+      fit: BoxFit.contain,
+      placeholder: (_, _) => const Center(child: CircularProgressIndicator()),
+      errorWidget: (_, _, _) => const Icon(Icons.broken_image_outlined),
+    );
+  }
+}
+
 class _MessageState extends StatelessWidget {
-  const _MessageState({
-    required this.icon,
-    required this.message,
-  });
+  const _MessageState({required this.icon, required this.message});
 
   final IconData icon;
   final String message;
