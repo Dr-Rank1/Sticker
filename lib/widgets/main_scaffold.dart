@@ -9,13 +9,73 @@ import '../screens/library_screen.dart';
 import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../tiktok/comment_sticker_sheet.dart';
 import '../tiktok/tiktok_import_sheet.dart';
 
-class MainScaffold extends ConsumerWidget {
+final _tiktokClipboardUrlPattern = RegExp(
+  r'https?://(?:(?:www|m|vm|vt)\.)?tiktok\.com/[^\s]+',
+  caseSensitive: false,
+);
+
+String? extractTikTokClipboardUrl(String? text) {
+  if (text == null) return null;
+  final match = _tiktokClipboardUrlPattern.firstMatch(text.trim())?.group(0);
+  return match?.replaceFirst(RegExp(r'''[.,!?;:'")\]}]+$'''), '');
+}
+
+class MainScaffold extends ConsumerStatefulWidget {
   const MainScaffold({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends ConsumerState<MainScaffold>
+    with WidgetsBindingObserver {
+  bool _checkingClipboard = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkClipboard());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkClipboard();
+    }
+  }
+
+  Future<void> _checkClipboard() async {
+    if (_checkingClipboard || !mounted) return;
+    _checkingClipboard = true;
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final url = extractTikTokClipboardUrl(data?.text);
+      if (url == null || !mounted) return;
+
+      // Consume the link before opening the sheet so another lifecycle event
+      // cannot trigger the same scan.
+      await Clipboard.setData(const ClipboardData(text: ''));
+      if (!mounted) return;
+      await showCommentStickerSheet(context, videoUrl: url);
+    } on PlatformException {
+      // Clipboard access may be denied by the OS or device privacy settings.
+    } finally {
+      _checkingClipboard = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tab = ref.watch(navigationProvider);
     final colors = context.colors;
     final brightness = Theme.of(context).brightness;
