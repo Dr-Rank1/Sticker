@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -6,11 +7,13 @@ import 'package:flutter/material.dart';
 import 'editor_models.dart';
 import 'sticker_fonts.dart';
 
-/// Renders text and emoji overlays into a transparent 512×512 PNG so FFmpeg
-/// can composite them onto the trimmed video.
+/// Fallback rasterizer for when a [RepaintBoundary] capture is unavailable.
+///
+/// Applies each layer's [Matrix4] in 512×512 canvas space so FFmpeg can
+/// composite the same layout onto video.
 class OverlayComposer {
   static Future<File?> compose({
-    required List<StickerOverlay> overlays,
+    required List<StickerLayer> overlays,
     required Directory directory,
     int size = WhatsAppStickerSpec.size,
   }) async {
@@ -29,39 +32,69 @@ class OverlayComposer {
     );
 
     for (final overlay in overlays) {
-      final center = Offset(overlay.nx * size, overlay.ny * size);
       canvas
         ..save()
-        ..translate(center.dx, center.dy)
-        ..rotate(overlay.rotation)
-        ..scale(overlay.scale);
+        ..transform(overlay.transform.storage);
 
-      if (overlay.kind == OverlayKind.emoji) {
-        _paintText(canvas, overlay.content, fontSize: 64, outlined: false);
-      } else {
-        _paintText(
-          canvas,
-          overlay.content,
-          fontSize: 42,
-          outlined: true,
-          fontName: overlay.fontName,
-        );
+      switch (overlay.widget) {
+        case EmojiLayerWidget(:final emoji):
+          _paintText(
+            canvas,
+            emoji,
+            fontSize: 56,
+            outlined: false,
+            box: overlay.size,
+          );
+        case TextLayerWidget(:final text, :final fontName):
+          _paintText(
+            canvas,
+            text,
+            fontSize: 34,
+            outlined: true,
+            fontName: fontName,
+            box: overlay.size,
+          );
+        case ImageLayerWidget(:final path, :final bytes):
+          await _paintImage(canvas, overlay.size, path: path, bytes: bytes);
       }
       canvas.restore();
     }
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(size, size);
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     picture.dispose();
     image.dispose();
-    if (bytes == null) return null;
+    if (byteData == null) return null;
 
     final file = File(
       '${directory.path}${Platform.pathSeparator}stikk_overlays_${DateTime.now().millisecondsSinceEpoch}.png',
     );
-    await file.writeAsBytes(bytes.buffer.asUint8List());
+    await file.writeAsBytes(byteData.buffer.asUint8List());
     return file;
+  }
+
+  static Future<void> _paintImage(
+    Canvas canvas,
+    Size box, {
+    required String path,
+    Uint8List? bytes,
+  }) async {
+    try {
+      final data = bytes ?? Uint8List.fromList(await File(path).readAsBytes());
+      final codec = await ui.instantiateImageCodec(data);
+      final frame = await codec.getNextFrame();
+      paintImage(
+        canvas: canvas,
+        rect: Offset.zero & box,
+        image: frame.image,
+        fit: BoxFit.fill,
+        filterQuality: FilterQuality.medium,
+      );
+      frame.image.dispose();
+    } catch (_) {
+      // Missing overlay images are skipped so export can still finish.
+    }
   }
 
   static void _paintText(
@@ -69,15 +102,15 @@ class OverlayComposer {
     String text, {
     required double fontSize,
     required bool outlined,
+    required Size box,
     String fontName = StickerFontCatalog.defaultFont,
   }) {
     TextPainter painter(TextStyle style) {
-      final result = TextPainter(
+      return TextPainter(
         text: TextSpan(text: text, style: style),
         textAlign: TextAlign.center,
         textDirection: TextDirection.ltr,
-      )..layout();
-      return result;
+      )..layout(maxWidth: box.width);
     }
 
     if (outlined) {
@@ -96,7 +129,13 @@ class OverlayComposer {
           ),
         ),
       );
-      stroke.paint(canvas, Offset(-stroke.width / 2, -stroke.height / 2));
+      stroke.paint(
+        canvas,
+        Offset(
+          (box.width - stroke.width) / 2,
+          (box.height - stroke.height) / 2,
+        ),
+      );
     }
 
     final fill = painter(
@@ -110,6 +149,9 @@ class OverlayComposer {
         ),
       ),
     );
-    fill.paint(canvas, Offset(-fill.width / 2, -fill.height / 2));
+    fill.paint(
+      canvas,
+      Offset((box.width - fill.width) / 2, (box.height - fill.height) / 2),
+    );
   }
 }

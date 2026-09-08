@@ -1,47 +1,159 @@
 import 'package:flutter/material.dart';
 
 import '../editor_models.dart';
-import '../sticker_fonts.dart';
-import '../../theme/app_colors.dart';
+import '../layer_transform.dart';
+import 'layer_content.dart';
 
-class OverlayCanvas extends StatelessWidget {
+class OverlayCanvas extends StatefulWidget {
   const OverlayCanvas({
     super.key,
-    required this.overlays,
+    required this.layers,
     required this.selectedId,
     required this.onSelect,
     required this.onChanged,
     required this.onGestureStart,
     required this.onGestureEnd,
+    required this.onDelete,
+    this.captureKey,
+    this.showSelection = true,
   });
 
-  final List<StickerOverlay> overlays;
+  final List<StickerLayer> layers;
   final String? selectedId;
   final ValueChanged<String?> onSelect;
-  final ValueChanged<StickerOverlay> onChanged;
+  final ValueChanged<StickerLayer> onChanged;
   final VoidCallback onGestureStart;
   final VoidCallback onGestureEnd;
+  final ValueChanged<String> onDelete;
+  final GlobalKey? captureKey;
+  final bool showSelection;
+
+  @override
+  State<OverlayCanvas> createState() => _OverlayCanvasState();
+}
+
+class _OverlayCanvasState extends State<OverlayCanvas> {
+  StickerLayer? _active;
+  double _lastScale = 1;
+  double _lastRotation = 0;
+
+  Offset _localPoint(ScaleStartDetails details, Size viewSize) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return Offset.zero;
+    return LayerTransform.toCanvas(
+      box.globalToLocal(details.focalPoint),
+      viewSize,
+    );
+  }
+
+  void _onScaleStart(ScaleStartDetails details, Size viewSize) {
+    final point = _localPoint(details, viewSize);
+    final selected = widget.layers
+        .where((layer) => layer.id == widget.selectedId)
+        .firstOrNull;
+
+    if (widget.showSelection &&
+        selected != null &&
+        LayerTransform.hitsDeleteHandle(
+          transform: selected.transform,
+          layerSize: selected.size,
+          point: point,
+        )) {
+      widget.onDelete(selected.id);
+      _active = null;
+      return;
+    }
+
+    final hitIndex = LayerTransform.hitTestIndex(
+      transforms: widget.layers.map((layer) => layer.transform).toList(),
+      sizes: widget.layers.map((layer) => layer.size).toList(),
+      point: point,
+    );
+    _lastScale = 1;
+    _lastRotation = 0;
+    if (hitIndex < 0) {
+      _active = null;
+      widget.onSelect(null);
+      return;
+    }
+
+    final hit = widget.layers[hitIndex];
+
+    _active = hit;
+    widget.onSelect(hit.id);
+    widget.onGestureStart();
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails details, Size viewSize) {
+    final active = _active;
+    if (active == null) return;
+
+    final current = widget.layers
+        .where((layer) => layer.id == active.id)
+        .firstOrNull;
+    if (current == null) return;
+
+    final scaleMultiplier = _lastScale == 0 ? 1.0 : details.scale / _lastScale;
+    final rotationRadians = details.rotation - _lastRotation;
+    _lastScale = details.scale;
+    _lastRotation = details.rotation;
+
+    final next = current.copyWith(
+      transform: LayerTransform.applyGesture(
+        source: current.transform,
+        layerSize: current.size,
+        focalPointDelta: LayerTransform.toCanvasDelta(
+          details.focalPointDelta,
+          viewSize,
+        ),
+        scaleMultiplier: scaleMultiplier,
+        rotationRadians: rotationRadians,
+      ),
+    );
+    _active = next;
+    widget.onChanged(next);
+  }
+
+  void _onScaleEnd(ScaleEndDetails details) {
+    if (_active != null) {
+      widget.onGestureEnd();
+    }
+    _active = null;
+    _lastScale = 1;
+    _lastRotation = 0;
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final viewSize = Size(constraints.maxWidth, constraints.maxHeight);
         return GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: () => onSelect(null),
-          child: Stack(
-            children: [
-              for (final overlay in overlays)
-                _OverlayItem(
-                  overlay: overlay,
-                  selected: overlay.id == selectedId,
-                  canvasSize: Size(constraints.maxWidth, constraints.maxHeight),
-                  onSelect: () => onSelect(overlay.id),
-                  onChanged: onChanged,
-                  onGestureStart: onGestureStart,
-                  onGestureEnd: onGestureEnd,
+          behavior: HitTestBehavior.opaque,
+          onScaleStart: (details) => _onScaleStart(details, viewSize),
+          onScaleUpdate: (details) => _onScaleUpdate(details, viewSize),
+          onScaleEnd: _onScaleEnd,
+          child: FittedBox(
+            fit: BoxFit.fill,
+            child: SizedBox(
+              width: LayerTransform.canvasExtent,
+              height: LayerTransform.canvasExtent,
+              child: RepaintBoundary(
+                key: widget.captureKey,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (final layer in widget.layers)
+                      _LayerView(
+                        layer: layer,
+                        selected:
+                            widget.showSelection &&
+                            layer.id == widget.selectedId,
+                      ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         );
       },
@@ -49,133 +161,45 @@ class OverlayCanvas extends StatelessWidget {
   }
 }
 
-class _OverlayItem extends StatefulWidget {
-  const _OverlayItem({
-    required this.overlay,
-    required this.selected,
-    required this.canvasSize,
-    required this.onSelect,
-    required this.onChanged,
-    required this.onGestureStart,
-    required this.onGestureEnd,
-  });
+class _LayerView extends StatelessWidget {
+  const _LayerView({required this.layer, required this.selected});
 
-  final StickerOverlay overlay;
+  final StickerLayer layer;
   final bool selected;
-  final Size canvasSize;
-  final VoidCallback onSelect;
-  final ValueChanged<StickerOverlay> onChanged;
-  final VoidCallback onGestureStart;
-  final VoidCallback onGestureEnd;
-
-  @override
-  State<_OverlayItem> createState() => _OverlayItemState();
-}
-
-class _OverlayItemState extends State<_OverlayItem> {
-  StickerOverlay? _gestureOrigin;
-  Offset _panDelta = Offset.zero;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final overlay = widget.overlay;
-
-    return Align(
-      alignment: Alignment(overlay.nx * 2 - 1, overlay.ny * 2 - 1),
-      child: GestureDetector(
-        onTap: widget.onSelect,
-        onScaleStart: (_) {
-          _gestureOrigin = overlay;
-          _panDelta = Offset.zero;
-          widget.onSelect();
-          widget.onGestureStart();
-        },
-        onScaleUpdate: (details) {
-          final origin = _gestureOrigin ?? overlay;
-          _panDelta += details.focalPointDelta;
-          final next = origin.copyWith(
-            nx: (origin.nx + _panDelta.dx / widget.canvasSize.width).clamp(
-              0.08,
-              0.92,
+    return Transform(
+      key: Key('sticker-layer-${layer.id}'),
+      transform: layer.transform,
+      alignment: Alignment.topLeft,
+      filterQuality: FilterQuality.medium,
+      child: SizedBox(
+        width: layer.size.width,
+        height: layer.size.height,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(child: LayerContent(layer: layer)),
             ),
-            ny: (origin.ny + _panDelta.dy / widget.canvasSize.height).clamp(
-              0.08,
-              0.92,
-            ),
-            scale: (origin.scale * details.scale).clamp(0.4, 4.0),
-            rotation: origin.rotation + details.rotation,
-          );
-          widget.onChanged(next);
-        },
-        onScaleEnd: (_) {
-          _gestureOrigin = null;
-          widget.onGestureEnd();
-        },
-        child: Transform.rotate(
-          angle: overlay.rotation,
-          child: Transform.scale(
-            scale: overlay.scale,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: widget.selected
-                    ? Border.all(color: colors.accent, width: 2)
-                    : null,
-                borderRadius: BorderRadius.circular(8),
+            if (selected) ...[
+              const Positioned.fill(
+                child: IgnorePointer(child: DashedSelectionBorder()),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: overlay.kind == OverlayKind.emoji
-                    ? Text(
-                        overlay.content,
-                        style: const TextStyle(fontSize: 56),
-                      )
-                    : _OutlinedText(
-                        overlay.content,
-                        fontName: overlay.fontName,
-                      ),
+              Positioned(
+                right: -10,
+                top: -10,
+                child: IgnorePointer(
+                  child: LayerDeleteHandle(
+                    key: Key('layer-delete-${layer.id}'),
+                  ),
+                ),
               ),
-            ),
-          ),
+            ],
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _OutlinedText extends StatelessWidget {
-  const _OutlinedText(this.text, {required this.fontName});
-
-  final String text;
-  final String fontName;
-
-  @override
-  Widget build(BuildContext context) {
-    const base = TextStyle(
-      fontSize: 34,
-      fontWeight: FontWeight.w800,
-      height: 1.1,
-    );
-    final style = StickerFontCatalog.styleFor(fontName, base);
-    return Stack(
-      children: [
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: style.copyWith(
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 7
-              ..strokeJoin = StrokeJoin.round
-              ..color = Colors.black,
-          ),
-        ),
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: style.copyWith(color: Colors.white),
-        ),
-      ],
     );
   }
 }

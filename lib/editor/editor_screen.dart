@@ -10,6 +10,7 @@ import '../packs/save_to_pack_sheet.dart';
 import '../state/navigation_controller.dart';
 import '../storage/storage_utility.dart';
 import '../theme/app_colors.dart';
+import 'canvas_exporter.dart';
 import 'editor_controller.dart';
 import 'editor_models.dart';
 import 'ffmpeg_sticker_service.dart';
@@ -45,6 +46,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   VideoPlayerController? _player;
   bool _showSpeeds = false;
   final _textController = TextEditingController();
+  final _overlayCaptureKey = GlobalKey();
 
   EditorController get _editor => ref.read(editorProvider.notifier);
 
@@ -102,10 +104,19 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     try {
       final document = ref.read(editorProvider).document;
       final temp = await getTemporaryDirectory();
-      final overlay = await OverlayComposer.compose(
-        overlays: document.overlays,
-        directory: temp,
-      );
+      File? overlay;
+      if (document.overlays.isNotEmpty) {
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
+        overlay = await CanvasExporter.captureToFile(
+          key: _overlayCaptureKey,
+          directory: temp,
+        );
+        overlay ??= await OverlayComposer.compose(
+          overlays: document.overlays,
+          directory: temp,
+        );
+      }
 
       final StickerExportResult result;
       if (widget.isStatic) {
@@ -318,28 +329,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                             else
                               const Center(child: CircularProgressIndicator()),
                             OverlayCanvas(
-                              overlays: document.overlays,
+                              captureKey: _overlayCaptureKey,
+                              layers: document.overlays,
                               selectedId: document.selectedId,
+                              showSelection: !editorState.saving,
                               onSelect: _editor.select,
                               onChanged: _editor.updateOverlayLive,
                               onGestureStart: _editor.beginGesture,
                               onGestureEnd: _editor.endGesture,
+                              onDelete: (_) => _editor.deleteSelected(),
                             ),
-                            if (document.selectedId != null)
-                              Positioned(
-                                right: 12,
-                                top: 12,
-                                child: IconButton.filled(
-                                  onPressed: _editor.deleteSelected,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.black54,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  icon: const Icon(
-                                    Icons.delete_outline_rounded,
-                                  ),
-                                ),
-                              ),
                             if (editorState.saving)
                               ColoredBox(
                                 color: Colors.black54,

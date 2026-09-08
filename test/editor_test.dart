@@ -58,6 +58,17 @@ void main() {
         'Roboto',
       );
     });
+
+    test('image layers join the z-ordered overlay list', () {
+      final editor = container.read(editorProvider.notifier);
+      editor.addText('Hello');
+      editor.addImage('overlay.png');
+
+      final overlays = container.read(editorProvider).document.overlays;
+      expect(overlays, hasLength(2));
+      expect(overlays.last.kind, OverlayKind.image);
+      expect(overlays.last.widget, isA<ImageLayerWidget>());
+    });
   });
 
   group('FfmpegStickerService', () {

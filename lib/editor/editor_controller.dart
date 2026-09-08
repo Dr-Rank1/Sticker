@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'editor_models.dart';
@@ -101,7 +103,7 @@ class EditorController extends Notifier<EditorState> {
       state.document.copyWith(
         overlays: [
           ...state.document.overlays,
-          StickerOverlay(id: id, kind: OverlayKind.text, content: trimmed),
+          StickerLayer.text(trimmed, id: id),
         ],
         selectedId: id,
       ),
@@ -114,12 +116,20 @@ class EditorController extends Notifier<EditorState> {
       state.document.copyWith(
         overlays: [
           ...state.document.overlays,
-          StickerOverlay(
-            id: id,
-            kind: OverlayKind.emoji,
-            content: emoji,
-            ny: 0.62,
-          ),
+          StickerLayer.emoji(emoji, id: id),
+        ],
+        selectedId: id,
+      ),
+    );
+  }
+
+  void addImage(String path, {Uint8List? bytes}) {
+    final id = _newId();
+    _commit(
+      state.document.copyWith(
+        overlays: [
+          ...state.document.overlays,
+          StickerLayer.image(path, id: id, bytes: bytes),
         ],
         selectedId: id,
       ),
@@ -161,7 +171,7 @@ class EditorController extends Notifier<EditorState> {
         overlays: [
           for (final overlay in state.document.overlays)
             if (overlay.id == selected.id)
-              overlay.copyWith(fontName: fontName)
+              overlay.withFont(fontName)
             else
               overlay,
         ],
@@ -197,7 +207,7 @@ class EditorController extends Notifier<EditorState> {
     _gestureBase = state.document;
   }
 
-  void updateOverlayLive(StickerOverlay overlay) {
+  void updateOverlayLive(StickerLayer overlay) {
     state = state.copyWith(
       document: state.document.copyWith(
         overlays: [
@@ -247,11 +257,11 @@ class EditorController extends Notifier<EditorState> {
         _overlaySignature(a.overlays) == _overlaySignature(b.overlays);
   }
 
-  String _overlaySignature(List<StickerOverlay> overlays) {
+  String _overlaySignature(List<StickerLayer> overlays) {
     return overlays
         .map(
           (o) =>
-              '${o.id}:${o.content}:${o.fontName}:${o.nx.toStringAsFixed(3)}:${o.ny.toStringAsFixed(3)}:${o.scale.toStringAsFixed(3)}:${o.rotation.toStringAsFixed(3)}',
+              '${o.id}:${o.content}:${o.fontName}:${o.size.width.toStringAsFixed(1)}x${o.size.height.toStringAsFixed(1)}:${o.transform.storage.map((n) => n.toStringAsFixed(3)).join(',')}',
         )
         .join('|');
   }

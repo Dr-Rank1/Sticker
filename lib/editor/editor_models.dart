@@ -1,52 +1,207 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
+import 'layer_transform.dart';
 import 'sticker_fonts.dart';
 
-enum OverlayKind { text, emoji }
+enum OverlayKind { text, emoji, image }
+
+/// Visual payload for a [StickerLayer]: text, emoji, or image.
+@immutable
+sealed class StickerLayerWidget {
+  const StickerLayerWidget();
+}
 
 @immutable
-class StickerOverlay {
-  const StickerOverlay({
-    required this.id,
-    required this.kind,
-    required this.content,
+class TextLayerWidget extends StickerLayerWidget {
+  const TextLayerWidget(
+    this.text, {
     this.fontName = StickerFontCatalog.defaultFont,
-    this.nx = 0.5,
-    this.ny = 0.5,
-    this.scale = 1,
-    this.rotation = 0,
   });
 
-  final String id;
-  final OverlayKind kind;
-  final String content;
+  final String text;
   final String fontName;
+}
 
-  /// Normalized center (0–1) on the 512×512 canvas.
-  final double nx;
-  final double ny;
-  final double scale;
-  final double rotation;
+@immutable
+class EmojiLayerWidget extends StickerLayerWidget {
+  const EmojiLayerWidget(this.emoji);
 
-  StickerOverlay copyWith({
-    String? fontName,
-    double? nx,
-    double? ny,
-    double? scale,
-    double? rotation,
+  final String emoji;
+}
+
+@immutable
+class ImageLayerWidget extends StickerLayerWidget {
+  const ImageLayerWidget(this.path, {this.bytes});
+
+  final String path;
+  final Uint8List? bytes;
+}
+
+/// A single interactive overlay. [transform] is a [Matrix4] in 512×512
+/// canvas space. List order in [EditorDocument.overlays] is z-index
+/// (later entries paint on top).
+@immutable
+class StickerLayer {
+  StickerLayer({
+    required this.id,
+    required this.widget,
+    Matrix4? transform,
+    Size? size,
+  }) : size = size ?? measure(widget),
+       transform = Matrix4.copy(
+         transform ??
+             LayerTransform.initial(
+               canvasSize: const Size(
+                 LayerTransform.canvasExtent,
+                 LayerTransform.canvasExtent,
+               ),
+               layerSize: size ?? measure(widget),
+             ),
+       );
+
+  factory StickerLayer.text(
+    String text, {
+    required String id,
+    String fontName = StickerFontCatalog.defaultFont,
+    Offset normalizedCenter = const Offset(0.5, 0.5),
   }) {
-    return StickerOverlay(
+    final widget = TextLayerWidget(text, fontName: fontName);
+    final size = measure(widget);
+    return StickerLayer(
       id: id,
-      kind: kind,
-      content: content,
-      fontName: fontName ?? this.fontName,
-      nx: nx ?? this.nx,
-      ny: ny ?? this.ny,
-      scale: scale ?? this.scale,
-      rotation: rotation ?? this.rotation,
+      widget: widget,
+      size: size,
+      transform: LayerTransform.initial(
+        canvasSize: const Size(
+          LayerTransform.canvasExtent,
+          LayerTransform.canvasExtent,
+        ),
+        layerSize: size,
+        normalizedCenter: normalizedCenter,
+      ),
     );
   }
+
+  factory StickerLayer.emoji(
+    String emoji, {
+    required String id,
+    Offset normalizedCenter = const Offset(0.5, 0.62),
+  }) {
+    final content = EmojiLayerWidget(emoji);
+    final size = measure(content);
+    return StickerLayer(
+      id: id,
+      widget: content,
+      size: size,
+      transform: LayerTransform.initial(
+        canvasSize: const Size(
+          LayerTransform.canvasExtent,
+          LayerTransform.canvasExtent,
+        ),
+        layerSize: size,
+        normalizedCenter: normalizedCenter,
+      ),
+    );
+  }
+
+  factory StickerLayer.image(
+    String path, {
+    required String id,
+    Uint8List? bytes,
+    Offset normalizedCenter = const Offset(0.5, 0.5),
+  }) {
+    final widget = ImageLayerWidget(path, bytes: bytes);
+    final size = measure(widget);
+    return StickerLayer(
+      id: id,
+      widget: widget,
+      size: size,
+      transform: LayerTransform.initial(
+        canvasSize: const Size(
+          LayerTransform.canvasExtent,
+          LayerTransform.canvasExtent,
+        ),
+        layerSize: size,
+        normalizedCenter: normalizedCenter,
+      ),
+    );
+  }
+
+  final String id;
+
+  /// Text, emoji, or image content rendered on the canvas.
+  final StickerLayerWidget widget;
+  final Matrix4 transform;
+  final Size size;
+
+  OverlayKind get kind => switch (widget) {
+    TextLayerWidget() => OverlayKind.text,
+    EmojiLayerWidget() => OverlayKind.emoji,
+    ImageLayerWidget() => OverlayKind.image,
+  };
+
+  String get content => switch (widget) {
+    TextLayerWidget(:final text) => text,
+    EmojiLayerWidget(:final emoji) => emoji,
+    ImageLayerWidget(:final path) => path,
+  };
+
+  String get fontName => switch (widget) {
+    TextLayerWidget(:final fontName) => fontName,
+    _ => StickerFontCatalog.defaultFont,
+  };
+
+  StickerLayer copyWith({
+    StickerLayerWidget? widget,
+    Matrix4? transform,
+    Size? size,
+  }) {
+    return StickerLayer(
+      id: id,
+      widget: widget ?? this.widget,
+      transform: transform ?? this.transform,
+      size: size ?? this.size,
+    );
+  }
+
+  StickerLayer withFont(String fontName) {
+    final current = widget;
+    if (current is! TextLayerWidget || current.fontName == fontName) {
+      return this;
+    }
+    final nextWidget = TextLayerWidget(current.text, fontName: fontName);
+    final nextSize = measure(nextWidget);
+    final oldCenter = LayerTransform.centerOf(transform, size);
+    final nextTransform = Matrix4.copy(transform);
+    final newCenter = LayerTransform.centerOf(nextTransform, nextSize);
+    nextTransform.leftTranslate(
+      oldCenter.dx - newCenter.dx,
+      oldCenter.dy - newCenter.dy,
+    );
+    return copyWith(
+      widget: nextWidget,
+      size: nextSize,
+      transform: nextTransform,
+    );
+  }
+
+  static Size measure(StickerLayerWidget widget) {
+    switch (widget) {
+      case TextLayerWidget(:final text):
+        final width = (text.length * 21.0 + 24).clamp(64.0, 480.0);
+        return Size(width, 56);
+      case EmojiLayerWidget():
+        return const Size(80, 80);
+      case ImageLayerWidget():
+        return const Size(168, 168);
+    }
+  }
 }
+
+/// Back-compat alias used by older editor tests and export helpers.
+typedef StickerOverlay = StickerLayer;
 
 @immutable
 class EditorDocument {
@@ -59,7 +214,8 @@ class EditorDocument {
     this.videoDuration = 0,
   });
 
-  final List<StickerOverlay> overlays;
+  /// Z-ordered sticker layers. Later entries are drawn on top.
+  final List<StickerLayer> overlays;
   final double trimStart;
   final double trimEnd;
   final double speed;
@@ -68,7 +224,7 @@ class EditorDocument {
 
   double get trimDuration => (trimEnd - trimStart).clamp(0.2, videoDuration);
 
-  StickerOverlay? get selected {
+  StickerLayer? get selected {
     if (selectedId == null) return null;
     for (final overlay in overlays) {
       if (overlay.id == selectedId) return overlay;
@@ -77,7 +233,7 @@ class EditorDocument {
   }
 
   EditorDocument copyWith({
-    List<StickerOverlay>? overlays,
+    List<StickerLayer>? overlays,
     double? trimStart,
     double? trimEnd,
     double? speed,
