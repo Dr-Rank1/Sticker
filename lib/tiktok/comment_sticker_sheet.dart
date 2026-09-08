@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../editor/ffmpeg_sticker_service.dart';
-import '../packs/save_to_pack_sheet.dart';
+import '../packs/pack_models.dart';
+import '../packs/pack_providers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'apify_service.dart';
@@ -123,20 +124,18 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           .makeWhatsAppReady(downloaded);
       if (!mounted) return;
 
-      final pack = await showSaveToPackSheet(
-        context,
-        stickerPath: ready.path,
-        animated: false,
-      );
+      await ref
+          .read(packsProvider.notifier)
+          .saveStaticStickerToLibrary(ready.path);
       if (!mounted) return;
-      if (pack != null) {
-        await HapticFeedback.mediumImpact();
-        if (!mounted) return;
-        _showMessage('Saved to Pack');
-      }
+
+      HapticFeedback.mediumImpact();
+      _showMessage('Sticker formatted and saved to Library!');
     } on TikTokCommentException catch (error) {
       if (mounted) _showMessage(error.message);
     } on StickerExportException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } on PackException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
       if (mounted) {
@@ -244,6 +243,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           clipBehavior: Clip.antiAlias,
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           child: InkWell(
+            key: Key('comment-sticker-${sticker.id}'),
             onTap: _selectedId == null ? () => _select(sticker) : null,
             child: Stack(
               fit: StackFit.expand,

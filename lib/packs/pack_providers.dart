@@ -83,4 +83,32 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
     await _repo.deletePack(id);
     await refresh();
   }
+
+  /// Finds or creates the static "Comment stickers" pack and adds a WebP.
+  Future<StickerPack> saveStaticStickerToLibrary(String sourcePath) async {
+    final packs = await _repo.getAll();
+    StickerPack? target;
+    for (final pack in packs) {
+      if (pack.name == commentPackName &&
+          pack.acceptsSticker(animated: false) &&
+          !pack.isFull) {
+        target = pack;
+        break;
+      }
+    }
+    target ??= await _repo.createPack(
+      name: commentPackName,
+      author: commentPackAuthor,
+    );
+    final updated = await _repo.addSticker(
+      packId: target.id,
+      sourcePath: sourcePath,
+      animated: false,
+    );
+    await refresh();
+    return updated;
+  }
 }
+
+const commentPackName = 'Comment stickers';
+const commentPackAuthor = 'Stikk';

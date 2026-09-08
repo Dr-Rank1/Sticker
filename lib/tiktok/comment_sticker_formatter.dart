@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
+import '../editor/editor_models.dart';
 import '../editor/ffmpeg_sticker_service.dart';
 import '../editor/image_sticker_service.dart';
 import '../photos/photo_import_controller.dart';
@@ -30,19 +31,37 @@ class CommentStickerFormatter {
       }
 
       final canvas = _imageService.fitToStickerCanvas(decoded);
+      if (canvas.width != WhatsAppStickerSpec.size ||
+          canvas.height != WhatsAppStickerSpec.size) {
+        throw const StickerExportException(
+          'The sticker canvas could not be sized to 512×512.',
+        );
+      }
+
       final directory = await _temporaryDirectory();
       final stamp = DateTime.now().microsecondsSinceEpoch;
+      final output = File(
+        '${directory.path}${Platform.pathSeparator}whatsapp_ready_$stamp.webp',
+      );
+
+      final lossless = img.encodeWebP(canvas);
+      if (lossless.length <= WhatsAppStickerSpec.maxStaticBytes) {
+        await output.writeAsBytes(lossless, flush: true);
+        return output;
+      }
+
       canvasPng = File(
         '${directory.path}${Platform.pathSeparator}comment_canvas_$stamp.png',
       );
       await canvasPng.writeAsBytes(img.encodePng(canvas), flush: true);
-
       final encoded = await _imageService.exportStaticSticker(
         imagePath: canvasPng.path,
       );
-      final output = File(
-        '${directory.path}${Platform.pathSeparator}whatsapp_ready_$stamp.webp',
-      );
+      if (encoded.bytes > WhatsAppStickerSpec.maxStaticBytes) {
+        throw StickerExportException(
+          'Could not keep the sticker under 100KB. Try another comment image.',
+        );
+      }
       if (output.existsSync()) output.deleteSync();
       await encoded.file.rename(output.path);
       return output;

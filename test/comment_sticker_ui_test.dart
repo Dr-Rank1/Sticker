@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
@@ -7,9 +8,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:stikk/editor/image_sticker_service.dart';
+import 'package:stikk/packs/pack_providers.dart';
+import 'package:stikk/packs/pack_repository.dart';
 import 'package:stikk/state/settings_store.dart';
 import 'package:stikk/theme/app_theme.dart';
 import 'package:stikk/tiktok/apify_service.dart';
+import 'package:stikk/tiktok/comment_sticker_formatter.dart';
 import 'package:stikk/tiktok/comment_sticker_sheet.dart';
 import 'package:stikk/tiktok/tiktok_comment_service.dart';
 import 'package:stikk/widgets/main_scaffold.dart';
@@ -119,6 +124,57 @@ void main() {
     expect(find.text('Comment stickers'), findsNothing);
     expect(find.text('Apify’s request limit was reached.'), findsOneWidget);
   });
+
+  testWidgets('tapping a sticker formats it and saves it to Library', (
+    tester,
+  ) async {
+    final repo = InMemoryPackRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          packRepositoryProvider.overrideWithValue(repo),
+          tikTokCommentServiceProvider.overrideWithValue(
+            _FakeCommentService(File('dl.img')),
+          ),
+          commentStickerFormatterProvider.overrideWithValue(
+            _FakeFormatter(File('ready.webp')),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(
+            body: CommentStickerSheet(
+              stickers: [
+                CommentSticker(
+                  id: '1_0',
+                  commentId: '1',
+                  imageUrl: 'https://example.com/sticker.webp',
+                  author: 'Ian',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final tile = tester.widget<InkWell>(
+      find.byKey(const Key('comment-sticker-1_0')),
+    );
+    tile.onTap!.call();
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.text('Sticker formatted and saved to Library!'),
+      findsOneWidget,
+    );
+    final packs = await repo.getAll();
+    expect(packs.single.name, commentPackName);
+    expect(packs.single.stickers, hasLength(1));
+    expect(packs.single.stickers.single.animated, isFalse);
+  });
 }
 
 Widget _app(ApifyService apify) {
@@ -162,6 +218,8 @@ void _mockClipboardReader(
           return null;
         case 'Clipboard.hasStrings':
           return <String, dynamic>{'value': read().isNotEmpty};
+        case 'HapticFeedback.vibrate':
+          return null;
       }
       return null;
     },
@@ -204,4 +262,27 @@ class _FakeApifyService extends ApifyService {
     if (thrown != null) throw thrown;
     return stickers;
   }
+}
+
+class _FakeCommentService extends TikTokCommentService {
+  _FakeCommentService(this.file)
+    : super(
+        apiGet: (_, _) async => Response<dynamic>(
+          requestOptions: RequestOptions(path: '/'),
+        ),
+      );
+
+  final File file;
+
+  @override
+  Future<File> downloadSticker(CommentSticker sticker) async => file;
+}
+
+class _FakeFormatter extends CommentStickerFormatter {
+  _FakeFormatter(this.file) : super(ImageStickerService());
+
+  final File file;
+
+  @override
+  Future<File> makeWhatsAppReady(File source) async => file;
 }
