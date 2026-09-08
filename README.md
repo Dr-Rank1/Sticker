@@ -51,9 +51,8 @@ comments that expose actual image attachments, and present the images in a
 selectable grid. Selected images are padded on a transparent 512×512 canvas,
 encoded as static WebP, and can be saved to a local pack.
 
-The active comment-grid integration uses ScrapeBadger's documented
-`image_urls` field. The repository also contains an Apify REST client for Actor
-`X6ACJnuJVBUsBocfe`, including asynchronous run polling and dataset retrieval.
+The comment-sticker grid runs Apify Actor `X6ACJnuJVBUsBocfe`, polls until the
+run succeeds, and keeps only dataset items that include a sticker or image URL.
 
 ### Start from a meme
 
@@ -240,31 +239,15 @@ flutter run --dart-define=TENOR_API_KEY=your_tenor_key
 Without this key, the rest of the app remains usable and Discover displays a
 configuration message.
 
-### ScrapeBadger
-
-ScrapeBadger powers the currently connected TikTok comment-sticker grid because
-its comment schema explicitly exposes sticker and image attachments through
-`image_urls`.
-
-```sh
-flutter run \
-  --dart-define=SCRAPEBADGER_API_KEY=your_scrapebadger_key
-```
-
-The scanner currently reads at most two 50-comment pages to control paid API
-credit usage. Text-only comments are discarded, image URLs are deduplicated,
-and replies included in the response are inspected recursively.
-
 ### Apify
 
-`ApifyService` provides a direct Dio translation of the
-`X6ACJnuJVBUsBocfe` TikTok comment scraper workflow:
+Clipboard comment scanning uses `ApifyService` and Actor `X6ACJnuJVBUsBocfe`:
 
-1. Start the Actor with the configured input.
-2. Poll `/actor-runs/{runId}` every two seconds.
-3. Stop on success, failure, abort, timeout, or the local maximum wait.
-4. Fetch and return the default dataset items.
-5. Print each item with `debugPrint` for schema inspection.
+1. `POST /v2/acts/{actorId}/runs?token=...` with the pasted TikTok URL.
+2. Poll `GET /v2/acts/{actorId}/runs/{runId}?token=...` every three seconds
+   until the run status is `SUCCEEDED`.
+3. `GET /v2/datasets/{datasetId}/items` and keep only rows with a sticker or
+   image URL.
 
 Configure it with:
 
@@ -272,8 +255,15 @@ Configure it with:
 flutter run --dart-define=APIFY_API_TOKEN=your_apify_token
 ```
 
-The Apify service is available for development and schema exploration; the
-clipboard comment-sticker UI currently uses ScrapeBadger.
+### ScrapeBadger
+
+ScrapeBadger remains available as an alternate comment client. It reads at most
+two 50-comment pages, discards text-only comments, and inspects replies.
+
+```sh
+flutter run \
+  --dart-define=SCRAPEBADGER_API_KEY=your_scrapebadger_key
+```
 
 ### Run with all optional integrations
 
@@ -295,7 +285,7 @@ TikWM and Imgflip do not require keys in this project.
 - TikTok import sends the pasted public video URL to TikWM.
 - Meme browsing contacts Imgflip.
 - Discover contacts Tenor.
-- Comment scanning contacts the configured ScrapeBadger or Apify service.
+- Comment scanning contacts Apify Actor `X6ACJnuJVBUsBocfe`.
 - Google Fonts may download selected font files over the network.
 
 An API token embedded in a distributed mobile application can be extracted,

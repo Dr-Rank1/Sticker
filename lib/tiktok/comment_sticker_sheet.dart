@@ -9,6 +9,7 @@ import '../editor/ffmpeg_sticker_service.dart';
 import '../packs/save_to_pack_sheet.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import 'apify_service.dart';
 import 'comment_sticker_formatter.dart';
 import 'tiktok_comment_service.dart';
 
@@ -58,14 +59,14 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
     });
     try {
       final stickers = await ref
-          .read(tikTokCommentServiceProvider)
-          .fetchStickers(widget.videoUrl);
+          .read(apifyServiceProvider)
+          .fetchCommentStickers(widget.videoUrl);
       if (!mounted) return;
       setState(() {
         _stickers = stickers;
         _loading = false;
       });
-    } on TikTokCommentException catch (error) {
+    } on ApifyException catch (error) {
       if (!mounted) return;
       setState(() {
         _loading = false;
