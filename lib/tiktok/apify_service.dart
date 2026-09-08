@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../logging/app_logger.dart';
 import 'tiktok_comment_service.dart';
 
 class ApifyException implements Exception {
@@ -152,9 +152,7 @@ class ApifyService {
           .whereType<Map<String, dynamic>>()
           .where(hasStickerOrImageUrl)
           .toList(growable: false);
-      for (final item in items) {
-        debugPrint('Apify dataset item: $item');
-      }
+      appLogger.d('Apify returned ${items.length} comment stickers.');
       return items;
     } on ApifyException {
       rethrow;

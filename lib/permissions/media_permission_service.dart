@@ -20,8 +20,8 @@ class MediaPermissionResult {
   final bool permanentlyDenied;
 }
 
-/// Resolves and requests the media permissions Stikk needs to pick photos
-/// and videos, using Android 13+ granular access on API 33+.
+/// Resolves and requests the gallery permissions Stikk needs to pick photos,
+/// using Android 13+ granular photo access on API 33+.
 class MediaPermissionService {
   MediaPermissionService({
     TargetPlatform? platform,
@@ -58,7 +58,7 @@ class MediaPermissionService {
     }
     final sdk = androidSdk ?? 0;
     if (sdk >= android13) {
-      return const [Permission.photos, Permission.videos];
+      return const [Permission.photos];
     }
     return const [Permission.storage];
   }

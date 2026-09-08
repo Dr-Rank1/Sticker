@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'error/app_error_fallback.dart';
+import 'error/app_error_handlers.dart';
+import 'logging/app_logger.dart';
 import 'onboarding/onboarding_controller.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'packs/pack_providers.dart';
@@ -12,17 +17,36 @@ import 'widgets/main_scaffold.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final repository = await HivePackRepository.open();
-  final settings = await HiveSettingsStore.open();
-  runApp(
-    ProviderScope(
-      overrides: [
-        packRepositoryProvider.overrideWithValue(repository),
-        settingsStoreProvider.overrideWithValue(settings),
-      ],
-      child: const StikkApp(),
-    ),
-  );
+  installAppErrorHandlers();
+
+  await runZonedGuarded(() async {
+    final repository = await HivePackRepository.open();
+    final settings = await HiveSettingsStore.open();
+    runApp(
+      ProviderScope(
+        overrides: [
+          packRepositoryProvider.overrideWithValue(repository),
+          settingsStoreProvider.overrideWithValue(settings),
+        ],
+        child: const StikkApp(),
+      ),
+    );
+  }, (error, stack) {
+    appLogger.e('App startup failed', error: error, stackTrace: stack);
+    runApp(const _StartupErrorApp());
+  });
+}
+
+class _StartupErrorApp extends StatelessWidget {
+  const _StartupErrorApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: AppErrorFallback(),
+    );
+  }
 }
 
 class StikkApp extends ConsumerWidget {

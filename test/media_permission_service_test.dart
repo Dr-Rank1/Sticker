@@ -5,15 +5,15 @@ import 'package:stikk/permissions/media_permission_service.dart';
 
 void main() {
   group('MediaPermissionService', () {
-    test('uses photos and videos on Android 13+', () {
+    test('uses photos on Android 13+', () {
       final service = MediaPermissionService(platform: TargetPlatform.android);
       expect(
         service.permissionsFor(androidSdk: 33),
-        [Permission.photos, Permission.videos],
+        [Permission.photos],
       );
       expect(
         service.permissionsFor(androidSdk: 36),
-        [Permission.photos, Permission.videos],
+        [Permission.photos],
       );
     });
 
@@ -67,7 +67,7 @@ void main() {
       );
 
       final result = await service.requestMedia();
-      expect(requested, [Permission.photos, Permission.videos]);
+      expect(requested, [Permission.photos]);
       expect(result.hasAccess, isTrue);
       expect(result.permanentlyDenied, isFalse);
     });

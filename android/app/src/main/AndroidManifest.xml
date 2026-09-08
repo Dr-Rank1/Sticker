@@ -1,12 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Network: TikTok import, Discover, memes, comment scanning, fonts. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Camera: optional "From a photo" capture. Hardware is not required. -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Storage: gallery access on Android 12 and below. App files use internal storage. -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"/>
+    <!-- Storage: photo picker / gallery on Android 13+. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+    <!-- Storage: Android 14+ selected-photos access. -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
     <application
         android:label="Stikk"
@@ -40,6 +44,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- WhatsApp Sticker ContentProvider.
+             WhatsApp queries this exported provider for pack metadata, tray icons,
+             and WebP sticker files. The authority must match the identifier sent
+             through the ENABLE_STICKER_PACK intent. readPermission limits reads
+             to WhatsApp's sticker permission. -->
         <provider
             android:name=".StickerContentProvider"
             android:authorities="${contentProviderAuthority}"

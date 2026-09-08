@@ -139,8 +139,9 @@ Stikk is developed primarily for Android.
   reports that an Android device is required.
 - Splash and launcher icon configuration is present for Android and iOS.
 
-Camera, gallery, media, and internet permissions are declared in the Android
-project. The camera is optional hardware.
+Camera, internet, and photo-library storage permissions are declared in the
+Android project. The camera is optional hardware. WhatsApp reads packs through
+an exported ContentProvider documented in `AndroidManifest.xml`.
 
 ## Technology
 
