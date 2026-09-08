@@ -60,8 +60,13 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
   Future<StickerPack> addSticker({
     required String packId,
     required String sourcePath,
+    bool animated = true,
   }) async {
-    final pack = await _repo.addSticker(packId: packId, sourcePath: sourcePath);
+    final pack = await _repo.addSticker(
+      packId: packId,
+      sourcePath: sourcePath,
+      animated: animated,
+    );
     await refresh();
     return pack;
   }

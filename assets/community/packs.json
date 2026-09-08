@@ -1,0 +1,188 @@
+{
+  "packs": [
+    {
+      "id": "comm_monday_moods",
+      "name": "Monday moods",
+      "author": "nina.makes",
+      "coverUrl": "https://picsum.photos/seed/stikk-monday/800/500",
+      "downloads": 128400,
+      "tags": ["funny", "relatable"],
+      "createdAt": "2026-08-12",
+      "blurb": "The face you make when the week starts anyway.",
+      "stickers": [
+        { "label": "so done", "imageUrl": "https://picsum.photos/seed/stikk-monday-1/512/512" },
+        { "label": "coffee first", "imageUrl": "https://picsum.photos/seed/stikk-monday-2/512/512" },
+        { "label": "melting", "imageUrl": "https://picsum.photos/seed/stikk-monday-3/512/512" },
+        { "label": "send help", "imageUrl": "https://picsum.photos/seed/stikk-monday-4/512/512" },
+        { "label": "one more hour", "imageUrl": "https://picsum.photos/seed/stikk-monday-5/512/512" },
+        { "label": "inbox zero?", "imageUrl": "https://picsum.photos/seed/stikk-monday-6/512/512" },
+        { "label": "brb crying", "imageUrl": "https://picsum.photos/seed/stikk-monday-7/512/512" },
+        { "label": "we good", "imageUrl": "https://picsum.photos/seed/stikk-monday-8/512/512" }
+      ]
+    },
+    {
+      "id": "comm_pet_chaos",
+      "name": "Pet chaos",
+      "author": "pixelpaws",
+      "coverUrl": "https://picsum.photos/seed/stikk-pets/800/500",
+      "downloads": 97600,
+      "tags": ["pets", "cute"],
+      "createdAt": "2026-08-28",
+      "blurb": "Unhinged animals, limited vocabulary, maximum feelings.",
+      "stickers": [
+        { "label": "zoomies", "imageUrl": "https://picsum.photos/seed/stikk-pets-1/512/512" },
+        { "label": "judge you", "imageUrl": "https://picsum.photos/seed/stikk-pets-2/512/512" },
+        { "label": "feed me", "imageUrl": "https://picsum.photos/seed/stikk-pets-3/512/512" },
+        { "label": "not today", "imageUrl": "https://picsum.photos/seed/stikk-pets-4/512/512" },
+        { "label": "belly rubs", "imageUrl": "https://picsum.photos/seed/stikk-pets-5/512/512" },
+        { "label": "I saw that", "imageUrl": "https://picsum.photos/seed/stikk-pets-6/512/512" }
+      ]
+    },
+    {
+      "id": "comm_gym_replies",
+      "name": "Gym replies",
+      "author": "liftclub",
+      "coverUrl": "https://picsum.photos/seed/stikk-gym/800/500",
+      "downloads": 84210,
+      "tags": ["gym", "funny"],
+      "createdAt": "2026-07-30",
+      "blurb": "For skipping leg day and bragging about it.",
+      "stickers": [
+        { "label": "one more set", "imageUrl": "https://picsum.photos/seed/stikk-gym-1/512/512" },
+        { "label": "protein", "imageUrl": "https://picsum.photos/seed/stikk-gym-2/512/512" },
+        { "label": "I'm out", "imageUrl": "https://picsum.photos/seed/stikk-gym-3/512/512" },
+        { "label": "PR energy", "imageUrl": "https://picsum.photos/seed/stikk-gym-4/512/512" },
+        { "label": "sore", "imageUrl": "https://picsum.photos/seed/stikk-gym-5/512/512" },
+        { "label": "cardio? no", "imageUrl": "https://picsum.photos/seed/stikk-gym-6/512/512" }
+      ]
+    },
+    {
+      "id": "comm_soft_launch",
+      "name": "Soft launch",
+      "author": "studio.mae",
+      "coverUrl": "https://picsum.photos/seed/stikk-soft/800/500",
+      "downloads": 63100,
+      "tags": ["aesthetic", "love"],
+      "createdAt": "2026-09-01",
+      "blurb": "Gentle chaos for people who text in lowercase.",
+      "stickers": [
+        { "label": "hi actually", "imageUrl": "https://picsum.photos/seed/stikk-soft-1/512/512" },
+        { "label": "that's cute", "imageUrl": "https://picsum.photos/seed/stikk-soft-2/512/512" },
+        { "label": "okay wait", "imageUrl": "https://picsum.photos/seed/stikk-soft-3/512/512" },
+        { "label": "miss u", "imageUrl": "https://picsum.photos/seed/stikk-soft-4/512/512" },
+        { "label": "later maybe", "imageUrl": "https://picsum.photos/seed/stikk-soft-5/512/512" },
+        { "label": "good night", "imageUrl": "https://picsum.photos/seed/stikk-soft-6/512/512" }
+      ]
+    },
+    {
+      "id": "comm_anime_reactions",
+      "name": "Anime reactions",
+      "author": "sakura.ink",
+      "coverUrl": "https://picsum.photos/seed/stikk-anime/800/500",
+      "downloads": 210800,
+      "tags": ["anime", "reactions"],
+      "createdAt": "2026-06-18",
+      "blurb": "Big feelings, bigger eyes, zero chill.",
+      "stickers": [
+        { "label": "nani", "imageUrl": "https://picsum.photos/seed/stikk-anime-1/512/512" },
+        { "label": "not you", "imageUrl": "https://picsum.photos/seed/stikk-anime-2/512/512" },
+        { "label": "plot twist", "imageUrl": "https://picsum.photos/seed/stikk-anime-3/512/512" },
+        { "label": "I'm in", "imageUrl": "https://picsum.photos/seed/stikk-anime-4/512/512" },
+        { "label": "dramatic", "imageUrl": "https://picsum.photos/seed/stikk-anime-5/512/512" },
+        { "label": "found family", "imageUrl": "https://picsum.photos/seed/stikk-anime-6/512/512" },
+        { "label": "filler ep", "imageUrl": "https://picsum.photos/seed/stikk-anime-7/512/512" },
+        { "label": "final form", "imageUrl": "https://picsum.photos/seed/stikk-anime-8/512/512" }
+      ]
+    },
+    {
+      "id": "comm_office_hours",
+      "name": "Office hours",
+      "author": "desk.jokes",
+      "coverUrl": "https://picsum.photos/seed/stikk-office/800/500",
+      "downloads": 55440,
+      "tags": ["work", "funny"],
+      "createdAt": "2026-08-04",
+      "blurb": "Meetings that could have been a sticker.",
+      "stickers": [
+        { "label": "this could've been an email", "imageUrl": "https://picsum.photos/seed/stikk-office-1/512/512" },
+        { "label": "on mute", "imageUrl": "https://picsum.photos/seed/stikk-office-2/512/512" },
+        { "label": "circling back", "imageUrl": "https://picsum.photos/seed/stikk-office-3/512/512" },
+        { "label": "quick sync", "imageUrl": "https://picsum.photos/seed/stikk-office-4/512/512" },
+        { "label": "ooo", "imageUrl": "https://picsum.photos/seed/stikk-office-5/512/512" },
+        { "label": "ship it", "imageUrl": "https://picsum.photos/seed/stikk-office-6/512/512" }
+      ]
+    },
+    {
+      "id": "comm_night_owls",
+      "name": "Night owls",
+      "author": "moonlight.club",
+      "coverUrl": "https://picsum.photos/seed/stikk-night/800/500",
+      "downloads": 71990,
+      "tags": ["mood", "relatable"],
+      "createdAt": "2026-09-04",
+      "blurb": "3am thoughts, 9am consequences.",
+      "stickers": [
+        { "label": "still up", "imageUrl": "https://picsum.photos/seed/stikk-night-1/512/512" },
+        { "label": "one episode", "imageUrl": "https://picsum.photos/seed/stikk-night-2/512/512" },
+        { "label": "can't sleep", "imageUrl": "https://picsum.photos/seed/stikk-night-3/512/512" },
+        { "label": "brain noisy", "imageUrl": "https://picsum.photos/seed/stikk-night-4/512/512" },
+        { "label": "good night-ish", "imageUrl": "https://picsum.photos/seed/stikk-night-5/512/512" },
+        { "label": "see you never", "imageUrl": "https://picsum.photos/seed/stikk-night-6/512/512" }
+      ]
+    },
+    {
+      "id": "comm_foodie_chaos",
+      "name": "Foodie chaos",
+      "author": "snack.wave",
+      "coverUrl": "https://picsum.photos/seed/stikk-food/800/500",
+      "downloads": 90330,
+      "tags": ["food", "funny"],
+      "createdAt": "2026-07-14",
+      "blurb": "Hungry, dramatic, and five minutes from ordering again.",
+      "stickers": [
+        { "label": "feed me", "imageUrl": "https://picsum.photos/seed/stikk-food-1/512/512" },
+        { "label": "spicy", "imageUrl": "https://picsum.photos/seed/stikk-food-2/512/512" },
+        { "label": "share? no", "imageUrl": "https://picsum.photos/seed/stikk-food-3/512/512" },
+        { "label": "brunch", "imageUrl": "https://picsum.photos/seed/stikk-food-4/512/512" },
+        { "label": "late night bite", "imageUrl": "https://picsum.photos/seed/stikk-food-5/512/512" },
+        { "label": "worth it", "imageUrl": "https://picsum.photos/seed/stikk-food-6/512/512" }
+      ]
+    },
+    {
+      "id": "comm_study_grind",
+      "name": "Study grind",
+      "author": "note.club",
+      "coverUrl": "https://picsum.photos/seed/stikk-study/800/500",
+      "downloads": 44880,
+      "tags": ["study", "relatable"],
+      "createdAt": "2026-09-06",
+      "blurb": "For group chats that should be studying.",
+      "stickers": [
+        { "label": "5 more pages", "imageUrl": "https://picsum.photos/seed/stikk-study-1/512/512" },
+        { "label": "brain full", "imageUrl": "https://picsum.photos/seed/stikk-study-2/512/512" },
+        { "label": "quiz me", "imageUrl": "https://picsum.photos/seed/stikk-study-3/512/512" },
+        { "label": "I'm cooked", "imageUrl": "https://picsum.photos/seed/stikk-study-4/512/512" },
+        { "label": "library run", "imageUrl": "https://picsum.photos/seed/stikk-study-5/512/512" },
+        { "label": "passed??", "imageUrl": "https://picsum.photos/seed/stikk-study-6/512/512" }
+      ]
+    },
+    {
+      "id": "comm_weekend_plans",
+      "name": "Weekend plans",
+      "author": "sun.day",
+      "coverUrl": "https://picsum.photos/seed/stikk-weekend/800/500",
+      "downloads": 38750,
+      "tags": ["friends", "funny"],
+      "createdAt": "2026-09-07",
+      "blurb": "Yes, no, maybe, and we still end up on the couch.",
+      "stickers": [
+        { "label": "I'm in", "imageUrl": "https://picsum.photos/seed/stikk-weekend-1/512/512" },
+        { "label": "running late", "imageUrl": "https://picsum.photos/seed/stikk-weekend-2/512/512" },
+        { "label": "rain check", "imageUrl": "https://picsum.photos/seed/stikk-weekend-3/512/512" },
+        { "label": "couch era", "imageUrl": "https://picsum.photos/seed/stikk-weekend-4/512/512" },
+        { "label": "one drink", "imageUrl": "https://picsum.photos/seed/stikk-weekend-5/512/512" },
+        { "label": "home by 9", "imageUrl": "https://picsum.photos/seed/stikk-weekend-6/512/512" }
+      ]
+    }
+  ]
+}

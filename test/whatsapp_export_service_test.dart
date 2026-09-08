@@ -18,11 +18,7 @@ void main() {
       trayIconPath: 'tray.png',
       stickers: [
         for (var i = 0; i < stickers; i++)
-          StickerItem(
-            id: 's$i',
-            filePath: 's$i.webp',
-            createdAt: now,
-          ),
+          StickerItem(id: 's$i', filePath: 's$i.webp', createdAt: now),
       ],
       createdAt: now,
       updatedAt: now,
@@ -63,15 +59,17 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-      expect(call.method, WhatsAppExportService.addStickerPackMethod);
-      expect(call.arguments['identifier'], 'pack_123');
-      throw PlatformException(code: 'WHATSAPP_NOT_INSTALLED');
-    });
+          expect(call.method, WhatsAppExportService.addStickerPackMethod);
+          expect(call.arguments['identifier'], 'pack_123');
+          throw PlatformException(code: 'WHATSAPP_NOT_INSTALLED');
+        });
 
     expect(
-      () => WhatsAppExportService().exportToWhatsApp(pack()),
+      () =>
+          WhatsAppExportService(canLaunch: (_) async => true)
+              .exportToWhatsApp(pack()),
       throwsA(
-        isA<PackException>().having(
+        isA<WhatsAppNotInstalledException>().having(
           (error) => error.message,
           'message',
           'WhatsApp isn’t installed on this device.',
@@ -80,18 +78,46 @@ void main() {
     );
   });
 
+  test('checks for WhatsApp before invoking the native export', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    var nativeInvoked = false;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          nativeInvoked = true;
+          return true;
+        });
+
+    final service = WhatsAppExportService(
+      canLaunch: (uri) async {
+        expect(uri, WhatsAppExportService.whatsAppUri);
+        return false;
+      },
+    );
+
+    await expectLater(
+      service.exportToWhatsApp(pack()),
+      throwsA(isA<WhatsAppNotInstalledException>()),
+    );
+    expect(nativeInvoked, isFalse);
+  });
+
   test('reports success when the native channel completes', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-      expect(call.method, WhatsAppExportService.addStickerPackMethod);
-      expect(call.arguments['name'], 'Moods');
-      expect(call.arguments['publisher'], 'Ian');
-      expect(call.arguments['stickerPaths'], ['s0.webp', 's1.webp', 's2.webp']);
-      return true;
-    });
+          expect(call.method, WhatsAppExportService.addStickerPackMethod);
+          expect(call.arguments['name'], 'Moods');
+          expect(call.arguments['publisher'], 'Ian');
+          expect(call.arguments['stickerPaths'], [
+            's0.webp',
+            's1.webp',
+            's2.webp',
+          ]);
+          return true;
+        });
 
-    final result = await WhatsAppExportService().exportToWhatsApp(pack());
+    final result = await WhatsAppExportService(canLaunch: (_) async => true)
+        .exportToWhatsApp(pack());
     expect(result.message, 'Added to WhatsApp.');
   });
 }

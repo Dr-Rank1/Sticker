@@ -69,6 +69,21 @@ void main() {
       final full = await repo.getById(created.id);
       expect(full!.stickers, hasLength(30));
     });
+
+    test('refuses mixing static and animated stickers', () async {
+      final repo = InMemoryPackRepository();
+      final created = await repo.createPack(name: 'Mix', author: 'Ian');
+      await repo.addSticker(packId: created.id, sourcePath: 'clip.webp');
+
+      expect(
+        () => repo.addSticker(
+          packId: created.id,
+          sourcePath: 'photo.webp',
+          animated: false,
+        ),
+        throwsA(isA<PackException>()),
+      );
+    });
   });
 
   group('HivePackRepository', () {

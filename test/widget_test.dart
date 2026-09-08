@@ -1,8 +1,35 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:stikk/main.dart';
+import 'package:stikk/state/settings_store.dart';
+import 'package:stikk/storage/storage_utility.dart';
+
+ProviderScope appWithOnboardingDone() {
+  final documents = Directory(
+    '${Directory.systemTemp.path}/stikk_widget_documents',
+  )..createSync(recursive: true);
+  final temporary = Directory(
+    '${Directory.systemTemp.path}/stikk_widget_temporary',
+  )..createSync(recursive: true);
+  return ProviderScope(
+    overrides: [
+      settingsStoreProvider.overrideWithValue(
+        InMemorySettingsStore(onboardingComplete: true),
+      ),
+      storageUtilityProvider.overrideWithValue(
+        StorageUtility(
+          documentsDirectory: () async => documents,
+          temporaryDirectory: () async => temporary,
+        ),
+      ),
+    ],
+    child: const StikkApp(),
+  );
+}
 
 void main() {
   setUpAll(() {
@@ -10,7 +37,7 @@ void main() {
   });
 
   testWidgets('shows library and switches tabs', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: StikkApp()));
+    await tester.pumpWidget(appWithOnboardingDone());
     await tester.pump();
 
     expect(find.text('Library'), findsWidgets);
@@ -18,13 +45,16 @@ void main() {
 
     await tester.tap(find.byKey(const Key('nav-community')));
     await tester.pump();
+    await tester.pump();
 
     expect(find.text('Community'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Monday moods'), 400);
     expect(find.text('Monday moods'), findsOneWidget);
+    expect(find.text('#funny'), findsWidgets);
   });
 
   testWidgets('Create opens the TikTok link sheet', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: StikkApp()));
+    await tester.pumpWidget(appWithOnboardingDone());
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('nav-create')));
@@ -36,8 +66,26 @@ void main() {
     expect(find.text('From a photo'), findsOneWidget);
   });
 
+  testWidgets('opens Settings from the Library app bar', (tester) async {
+    await tester.pumpWidget(appWithOnboardingDone());
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('open-settings')));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Storage'), findsOneWidget);
+    expect(
+      find.text(
+        'See what Stikk uses on this device and remove disposable working files.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('invalid TikTok link shows a friendly snackbar', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: StikkApp()));
+    await tester.pumpWidget(appWithOnboardingDone());
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('nav-create')));

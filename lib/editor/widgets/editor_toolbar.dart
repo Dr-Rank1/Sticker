@@ -13,10 +13,12 @@ class EditorToolbar extends StatelessWidget {
     required this.onEmojis,
     required this.onToggleSpeed,
     required this.onSpeedPicked,
+    this.showSpeed = true,
   });
 
   final double speed;
   final bool showSpeeds;
+  final bool showSpeed;
   final VoidCallback onText;
   final VoidCallback onEmojis;
   final VoidCallback onToggleSpeed;
@@ -30,7 +32,7 @@ class EditorToolbar extends StatelessWidget {
       children: [
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
-          child: showSpeeds
+          child: showSpeed && showSpeeds
               ? Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Wrap(
@@ -66,12 +68,13 @@ class EditorToolbar extends StatelessWidget {
               label: 'Emojis',
               onTap: onEmojis,
             ),
-            _ToolButton(
-              icon: Icons.speed_rounded,
-              label: 'Speed',
-              selected: showSpeeds,
-              onTap: onToggleSpeed,
-            ),
+            if (showSpeed)
+              _ToolButton(
+                icon: Icons.speed_rounded,
+                label: 'Speed',
+                selected: showSpeeds,
+                onTap: onToggleSpeed,
+              ),
           ],
         ),
       ],

@@ -30,6 +30,21 @@ void main() {
     expect(find.text('Speed'), findsOneWidget);
     expect(find.text('Save'), findsOneWidget);
   });
+
+  testWidgets('static photo editor hides speed and trim', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: EditorScreen(imagePath: 'missing-sticker.png'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Text'), findsOneWidget);
+    expect(find.text('Speed'), findsNothing);
+  });
 }
 
 class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {

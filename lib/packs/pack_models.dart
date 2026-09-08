@@ -63,6 +63,17 @@ class StickerPack {
 
   bool get meetsMinimum => stickers.length >= WhatsAppPackRules.minStickers;
 
+  /// WhatsApp packs are either all static or all animated.
+  bool? get animatedKind {
+    if (stickers.isEmpty) return null;
+    return stickers.any((sticker) => sticker.animated);
+  }
+
+  bool acceptsSticker({required bool animated}) {
+    final kind = animatedKind;
+    return kind == null || kind == animated;
+  }
+
   bool get canExportToWhatsApp {
     return name.trim().isNotEmpty &&
         author.trim().isNotEmpty &&

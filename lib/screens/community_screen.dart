@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../community/community_catalog.dart';
+import '../community/community_models.dart';
+import '../community/community_pack_detail_screen.dart';
+import '../community/community_widgets.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-class CommunityScreen extends StatefulWidget {
+class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});
 
   @override
-  State<CommunityScreen> createState() => _CommunityScreenState();
+  ConsumerState<CommunityScreen> createState() => _CommunityScreenState();
 }
 
-class _CommunityScreenState extends State<CommunityScreen> {
-  int _filter = 0;
-
-  static const _filters = ['For you', 'New', 'Popular'];
+class _CommunityScreenState extends ConsumerState<CommunityScreen> {
+  var _filter = CommunityFeedFilter.trending;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final catalog = ref.watch(communityCatalogProvider);
 
     return CustomScrollView(
       slivers: [
@@ -35,31 +39,29 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Packs from people who make stickers like you.',
+                    'Trending sticker packs, free and offline. No account.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 20),
                   Wrap(
                     spacing: 8,
                     children: [
-                      for (var i = 0; i < _filters.length; i++)
+                      for (final filter in CommunityFeedFilter.values)
                         ChoiceChip(
-                          label: Text(_filters[i]),
-                          selected: _filter == i,
-                          onSelected: (_) => setState(() => _filter = i),
+                          key: Key('community-filter-${filter.name}'),
+                          label: Text(filter.label),
+                          selected: _filter == filter,
+                          onSelected: (_) => setState(() => _filter = filter),
                           showCheckmark: false,
                           selectedColor: colors.accentSoft,
-                          labelStyle: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(
-                                color: _filter == i
+                          labelStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: _filter == filter
                                     ? colors.accentDim
                                     : colors.textSecondary,
                               ),
                           backgroundColor: colors.surface,
                           side: BorderSide(
-                            color: _filter == i ? colors.accentSoft : colors.border,
+                            color: _filter == filter ? colors.accentSoft : colors.border,
                           ),
                         ),
                     ],
@@ -69,130 +71,124 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-          sliver: SliverList.separated(
-            itemCount: _placeholderPacks.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              return _CommunityPackCard(pack: _placeholderPacks[index]);
-            },
-          ),
+        ...catalog.when(
+          loading: () => [
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ],
+          error: (error, _) => [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: Text('$error')),
+            ),
+          ],
+          data: (data) {
+            final packs = data.feed(_filter);
+            return [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                sliver: SliverList.separated(
+                  itemCount: packs.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    return _TrendingPackCard(
+                      pack: packs[index],
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => CommunityPackDetailScreen(packId: packs[index].id),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ];
+          },
         ),
       ],
     );
   }
 }
 
-class _CommunityPack {
-  const _CommunityPack({
-    required this.title,
-    required this.creator,
-    required this.stickers,
-    required this.tint,
-  });
+class _TrendingPackCard extends StatelessWidget {
+  const _TrendingPackCard({required this.pack, required this.onTap});
 
-  final String title;
-  final String creator;
-  final List<String> stickers;
-  final Color tint;
-}
-
-const _placeholderPacks = [
-  _CommunityPack(
-    title: 'Monday moods',
-    creator: 'nina.makes',
-    stickers: ['😴', '☕', '🫠', '💀'],
-    tint: Color(0xFFB8E6FF),
-  ),
-  _CommunityPack(
-    title: 'Pet chaos',
-    creator: 'pixelpaws',
-    stickers: ['🐶', '🐱', '🐾', '🦴'],
-    tint: Color(0xFFFFD9B8),
-  ),
-  _CommunityPack(
-    title: 'Gym replies',
-    creator: 'liftclub',
-    stickers: ['💪', '🔥', '😤', '🏆'],
-    tint: Color(0xFFD7F7EB),
-  ),
-  _CommunityPack(
-    title: 'Soft launch',
-    creator: 'studio.mae',
-    stickers: ['🌸', '✨', '💌', '🌙'],
-    tint: Color(0xFFF3D4F7),
-  ),
-];
-
-class _CommunityPackCard extends StatelessWidget {
-  const _CommunityPackCard({required this.pack});
-
-  final _CommunityPack pack;
+  final CommunityPack pack;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surface,
+    return Material(
+      color: colors.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-        border: Border.all(color: colors.border),
+        side: BorderSide(color: colors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: pack.tint,
-                child: Text(
-                  pack.creator[0].toUpperCase(),
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(pack.title, style: Theme.of(context).textTheme.titleLarge),
-                    Text(
-                      pack.creator,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.add_box_outlined, color: colors.accent),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              for (final sticker in pack.stickers) ...[
-                Expanded(
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: pack.tint.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      child: InkWell(
+        key: Key('community-pack-${pack.id}'),
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: CommunityNetworkImage(url: pack.coverUrl),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(pack.name, style: textTheme.titleLarge),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 11,
+                        backgroundColor: colors.accentSoft,
+                        child: Text(
+                          pack.author[0].toUpperCase(),
+                          style: textTheme.labelMedium?.copyWith(color: colors.accentDim),
+                        ),
                       ),
-                      child: Center(
-                        child: Text(sticker, style: const TextStyle(fontSize: 28)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          pack.author,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodySmall,
+                        ),
                       ),
-                    ),
+                      Icon(Icons.download_rounded, size: 16, color: colors.textTertiary),
+                      const SizedBox(width: 4),
+                      Text(
+                        pack.downloadLabel,
+                        style: textTheme.labelMedium,
+                      ),
+                    ],
                   ),
-                ),
-                if (sticker != pack.stickers.last) const SizedBox(width: 8),
-              ],
-            ],
-          ),
-        ],
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final tag in pack.tags) CommunityTagChip(label: tag),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

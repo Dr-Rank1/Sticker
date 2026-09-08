@@ -1,26 +1,35 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'pack_models.dart';
 
 class WhatsAppExportResult {
-  const WhatsAppExportResult({
-    required this.pack,
-    required this.message,
-  });
+  const WhatsAppExportResult({required this.pack, required this.message});
 
   final StickerPack pack;
   final String message;
 }
 
+class WhatsAppNotInstalledException extends PackException {
+  const WhatsAppNotInstalledException()
+    : super('WhatsApp isn’t installed on this device.');
+}
+
 class WhatsAppExportService {
-  WhatsAppExportService({MethodChannel? channel})
-      : _channel = channel ?? const MethodChannel(channelName);
+  WhatsAppExportService({
+    MethodChannel? channel,
+    Future<bool> Function(Uri url)? canLaunch,
+  }) : _channel = channel ?? const MethodChannel(channelName),
+       _canLaunch = canLaunch ?? canLaunchUrl;
 
   static const channelName = 'com.stickerapp/whatsapp_export';
   static const addStickerPackMethod = 'addStickerPack';
+  static final whatsAppUri = Uri.parse('whatsapp://send');
 
   final MethodChannel _channel;
+  final Future<bool> Function(Uri url) _canLaunch;
 
   WhatsAppExportResult prepare(StickerPack pack) {
     if (!pack.canExportToWhatsApp) {
@@ -28,7 +37,8 @@ class WhatsAppExportService {
     }
     return WhatsAppExportResult(
       pack: pack,
-      message: kIsWeb ||
+      message:
+          kIsWeb ||
               defaultTargetPlatform == TargetPlatform.windows ||
               defaultTargetPlatform == TargetPlatform.linux ||
               defaultTargetPlatform == TargetPlatform.macOS
@@ -46,6 +56,10 @@ class WhatsAppExportService {
       );
     }
 
+    if (!await isWhatsAppInstalled()) {
+      throw const WhatsAppNotInstalledException();
+    }
+
     try {
       await _channel.invokeMethod<void>(addStickerPackMethod, {
         'identifier': pack.whatsAppIdentifier,
@@ -56,10 +70,7 @@ class WhatsAppExportService {
         'imageDataVersion': pack.updatedAt.millisecondsSinceEpoch.toString(),
         'animated': pack.stickers.any((sticker) => sticker.animated),
       });
-      return WhatsAppExportResult(
-        pack: pack,
-        message: 'Added to WhatsApp.',
-      );
+      return WhatsAppExportResult(pack: pack, message: 'Added to WhatsApp.');
     } on PlatformException catch (error) {
       throw PackException(_messageFor(error));
     } on MissingPluginException {
@@ -69,10 +80,22 @@ class WhatsAppExportService {
     }
   }
 
+  /// The `whatsapp://` scheme is handled by either consumer WhatsApp or
+  /// WhatsApp Business, so one check covers both Android packages.
+  Future<bool> isWhatsAppInstalled() async {
+    try {
+      return await _canLaunch(whatsAppUri);
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   String _messageFor(PlatformException error) {
     switch (error.code) {
       case 'WHATSAPP_NOT_INSTALLED':
-        return 'WhatsApp isn’t installed on this device.';
+        throw const WhatsAppNotInstalledException();
       case 'CANCELLED':
         return 'WhatsApp didn’t add the pack.';
       case 'VALIDATION_ERROR':
@@ -92,4 +115,6 @@ class WhatsAppExportService {
   }
 }
 
-final whatsAppExportService = WhatsAppExportService();
+final whatsAppExportServiceProvider = Provider<WhatsAppExportService>((ref) {
+  return WhatsAppExportService();
+});

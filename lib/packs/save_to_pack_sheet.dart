@@ -10,20 +10,29 @@ import 'pack_providers.dart';
 Future<StickerPack?> showSaveToPackSheet(
   BuildContext context, {
   required String stickerPath,
+  bool animated = true,
 }) {
   return showModalBottomSheet<StickerPack>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (context) => SaveToPackSheet(stickerPath: stickerPath),
+    builder: (context) => SaveToPackSheet(
+      stickerPath: stickerPath,
+      animated: animated,
+    ),
   );
 }
 
 class SaveToPackSheet extends ConsumerWidget {
-  const SaveToPackSheet({super.key, required this.stickerPath});
+  const SaveToPackSheet({
+    super.key,
+    required this.stickerPath,
+    this.animated = true,
+  });
 
   final String stickerPath;
+  final bool animated;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,7 +48,9 @@ class SaveToPackSheet extends ConsumerWidget {
           Text('Save to a pack', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 6),
           Text(
-            'WhatsApp packs need 3–30 stickers. Pick a pack with room, or make a new one.',
+            animated
+                ? 'WhatsApp packs need 3–30 stickers of the same type. Pick a pack with room, or make a new one.'
+                : 'Photo stickers are static. WhatsApp packs can’t mix them with animated clips.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
@@ -56,21 +67,25 @@ class SaveToPackSheet extends ConsumerWidget {
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final pack = packs[index];
+                      final typeMismatch = !pack.acceptsSticker(animated: animated);
+                      final enabled = !pack.isFull && !typeMismatch;
                       return Material(
                         color: colors.surfaceMuted,
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         child: ListTile(
-                          enabled: !pack.isFull,
+                          enabled: enabled,
                           title: Text(pack.name),
                           subtitle: Text(
                             pack.isFull
                                 ? 'Full (${WhatsAppPackRules.maxStickers} stickers)'
-                                : '${pack.author} · ${pack.countLabel}',
+                                : typeMismatch
+                                    ? (animated
+                                        ? 'This pack is for photo stickers'
+                                        : 'This pack is for animated stickers')
+                                    : '${pack.author} · ${pack.countLabel}',
                           ),
                           trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: pack.isFull
-                              ? null
-                              : () => _add(context, ref, pack),
+                          onTap: enabled ? () => _add(context, ref, pack) : null,
                         ),
                       );
                     },
@@ -102,6 +117,7 @@ class SaveToPackSheet extends ConsumerWidget {
       final updated = await ref.read(packsProvider.notifier).addSticker(
             packId: pack.id,
             sourcePath: stickerPath,
+            animated: animated,
           );
       if (!context.mounted) return;
       Navigator.pop(context, updated);

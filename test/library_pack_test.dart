@@ -9,6 +9,7 @@ import 'package:stikk/packs/pack_models.dart';
 import 'package:stikk/packs/pack_providers.dart';
 import 'package:stikk/packs/pack_repository.dart';
 import 'package:stikk/packs/whatsapp_export_service.dart';
+import 'package:stikk/state/settings_store.dart';
 
 void main() {
   setUpAll(() {
@@ -26,11 +27,7 @@ void main() {
           trayIconPath: 'missing.png',
           stickers: [
             for (var i = 0; i < 3; i++)
-              StickerItem(
-                id: 's$i',
-                filePath: 's$i.webp',
-                createdAt: now,
-              ),
+              StickerItem(id: 's$i', filePath: 's$i.webp', createdAt: now),
           ],
           createdAt: now,
           updatedAt: now,
@@ -42,6 +39,9 @@ void main() {
       ProviderScope(
         overrides: [
           packRepositoryProvider.overrideWithValue(repo),
+          settingsStoreProvider.overrideWithValue(
+            InMemorySettingsStore(onboardingComplete: true),
+          ),
         ],
         child: const StikkApp(),
       ),
@@ -58,7 +58,9 @@ void main() {
     expect(find.byKey(const Key('add-to-whatsapp')), findsOneWidget);
   });
 
-  testWidgets('Add to WhatsApp is disabled until 3 stickers', (tester) async {
+  testWidgets('Add to WhatsApp shakes and explains the 3-sticker minimum', (
+    tester,
+  ) async {
     final now = DateTime(2026, 1, 1);
     final repo = InMemoryPackRepository(
       seed: {
@@ -79,12 +81,8 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          packRepositoryProvider.overrideWithValue(repo),
-        ],
-        child: const MaterialApp(
-          home: PackDetailScreen(packId: 'p2'),
-        ),
+        overrides: [packRepositoryProvider.overrideWithValue(repo)],
+        child: const MaterialApp(home: PackDetailScreen(packId: 'p2')),
       ),
     );
     await tester.pumpAndSettle();
@@ -92,11 +90,26 @@ void main() {
     final button = tester.widget<FilledButton>(
       find.byKey(const Key('add-to-whatsapp')),
     );
-    expect(button.onPressed, isNull);
+    expect(button.onPressed, isNotNull);
     expect(find.textContaining('minimum 3'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('add-to-whatsapp')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    final transform = tester.widget<Transform>(
+      find.byKey(const Key('whatsapp-export-shake')),
+    );
+    expect(transform.transform.getTranslation().x, isNot(0));
+    expect(
+      find.textContaining('WhatsApp requires at least 3 stickers'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('Add to WhatsApp shows feedback when WhatsApp is missing', (tester) async {
+  testWidgets('Add to WhatsApp shows feedback when WhatsApp is missing', (
+    tester,
+  ) async {
     final now = DateTime(2026, 1, 1);
     final repo = InMemoryPackRepository(
       seed: {
@@ -132,10 +145,11 @@ void main() {
       ProviderScope(
         overrides: [
           packRepositoryProvider.overrideWithValue(repo),
+          whatsAppExportServiceProvider.overrideWithValue(
+            WhatsAppExportService(canLaunch: (_) async => false),
+          ),
         ],
-        child: const MaterialApp(
-          home: PackDetailScreen(packId: 'p3'),
-        ),
+        child: const MaterialApp(home: PackDetailScreen(packId: 'p3')),
       ),
     );
     await tester.pumpAndSettle();
@@ -143,6 +157,11 @@ void main() {
     await tester.tap(find.byKey(const Key('add-to-whatsapp')));
     await tester.pumpAndSettle();
 
-    expect(find.text('WhatsApp isn’t installed on this device.'), findsOneWidget);
+    expect(
+      find.byKey(const Key('whatsapp-not-installed-title')),
+      findsOneWidget,
+    );
+    expect(find.text('Install WhatsApp'), findsOneWidget);
+    expect(find.text('Install WhatsApp Business'), findsOneWidget);
   });
 }

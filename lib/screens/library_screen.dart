@@ -7,8 +7,8 @@ import '../packs/pack_detail_screen.dart';
 import '../packs/pack_form_sheet.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
+import '../settings/settings_screen.dart';
 import '../state/navigation_controller.dart';
-import '../state/theme_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../tiktok/tiktok_import_sheet.dart';
@@ -20,8 +20,6 @@ class LibraryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final themeMode = ref.watch(themeModeProvider);
-    final themeController = ref.read(themeModeProvider.notifier);
     final packsAsync = ref.watch(packsProvider);
 
     return CustomScrollView(
@@ -62,13 +60,16 @@ class LibraryScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    tooltip: 'Appearance: ${themeController.label}',
-                    onPressed: themeController.cycle,
-                    icon: Icon(switch (themeMode) {
-                      ThemeMode.system => Icons.brightness_auto_rounded,
-                      ThemeMode.light => Icons.light_mode_rounded,
-                      ThemeMode.dark => Icons.dark_mode_rounded,
-                    }),
+                    key: const Key('open-settings'),
+                    tooltip: 'Settings',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.settings_rounded),
                     style: IconButton.styleFrom(
                       backgroundColor: colors.surface,
                       foregroundColor: colors.textPrimary,
@@ -109,11 +110,12 @@ class LibraryScreen extends ConsumerWidget {
                       child: EmptyState(
                         icon: Icons.auto_awesome_mosaic_rounded,
                         title: 'No packs yet',
-                        message:
-                            'Create stickers from photos or TikToks and group them into packs for WhatsApp.',
+                        message: 'Create stickers from photos or TikToks and group them into packs for WhatsApp.',
                         actionLabel: 'Create a sticker',
                         onAction: () {
-                          ref.read(navigationProvider.notifier).select(AppTab.create);
+                          ref
+                              .read(navigationProvider.notifier)
+                              .select(AppTab.create);
                           showTiktokImportSheet(context);
                         },
                       ),
@@ -183,7 +185,12 @@ class _PackCard extends StatelessWidget {
                     color: colors.surfaceMuted,
                     child: Center(
                       child: tray.existsSync()
-                          ? Image.file(tray, width: 96, height: 96, fit: BoxFit.cover)
+                          ? Image.file(
+                              tray,
+                              width: 96,
+                              height: 96,
+                              fit: BoxFit.cover,
+                            )
                           : Icon(
                               Icons.auto_awesome_mosaic_rounded,
                               color: colors.accent,
@@ -217,12 +224,14 @@ class _PackCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  pack.canExportToWhatsApp ? 'Ready · ${pack.countLabel}' : pack.countLabel,
+                  pack.canExportToWhatsApp
+                      ? 'Ready · ${pack.countLabel}'
+                      : pack.countLabel,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: pack.canExportToWhatsApp
-                            ? colors.accentDim
-                            : colors.textSecondary,
-                      ),
+                    color: pack.canExportToWhatsApp
+                        ? colors.accentDim
+                        : colors.textSecondary,
+                  ),
                 ),
               ),
             ],

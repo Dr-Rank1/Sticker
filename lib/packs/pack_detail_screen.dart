@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
@@ -21,8 +22,35 @@ class PackDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<PackDetailScreen> createState() => _PackDetailScreenState();
 }
 
-class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
+class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
+    with SingleTickerProviderStateMixin {
   bool _exporting = false;
+  late final AnimationController _shakeController;
+  late final Animation<double> _shake;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    _shake = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10, end: -7), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -7, end: 7), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 7, end: 0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +93,10 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(pack.author, style: Theme.of(context).textTheme.bodyMedium),
+                      Text(
+                        pack.author,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         '${pack.countLabel} stickers · 96×96 tray',
@@ -88,11 +119,12 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
                   )
                 : GridView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
                     itemCount: pack.stickers.length,
                     itemBuilder: (context, index) {
                       final sticker = pack.stickers[index];
@@ -127,9 +159,8 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
                   child: Text(
                     pack.exportBlockReason,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colors.textSecondary,
-                        ),
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: colors.textSecondary),
                   ),
                 ),
               Row(
@@ -139,7 +170,9 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
                       onPressed: pack.isFull
                           ? null
                           : () {
-                              ref.read(navigationProvider.notifier).select(AppTab.create);
+                              ref
+                                  .read(navigationProvider.notifier)
+                                  .select(AppTab.create);
                               Navigator.pop(context);
                               showTiktokImportSheet(context);
                             },
@@ -149,22 +182,38 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     flex: 2,
-                    child: FilledButton.icon(
-                      key: const Key('add-to-whatsapp'),
-                      onPressed: canExport && !_exporting
-                          ? () => _addToWhatsApp(pack)
-                          : null,
-                      icon: _exporting
-                          ? SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Theme.of(context).colorScheme.onPrimary,
+                    child: AnimatedBuilder(
+                      animation: _shake,
+                      builder: (context, child) => Transform.translate(
+                        key: const Key('whatsapp-export-shake'),
+                        offset: Offset(_shake.value, 0),
+                        child: child,
+                      ),
+                      child: FilledButton.icon(
+                        key: const Key('add-to-whatsapp'),
+                        onPressed: _exporting
+                            ? null
+                            : () => _handleExportTap(pack),
+                        style: canExport
+                            ? null
+                            : FilledButton.styleFrom(
+                                backgroundColor: colors.surfaceMuted,
+                                foregroundColor: colors.textTertiary,
                               ),
-                            )
-                          : const Icon(Icons.chat_rounded),
-                      label: Text(_exporting ? 'Adding…' : 'Add to WhatsApp'),
+                        icon: _exporting
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimary,
+                                ),
+                              )
+                            : const Icon(Icons.chat_rounded),
+                        label: Text(_exporting ? 'Adding…' : 'Add to WhatsApp'),
+                      ),
                     ),
                   ),
                 ],
@@ -176,12 +225,33 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
     );
   }
 
+  void _handleExportTap(StickerPack pack) {
+    if (!pack.meetsMinimum) {
+      _shakeController.forward(from: 0);
+      _showFeedback(
+        'WhatsApp requires at least 3 stickers in a pack. Add ${WhatsAppPackRules.minStickers - pack.stickers.length} more to continue.',
+      );
+      return;
+    }
+    if (!pack.canExportToWhatsApp) {
+      _showFeedback(pack.exportBlockReason);
+      return;
+    }
+    _addToWhatsApp(pack);
+  }
+
   Future<void> _addToWhatsApp(StickerPack pack) async {
     setState(() => _exporting = true);
     try {
-      final result = await whatsAppExportService.exportToWhatsApp(pack);
+      final result = await ref
+          .read(whatsAppExportServiceProvider)
+          .exportToWhatsApp(pack);
       if (!mounted) return;
       _showFeedback(result.message);
+    } on WhatsAppNotInstalledException {
+      if (!mounted) return;
+      setState(() => _exporting = false);
+      await _showWhatsAppInstallSheet();
     } on PackException catch (error) {
       if (!mounted) return;
       _showFeedback(error.message);
@@ -193,14 +263,92 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
     }
   }
 
+  Future<void> _showWhatsAppInstallSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        final colors = context.colors;
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: colors.accentSoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_rounded,
+                    color: colors.accentDim,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'WhatsApp isn’t installed',
+                  key: const Key('whatsapp-not-installed-title'),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Install WhatsApp or WhatsApp Business, then come back to add your sticker pack.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    key: const Key('install-whatsapp'),
+                    onPressed: () => _openStore(
+                      'https://play.google.com/store/apps/details?id=com.whatsapp',
+                    ),
+                    icon: const Icon(Icons.download_rounded),
+                    label: const Text('Install WhatsApp'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: const Key('install-whatsapp-business'),
+                    onPressed: () => _openStore(
+                      'https://play.google.com/store/apps/details?id=com.whatsapp.w4b',
+                    ),
+                    icon: const Icon(Icons.business_center_rounded),
+                    label: const Text('Install WhatsApp Business'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openStore(String url) async {
+    final opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      _showFeedback('Couldn’t open the app store. Please try again.');
+    }
+  }
+
   void _showFeedback(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
   }
 
@@ -213,10 +361,18 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete pack?'),
-        content: Text('“${pack.name}” and its stickers will be removed from this device.'),
+        content: Text(
+          '“${pack.name}” and its stickers will be removed from this device.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -238,16 +394,21 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen> {
         title: const Text('Remove sticker?'),
         content: const Text('It will be deleted from this pack.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
         ],
       ),
     );
     if (ok != true || !context.mounted) return;
-    await ref.read(packsProvider.notifier).removeSticker(
-          packId: pack.id,
-          stickerId: sticker.id,
-        );
+    await ref
+        .read(packsProvider.notifier)
+        .removeSticker(packId: pack.id, stickerId: sticker.id);
   }
 }
 
@@ -269,7 +430,10 @@ class _TrayView extends StatelessWidget {
             ? Image.file(file, fit: BoxFit.cover)
             : ColoredBox(
                 color: context.colors.accentSoft,
-                child: Icon(Icons.auto_awesome_mosaic_rounded, color: context.colors.accent),
+                child: Icon(
+                  Icons.auto_awesome_mosaic_rounded,
+                  color: context.colors.accent,
+                ),
               ),
       ),
     );

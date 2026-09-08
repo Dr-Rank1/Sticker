@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../photos/photo_import_sheet.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../tiktok/tiktok_import_sheet.dart';
@@ -40,14 +41,8 @@ class CreateScreen extends StatelessWidget {
               _CreateSourceCard(
                 icon: Icons.photo_library_rounded,
                 title: 'From a photo',
-                subtitle: 'Crop, remove the background, add text.',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('From a photo is coming in the next phase.'),
-                    ),
-                  );
-                },
+                subtitle: 'Auto crop, remove the background, add text.',
+                onTap: () => showPhotoImportSheet(context),
               ),
               const SizedBox(height: 12),
               _CreateSourceCard(

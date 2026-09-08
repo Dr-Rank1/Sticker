@@ -39,10 +39,11 @@ class FfmpegStickerService {
     Future<int> Function(
       List<String> args,
       void Function(double progress) onProgress,
-    )? runCommand,
-  })  : _tempDirectory = tempDirectory ?? getTemporaryDirectory,
-        // ignore: prefer_initializing_formals
-        _runCommand = runCommand;
+    )?
+    runCommand,
+  }) : _tempDirectory = tempDirectory ?? getTemporaryDirectory,
+       // ignore: prefer_initializing_formals
+       _runCommand = runCommand;
 
   static const List<({int fps, int quality})> _qualityLadder = [
     (fps: 12, quality: 50),
@@ -53,8 +54,11 @@ class FfmpegStickerService {
   ];
 
   final Future<Directory> Function() _tempDirectory;
-  final Future<int> Function(List<String> args, void Function(double progress) onProgress)?
-      _runCommand;
+  final Future<int> Function(
+    List<String> args,
+    void Function(double progress) onProgress,
+  )?
+  _runCommand;
 
   /// Public so tests can assert WhatsApp constraints without running FFmpeg.
   List<String> buildArguments({
@@ -130,14 +134,18 @@ class FfmpegStickerService {
 
     final input = File(inputPath);
     if (!input.existsSync()) {
-      throw const StickerExportException('The source video is no longer available.');
+      throw const StickerExportException(
+        'The source video is no longer available.',
+      );
     }
 
-    var duration = document.trimDuration / (document.speed <= 0 ? 1 : document.speed);
+    var duration =
+        document.trimDuration / (document.speed <= 0 ? 1 : document.speed);
     if (duration > WhatsAppStickerSpec.maxDurationSeconds) {
       duration = WhatsAppStickerSpec.maxDurationSeconds;
     }
-    final sourceDuration = duration * (document.speed <= 0 ? 1 : document.speed);
+    final sourceDuration =
+        duration * (document.speed <= 0 ? 1 : document.speed);
 
     final temp = await _tempDirectory();
     Object? lastError;
@@ -174,10 +182,14 @@ class FfmpegStickerService {
           lastError = StickerExportException(
             'FFmpeg failed while creating the sticker (code $code).',
           );
+          await _deleteIfPresent(output);
           continue;
         }
         if (!output.existsSync() || output.lengthSync() == 0) {
-          lastError = const StickerExportException('FFmpeg did not write a sticker file.');
+          lastError = const StickerExportException(
+            'FFmpeg did not write a sticker file.',
+          );
+          await _deleteIfPresent(output);
           continue;
         }
         final bytes = output.lengthSync();
@@ -191,10 +203,12 @@ class FfmpegStickerService {
           );
         }
         lastError = StickerExportException(
-          'Sticker was ${ (bytes / 1024).round() }KB. Trying a smaller encode...',
+          'Sticker was ${(bytes / 1024).round()}KB. Trying a smaller encode...',
         );
+        await _deleteIfPresent(output);
       } catch (error) {
         lastError = error;
+        await _deleteIfPresent(output);
       }
     }
 
@@ -202,6 +216,14 @@ class FfmpegStickerService {
       lastError?.toString() ??
           'Could not keep the sticker under 500KB. Try a shorter clip.',
     );
+  }
+
+  Future<void> _deleteIfPresent(File file) async {
+    try {
+      if (await file.exists()) await file.delete();
+    } on FileSystemException {
+      // The OS may already have evicted temporary output.
+    }
   }
 
   Future<int> _execute(

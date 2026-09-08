@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 
 import '../packs/save_to_pack_sheet.dart';
 import '../state/navigation_controller.dart';
+import '../storage/storage_utility.dart';
 import '../theme/app_colors.dart';
 import 'editor_controller.dart';
 import 'ffmpeg_sticker_service.dart';
@@ -15,20 +16,24 @@ import 'overlay_composer.dart';
 import 'widgets/editor_toolbar.dart';
 import 'widgets/overlay_canvas.dart';
 import 'widgets/trim_timeline.dart';
+import '../photos/photo_import_controller.dart';
 
 final ffmpegStickerServiceProvider = Provider<FfmpegStickerService>((ref) {
   return FfmpegStickerService();
 });
 
 class EditorScreen extends ConsumerStatefulWidget {
-  const EditorScreen({
-    super.key,
-    required this.videoPath,
-    this.caption,
-  });
+  const EditorScreen({super.key, this.videoPath, this.imagePath, this.caption})
+    : assert(
+        (videoPath == null) != (imagePath == null),
+        'Provide either a videoPath or an imagePath',
+      );
 
-  final String videoPath;
+  final String? videoPath;
+  final String? imagePath;
   final String? caption;
+
+  bool get isStatic => imagePath != null;
 
   @override
   ConsumerState<EditorScreen> createState() => _EditorScreenState();
@@ -44,11 +49,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   @override
   void initState() {
     super.initState();
-    _initPlayer();
+    if (!widget.isStatic) {
+      _initPlayer();
+    }
   }
 
   Future<void> _initPlayer() async {
-    final player = VideoPlayerController.file(File(widget.videoPath));
+    final player = VideoPlayerController.file(File(widget.videoPath!));
     _player = player;
     await player.initialize();
     if (!mounted) return;
@@ -81,11 +88,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   }
 
   Future<void> _save() async {
-    final player = _player;
     final messenger = ScaffoldMessenger.of(context);
-    if (player == null || !player.value.isInitialized) return;
+    if (!widget.isStatic) {
+      final player = _player;
+      if (player == null || !player.value.isInitialized) return;
+      await player.pause();
+    }
 
-    await player.pause();
     _editor.setSaving(saving: true, progress: 0);
 
     try {
@@ -95,15 +104,32 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         overlays: document.overlays,
         directory: temp,
       );
-      final result = await ref.read(ffmpegStickerServiceProvider).exportSticker(
-            inputPath: widget.videoPath,
-            document: document,
-            overlayPngPath: overlay?.path,
-            onProgress: (value) {
-              if (!mounted) return;
-              _editor.setSaving(saving: true, progress: value);
-            },
-          );
+
+      final StickerExportResult result;
+      if (widget.isStatic) {
+        result = await ref
+            .read(imageStickerServiceProvider)
+            .exportStaticSticker(
+              imagePath: widget.imagePath!,
+              overlayPngPath: overlay?.path,
+              onProgress: (value) {
+                if (!mounted) return;
+                _editor.setSaving(saving: true, progress: value);
+              },
+            );
+      } else {
+        result = await ref
+            .read(ffmpegStickerServiceProvider)
+            .exportSticker(
+              inputPath: widget.videoPath!,
+              document: document,
+              overlayPngPath: overlay?.path,
+              onProgress: (value) {
+                if (!mounted) return;
+                _editor.setSaving(saving: true, progress: value);
+              },
+            );
+      }
 
       final docs = await getApplicationDocumentsDirectory();
       final folder = Directory('${docs.path}${Platform.pathSeparator}stickers');
@@ -113,10 +139,20 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       final saved = await result.file.copy(
         '${folder.path}${Platform.pathSeparator}stikk_${DateTime.now().millisecondsSinceEpoch}.webp',
       );
+      await ref.read(storageUtilityProvider).cleanupAfterStickerSaved([
+        widget.videoPath,
+        widget.imagePath,
+        overlay?.path,
+        result.file.path,
+      ]);
 
       if (!mounted) return;
       _editor.setSaving(saving: false, progress: 1);
-      final pack = await showSaveToPackSheet(context, stickerPath: saved.path);
+      final pack = await showSaveToPackSheet(
+        context,
+        stickerPath: saved.path,
+        animated: !widget.isStatic,
+      );
       if (!mounted) return;
 
       if (pack != null) {
@@ -125,7 +161,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         messenger
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            SnackBar(content: Text('Added to ${pack.name} (${pack.countLabel}).')),
+            SnackBar(
+              content: Text('Added to ${pack.name} (${pack.countLabel}).'),
+            ),
           );
       } else {
         Navigator.of(context).pop(saved.path);
@@ -148,7 +186,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(message)));
-      await _player?.play();
+      if (!widget.isStatic) {
+        await _player?.play();
+      }
     }
   }
 
@@ -203,7 +243,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       InkWell(
                         onTap: () => Navigator.pop(context, item),
                         child: Center(
-                          child: Text(item, style: const TextStyle(fontSize: 28)),
+                          child: Text(
+                            item,
+                            style: const TextStyle(fontSize: 28),
+                          ),
                         ),
                       ),
                   ],
@@ -222,8 +265,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final editorState = ref.watch(editorProvider);
     final document = editorState.document;
     final player = _player;
-    final ready = player != null && player.value.isInitialized;
-    final playhead = ready ? player.value.position.inMilliseconds / 1000.0 : 0.0;
+    final videoReady = player != null && player.value.isInitialized;
+    final ready = widget.isStatic || videoReady;
+    final playhead = videoReady
+        ? player.value.position.inMilliseconds / 1000.0
+        : 0.0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -243,7 +289,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 8,
+                  ),
                   child: Center(
                     child: AspectRatio(
                       aspectRatio: 1,
@@ -253,7 +302,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                           fit: StackFit.expand,
                           children: [
                             const ColoredBox(color: Color(0xFF151A21)),
-                            if (ready && player.value.size.width > 0)
+                            if (widget.isStatic)
+                              _StaticPhoto(path: widget.imagePath!)
+                            else if (videoReady && player.value.size.width > 0)
                               FittedBox(
                                 fit: BoxFit.cover,
                                 child: SizedBox(
@@ -282,7 +333,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                     backgroundColor: Colors.black54,
                                     foregroundColor: Colors.white,
                                   ),
-                                  icon: const Icon(Icons.delete_outline_rounded),
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                  ),
                                 ),
                               ),
                             if (editorState.saving)
@@ -326,32 +379,38 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     EditorToolbar(
                       speed: document.speed,
                       showSpeeds: _showSpeeds,
+                      showSpeed: !widget.isStatic,
                       onText: _promptText,
                       onEmojis: _pickEmoji,
-                      onToggleSpeed: () => setState(() => _showSpeeds = !_showSpeeds),
+                      onToggleSpeed: () =>
+                          setState(() => _showSpeeds = !_showSpeeds),
                       onSpeedPicked: (value) {
                         _editor.setSpeed(value);
                         _player?.setPlaybackSpeed(value);
                       },
                     ),
-                    const SizedBox(height: 8),
-                    TrimTimeline(
-                      duration: document.videoDuration <= 0
-                          ? 1
-                          : document.videoDuration,
-                      start: document.trimStart,
-                      end: document.trimEnd,
-                      playhead: playhead,
-                      onChanged: _editor.setTrim,
-                      onChangeStart: _editor.beginGesture,
-                      onChangeEnd: () {
-                        _editor.endGesture();
-                        final doc = ref.read(editorProvider).document;
-                        _player?.seekTo(
-                          Duration(milliseconds: (doc.trimStart * 1000).round()),
-                        );
-                      },
-                    ),
+                    if (!widget.isStatic) ...[
+                      const SizedBox(height: 8),
+                      TrimTimeline(
+                        duration: document.videoDuration <= 0
+                            ? 1
+                            : document.videoDuration,
+                        start: document.trimStart,
+                        end: document.trimEnd,
+                        playhead: playhead,
+                        onChanged: _editor.setTrim,
+                        onChangeStart: _editor.beginGesture,
+                        onChangeEnd: () {
+                          _editor.endGesture();
+                          final doc = ref.read(editorProvider).document;
+                          _player?.seekTo(
+                            Duration(
+                              milliseconds: (doc.trimStart * 1000).round(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -422,7 +481,9 @@ class _EditorAppBar extends StatelessWidget {
                 : Text(
                     'Save',
                     style: TextStyle(
-                      color: onSave == null ? colors.textTertiary : colors.accentOn,
+                      color: onSave == null
+                          ? colors.textTertiary
+                          : colors.accentOn,
                     ),
                   ),
           ),
@@ -430,4 +491,94 @@ class _EditorAppBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StaticPhoto extends StatefulWidget {
+  const _StaticPhoto({required this.path});
+
+  final String path;
+
+  @override
+  State<_StaticPhoto> createState() => _StaticPhotoState();
+}
+
+class _StaticPhotoState extends State<_StaticPhoto> {
+  Uint8List? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StaticPhoto oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) {
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    final file = File(widget.path);
+    if (!file.existsSync()) {
+      if (mounted) setState(() => _bytes = null);
+      return;
+    }
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    setState(() => _bytes = bytes);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const _Checkerboard(),
+        if (_bytes != null)
+          Image.memory(
+            _bytes!,
+            fit: BoxFit.contain,
+            gaplessPlayback: true,
+            errorBuilder: (_, _, _) => const SizedBox.expand(),
+          ),
+      ],
+    );
+  }
+}
+
+class _Checkerboard extends StatelessWidget {
+  const _Checkerboard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CustomPaint(
+      painter: _CheckerboardPainter(),
+      child: SizedBox.expand(),
+    );
+  }
+}
+
+class _CheckerboardPainter extends CustomPainter {
+  const _CheckerboardPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const cell = 16.0;
+    final dark = Paint()..color = const Color(0xFF151A21);
+    final light = Paint()..color = const Color(0xFF1C222B);
+    canvas.drawRect(Offset.zero & size, dark);
+    for (var y = 0.0; y < size.height; y += cell) {
+      for (var x = 0.0; x < size.width; x += cell) {
+        final odd = ((x / cell).floor() + (y / cell).floor()).isOdd;
+        if (odd) {
+          canvas.drawRect(Rect.fromLTWH(x, y, cell, cell), light);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

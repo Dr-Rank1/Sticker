@@ -29,7 +29,10 @@ void main() {
       expect(container.read(editorProvider).canRedo, isTrue);
 
       editor.redo();
-      expect(container.read(editorProvider).document.overlays.single.content, 'Hello');
+      expect(
+        container.read(editorProvider).document.overlays.single.content,
+        'Hello',
+      );
     });
 
     test('speed changes are undoable', () {
@@ -92,6 +95,13 @@ void main() {
 
       expect(result.bytes, lessThanOrEqualTo(WhatsAppStickerSpec.maxBytes));
       expect(attempts, 3);
+      final generated = temp
+          .listSync()
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.webp'))
+          .toList();
+      expect(generated, hasLength(1));
+      expect(generated.single.path, result.file.path);
     });
   });
 }

@@ -17,6 +17,7 @@ abstract class PackRepository {
   Future<StickerPack> addSticker({
     required String packId,
     required String sourcePath,
+    bool animated = true,
   });
   Future<StickerPack> removeSticker({
     required String packId,
@@ -110,6 +111,7 @@ class HivePackRepository implements PackRepository {
   Future<StickerPack> addSticker({
     required String packId,
     required String sourcePath,
+    bool animated = true,
   }) async {
     final pack = await getById(packId);
     if (pack == null) {
@@ -118,6 +120,13 @@ class HivePackRepository implements PackRepository {
     if (pack.isFull) {
       throw const PackException(
         'WhatsApp packs can hold at most ${WhatsAppPackRules.maxStickers} stickers.',
+      );
+    }
+    if (!pack.acceptsSticker(animated: animated)) {
+      throw PackException(
+        animated
+            ? 'This pack is for static stickers. Create a new pack for animated ones.'
+            : 'This pack is for animated stickers. Create a new pack for photo stickers.',
       );
     }
 
@@ -140,6 +149,7 @@ class HivePackRepository implements PackRepository {
           id: stickerId,
           filePath: dest.path,
           createdAt: DateTime.now(),
+          animated: animated,
         ),
       ],
       updatedAt: DateTime.now(),
@@ -279,6 +289,7 @@ class InMemoryPackRepository implements PackRepository {
   Future<StickerPack> addSticker({
     required String packId,
     required String sourcePath,
+    bool animated = true,
   }) async {
     final pack = _packs[packId];
     if (pack == null) {
@@ -289,6 +300,13 @@ class InMemoryPackRepository implements PackRepository {
         'WhatsApp packs can hold at most ${WhatsAppPackRules.maxStickers} stickers.',
       );
     }
+    if (!pack.acceptsSticker(animated: animated)) {
+      throw PackException(
+        animated
+            ? 'This pack is for static stickers. Create a new pack for animated ones.'
+            : 'This pack is for animated stickers. Create a new pack for photo stickers.',
+      );
+    }
     _seq += 1;
     final next = pack.copyWith(
       stickers: [
@@ -297,6 +315,7 @@ class InMemoryPackRepository implements PackRepository {
           id: 'sticker_$_seq',
           filePath: sourcePath,
           createdAt: DateTime.now(),
+          animated: animated,
         ),
       ],
       updatedAt: DateTime.now(),
