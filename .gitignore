@@ -46,3 +46,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Isar native binaries downloaded for unit tests
+isar.dll
+isar.dylib
+libisar.so

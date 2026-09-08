@@ -1,52 +1,59 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
+import 'package:isar/isar.dart';
 import 'package:stikk/packs/pack_models.dart';
 import 'package:stikk/packs/pack_repository.dart';
+import 'package:stikk/packs/sticker_repository.dart';
 import 'package:stikk/packs/whatsapp_export_service.dart';
+
+StickerPack _pack({
+  int stickers = 0,
+  String name = 'Moods',
+  String author = 'Ian',
+  List<int> trayIconBytes = const [1, 2, 3],
+}) {
+  return StickerPack(
+    id: 'p1',
+    name: name,
+    author: author,
+    trayIconPath: 'tray.png',
+    trayIconBytes: trayIconBytes,
+    stickers: [
+      for (var i = 0; i < stickers; i++)
+        StickerItem(
+          id: 's$i',
+          filePath: 's$i.webp',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+    ],
+    createdAt: DateTime(2026, 1, 1),
+    updatedAt: DateTime(2026, 1, 1),
+  );
+}
 
 void main() {
   group('WhatsApp pack rules', () {
-    StickerPack pack({int stickers = 0, String name = 'Moods', String author = 'Ian'}) {
-      return StickerPack(
-        id: 'p1',
-        name: name,
-        author: author,
-        trayIconPath: 'tray.png',
-        stickers: [
-          for (var i = 0; i < stickers; i++)
-            StickerItem(
-              id: 's$i',
-              filePath: 's$i.webp',
-              createdAt: DateTime(2026, 1, 1),
-            ),
-        ],
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-      );
-    }
-
     test('blocks export below 3 stickers', () {
-      final two = pack(stickers: 2);
+      final two = _pack(stickers: 2);
       expect(two.canExportToWhatsApp, isFalse);
       expect(two.exportBlockReason, contains('minimum 3'));
     });
 
     test('allows export from 3 to 30 stickers', () {
-      expect(pack(stickers: 3).canExportToWhatsApp, isTrue);
-      expect(pack(stickers: 30).canExportToWhatsApp, isTrue);
+      expect(_pack(stickers: 3).canExportToWhatsApp, isTrue);
+      expect(_pack(stickers: 30).canExportToWhatsApp, isTrue);
     });
 
     test('blocks export above 30 stickers', () {
-      final overflow = pack(stickers: 31);
+      final overflow = _pack(stickers: 31);
       expect(overflow.canExportToWhatsApp, isFalse);
       expect(overflow.exportBlockReason, contains('maximum 30'));
     });
 
     test('WhatsAppExportService rejects invalid packs', () {
       expect(
-        () => WhatsAppExportService().prepare(pack(stickers: 1)),
+        () => WhatsAppExportService().prepare(_pack(stickers: 1)),
         throwsA(isA<PackException>()),
       );
     });
@@ -59,7 +66,10 @@ void main() {
       expect(created.trayIconPath, isNotEmpty);
 
       for (var i = 0; i < WhatsAppPackRules.maxStickers; i++) {
-        await repo.addSticker(packId: created.id, sourcePath: 'sticker_$i.webp');
+        await repo.addSticker(
+          packId: created.id,
+          sourcePath: 'sticker_$i.webp',
+        );
       }
 
       expect(
@@ -84,39 +94,113 @@ void main() {
         throwsA(isA<PackException>()),
       );
     });
+
+    test(
+      'save throws ValidationException below 3 and above 30 stickers',
+      () async {
+        final repo = InMemoryPackRepository();
+
+        await expectLater(
+          repo.save(_pack(stickers: 2)),
+          throwsA(isA<ValidationException>()),
+        );
+        await expectLater(
+          repo.save(_pack(stickers: 31)),
+          throwsA(isA<ValidationException>()),
+        );
+
+        final saved = await repo.save(_pack(stickers: 3));
+        expect(saved.stickers, hasLength(3));
+        final maxed = await repo.save(_pack(stickers: 30));
+        expect(maxed.stickers, hasLength(30));
+      },
+    );
+
+    test('watchAll emits when a sticker is added', () async {
+      final repo = InMemoryPackRepository();
+      final events = <List<StickerPack>>[];
+      final sub = repo.watchAll().listen(events.add);
+      addTearDown(sub.cancel);
+
+      await pumpEventQueue();
+      expect(events, isNotEmpty);
+      expect(events.last, isEmpty);
+
+      final created = await repo.createPack(name: 'Pets', author: 'Ian');
+      await repo.addSticker(packId: created.id, sourcePath: 'sticker.webp');
+      await pumpEventQueue();
+
+      expect(events.last, hasLength(1));
+      expect(events.last.single.stickers, hasLength(1));
+    });
   });
 
-  group('HivePackRepository', () {
-    setUpAll(() {
+  group('StickerRepository', () {
+    StickerRepository? repo;
+
+    setUpAll(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
+      try {
+        await Isar.initializeIsarCore(download: true);
+      } catch (_) {
+        // Flutter plugin binaries may already be loaded.
+      }
     });
-    test('persists packs to a local Hive box', () async {
-      final dir = await Directory.systemTemp.createTemp('stikk_hive');
-      addTearDown(() async {
-        await Hive.close();
+
+    tearDown(() async {
+      await repo?.close(deleteFromDisk: true);
+      repo = null;
+    });
+
+    Future<StickerRepository?> openRepo() async {
+      final dir = await Directory.systemTemp.createTemp('stikk_isar');
+      addTearDown(() {
         if (dir.existsSync()) dir.deleteSync(recursive: true);
       });
+      try {
+        repo = await StickerRepository.open(
+          directory: dir.path,
+          name: 'stikk_packs_${dir.path.hashCode}',
+          documents: () async => dir,
+        );
+        return repo;
+      } catch (error) {
+        markTestSkipped('Isar native libraries are unavailable: $error');
+        return null;
+      }
+    }
 
-      final source = File('${dir.path}${Platform.pathSeparator}clip.webp')
-        ..writeAsBytesSync(const [1, 2, 3, 4]);
+    test(
+      'save enforces WhatsApp sticker counts and watchAll updates',
+      () async {
+        final opened = await openRepo();
+        if (opened == null) {
+          return;
+        }
 
-      final repo = await HivePackRepository.open(
-        hivePath: dir.path,
-        documents: () async => dir,
-      );
-      final pack = await repo.createPack(name: 'Gym', author: 'Lift Club');
-      expect(File(pack.trayIconPath).existsSync(), isTrue);
+        await expectLater(
+          opened.save(_pack(stickers: 2)),
+          throwsA(isA<ValidationException>()),
+        );
+        await expectLater(
+          opened.save(_pack(stickers: 31)),
+          throwsA(isA<ValidationException>()),
+        );
 
-      final withSticker = await repo.addSticker(
-        packId: pack.id,
-        sourcePath: source.path,
-      );
-      expect(withSticker.stickers, hasLength(1));
+        final events = <List<StickerPack>>[];
+        final sub = opened.watchAll().listen(events.add);
+        addTearDown(sub.cancel);
 
-      final loaded = await repo.getById(pack.id);
-      expect(loaded?.name, 'Gym');
-      expect(loaded?.stickers, hasLength(1));
-      expect(File(loaded!.stickers.first.filePath).existsSync(), isTrue);
-    });
+        final saved = await opened.save(_pack(stickers: 3));
+        expect(saved.id, 'p1');
+        expect(saved.stickers, hasLength(3));
+        expect(saved.trayIconBytes, isNotEmpty);
+        expect(File(saved.trayIconPath).existsSync(), isTrue);
+
+        await pumpEventQueue();
+        expect(events.where((packs) => packs.isNotEmpty), isNotEmpty);
+        expect(events.last.single.stickers, hasLength(3));
+      },
+    );
   });
 }

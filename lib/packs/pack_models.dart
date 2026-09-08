@@ -23,11 +23,11 @@ class StickerItem {
   final bool animated;
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'filePath': filePath,
-        'createdAt': createdAt.toIso8601String(),
-        'animated': animated,
-      };
+    'id': id,
+    'filePath': filePath,
+    'createdAt': createdAt.toIso8601String(),
+    'animated': animated,
+  };
 
   factory StickerItem.fromMap(Map<dynamic, dynamic> map) {
     return StickerItem(
@@ -49,15 +49,19 @@ class StickerPack {
     required this.stickers,
     required this.createdAt,
     required this.updatedAt,
+    this.trayIconBytes = const [],
   });
 
   final String id;
   final String name;
   final String author;
   final String trayIconPath;
+  final List<int> trayIconBytes;
   final List<StickerItem> stickers;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  String get publisher => author;
 
   bool get isFull => stickers.length >= WhatsAppPackRules.maxStickers;
 
@@ -77,7 +81,7 @@ class StickerPack {
   bool get canExportToWhatsApp {
     return name.trim().isNotEmpty &&
         author.trim().isNotEmpty &&
-        trayIconPath.trim().isNotEmpty &&
+        (trayIconPath.trim().isNotEmpty || trayIconBytes.isNotEmpty) &&
         stickers.length >= WhatsAppPackRules.minStickers &&
         stickers.length <= WhatsAppPackRules.maxStickers;
   }
@@ -85,8 +89,8 @@ class StickerPack {
   String get exportBlockReason {
     if (name.trim().isEmpty) return 'Give this pack a name.';
     if (author.trim().isEmpty) return 'Add an author name.';
-    if (trayIconPath.trim().isEmpty) {
-      return 'Add a ${WhatsAppPackRules.traySize}×${WhatsAppPackRules.traySize} tray icon.';
+    if (trayIconPath.trim().isEmpty && trayIconBytes.isEmpty) {
+      return 'Add a ${WhatsAppPackRules.traySize}x${WhatsAppPackRules.traySize} tray icon.';
     }
     final count = stickers.length;
     if (count < WhatsAppPackRules.minStickers) {
@@ -115,6 +119,7 @@ class StickerPack {
     String? name,
     String? author,
     String? trayIconPath,
+    List<int>? trayIconBytes,
     List<StickerItem>? stickers,
     DateTime? updatedAt,
   }) {
@@ -123,6 +128,7 @@ class StickerPack {
       name: name ?? this.name,
       author: author ?? this.author,
       trayIconPath: trayIconPath ?? this.trayIconPath,
+      trayIconBytes: trayIconBytes ?? this.trayIconBytes,
       stickers: stickers ?? this.stickers,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -130,14 +136,14 @@ class StickerPack {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'name': name,
-        'author': author,
-        'trayIconPath': trayIconPath,
-        'stickers': stickers.map((s) => s.toMap()).toList(),
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'author': author,
+    'trayIconPath': trayIconPath,
+    'stickers': stickers.map((s) => s.toMap()).toList(),
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   factory StickerPack.fromMap(Map<dynamic, dynamic> map) {
     final rawStickers = map['stickers'] as List<dynamic>? ?? const [];
@@ -161,4 +167,9 @@ class PackException implements Exception {
   final String message;
   @override
   String toString() => message;
+}
+
+/// Thrown when a pack cannot be saved under WhatsApp sticker count rules.
+class ValidationException extends PackException {
+  const ValidationException(super.message);
 }

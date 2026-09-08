@@ -1,12 +1,9 @@
-import 'dart:io';
-
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart';
+import 'dart:async';
 
 import 'pack_models.dart';
-import 'tray_icon_service.dart';
 
 abstract class PackRepository {
+  Stream<List<StickerPack>> watchAll();
   Future<List<StickerPack>> getAll();
   Future<StickerPack?> getById(String id);
   Future<StickerPack> createPack({
@@ -24,231 +21,42 @@ abstract class PackRepository {
     required String stickerId,
   });
   Future<void> deletePack(String id);
-}
 
-class HivePackRepository implements PackRepository {
-  HivePackRepository({
-    required this.box,
-    required this.documents,
-    TrayIconService? trayIcons,
-  }) : trayIcons = trayIcons ?? TrayIconService();
-
-  static const boxName = 'sticker_packs';
-
-  final Box<dynamic> box;
-  final Future<Directory> Function() documents;
-  final TrayIconService trayIcons;
-
-  static Future<HivePackRepository> open({
-    String? hivePath,
-    Future<Directory> Function()? documents,
-  }) async {
-    if (hivePath != null) {
-      Hive.init(hivePath);
-    } else {
-      await Hive.initFlutter();
-    }
-    final box = await Hive.openBox<dynamic>(boxName);
-    return HivePackRepository(
-      box: box,
-      documents: documents ?? getApplicationDocumentsDirectory,
-    );
-  }
-
-  @override
-  Future<List<StickerPack>> getAll() async {
-    final packs = box.values.map(_decode).toList()
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return packs;
-  }
-
-  @override
-  Future<StickerPack?> getById(String id) async {
-    final raw = box.get(id);
-    if (raw == null) return null;
-    return _decode(raw);
-  }
-
-  @override
-  Future<StickerPack> createPack({
-    required String name,
-    required String author,
-  }) async {
-    final trimmedName = _requireName(name);
-    final trimmedAuthor = _requireAuthor(author);
-    final id = 'pack_${DateTime.now().microsecondsSinceEpoch}';
-    final now = DateTime.now();
-    final packDir = await _packDir(id);
-    final tray = await trayIcons.createDefault(
-      directory: packDir,
-      packId: id,
-      name: trimmedName,
-    );
-
-    final pack = StickerPack(
-      id: id,
-      name: trimmedName,
-      author: trimmedAuthor,
-      trayIconPath: tray.path,
-      stickers: const [],
-      createdAt: now,
-      updatedAt: now,
-    );
-    await box.put(id, pack.toMap());
-    return pack;
-  }
-
-  @override
-  Future<StickerPack> updatePack(StickerPack pack) async {
-    _requireName(pack.name);
-    _requireAuthor(pack.author);
-    final next = pack.copyWith(updatedAt: DateTime.now());
-    await box.put(next.id, next.toMap());
-    return next;
-  }
-
-  @override
-  Future<StickerPack> addSticker({
-    required String packId,
-    required String sourcePath,
-    bool animated = true,
-  }) async {
-    final pack = await getById(packId);
-    if (pack == null) {
-      throw const PackException('That pack no longer exists.');
-    }
-    if (pack.isFull) {
-      throw const PackException(
-        'WhatsApp packs can hold at most ${WhatsAppPackRules.maxStickers} stickers.',
-      );
-    }
-    if (!pack.acceptsSticker(animated: animated)) {
-      throw PackException(
-        animated
-            ? 'This pack is for static stickers. Create a new pack for animated ones.'
-            : 'This pack is for animated stickers. Create a new pack for photo stickers.',
-      );
-    }
-
-    final source = File(sourcePath);
-    if (!source.existsSync()) {
-      throw const PackException('The sticker file is missing.');
-    }
-
-    final stickerId = 'sticker_${DateTime.now().microsecondsSinceEpoch}';
-    final packDir = await _packDir(packId);
-    final dest = File(
-      '${packDir.path}${Platform.pathSeparator}$stickerId.webp',
-    );
-    await source.copy(dest.path);
-
-    final next = pack.copyWith(
-      stickers: [
-        ...pack.stickers,
-        StickerItem(
-          id: stickerId,
-          filePath: dest.path,
-          createdAt: DateTime.now(),
-          animated: animated,
-        ),
-      ],
-      updatedAt: DateTime.now(),
-    );
-    await box.put(packId, next.toMap());
-    return next;
-  }
-
-  @override
-  Future<StickerPack> removeSticker({
-    required String packId,
-    required String stickerId,
-  }) async {
-    final pack = await getById(packId);
-    if (pack == null) {
-      throw const PackException('That pack no longer exists.');
-    }
-    StickerItem? removed;
-    final remaining = <StickerItem>[];
-    for (final sticker in pack.stickers) {
-      if (sticker.id == stickerId) {
-        removed = sticker;
-      } else {
-        remaining.add(sticker);
-      }
-    }
-    if (removed != null) {
-      final file = File(removed.filePath);
-      if (file.existsSync()) {
-        file.deleteSync();
-      }
-    }
-    final next = pack.copyWith(stickers: remaining, updatedAt: DateTime.now());
-    await box.put(packId, next.toMap());
-    return next;
-  }
-
-  @override
-  Future<void> deletePack(String id) async {
-    final pack = await getById(id);
-    await box.delete(id);
-    if (pack == null) return;
-    final dir = Directory(
-      '${(await documents()).path}${Platform.pathSeparator}packs${Platform.pathSeparator}$id',
-    );
-    if (dir.existsSync()) {
-      dir.deleteSync(recursive: true);
-    }
-  }
-
-  Future<Directory> _packDir(String packId) async {
-    final root = await documents();
-    final dir = Directory(
-      '${root.path}${Platform.pathSeparator}packs${Platform.pathSeparator}$packId',
-    );
-    if (!dir.existsSync()) {
-      dir.createSync(recursive: true);
-    }
-    return dir;
-  }
-
-  StickerPack _decode(dynamic raw) {
-    return StickerPack.fromMap(Map<dynamic, dynamic>.from(raw as Map));
-  }
-
-  String _requireName(String name) {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) {
-      throw const PackException('Give this pack a name.');
-    }
-    if (trimmed.length > WhatsAppPackRules.maxNameLength) {
-      throw const PackException('Pack names can be at most 128 characters.');
-    }
-    return trimmed;
-  }
-
-  String _requireAuthor(String author) {
-    final trimmed = author.trim();
-    if (trimmed.isEmpty) {
-      throw const PackException('Add an author name.');
-    }
-    if (trimmed.length > WhatsAppPackRules.maxAuthorLength) {
-      throw const PackException('Author names can be at most 128 characters.');
-    }
-    return trimmed;
-  }
+  /// Persists a pack after enforcing WhatsApp sticker-count rules.
+  ///
+  /// Throws [ValidationException] when the pack has fewer than
+  /// [WhatsAppPackRules.minStickers] or more than
+  /// [WhatsAppPackRules.maxStickers] stickers.
+  Future<StickerPack> save(StickerPack pack);
 }
 
 class InMemoryPackRepository implements PackRepository {
-  InMemoryPackRepository({Map<String, StickerPack>? seed}) : _packs = {...?seed};
+  InMemoryPackRepository({Map<String, StickerPack>? seed})
+    : _packs = {...?seed};
 
   final Map<String, StickerPack> _packs;
+  final _controller = StreamController<List<StickerPack>>.broadcast();
   var _seq = 0;
 
-  @override
-  Future<List<StickerPack>> getAll() async {
+  List<StickerPack> _sorted() {
     return _packs.values.toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
+
+  void _notify() {
+    if (!_controller.isClosed) {
+      _controller.add(_sorted());
+    }
+  }
+
+  @override
+  Stream<List<StickerPack>> watchAll() async* {
+    yield _sorted();
+    yield* _controller.stream;
+  }
+
+  @override
+  Future<List<StickerPack>> getAll() async => _sorted();
 
   @override
   Future<StickerPack?> getById(String id) async => _packs[id];
@@ -276,12 +84,14 @@ class InMemoryPackRepository implements PackRepository {
       updatedAt: now,
     );
     _packs[pack.id] = pack;
+    _notify();
     return pack;
   }
 
   @override
   Future<StickerPack> updatePack(StickerPack pack) async {
     _packs[pack.id] = pack.copyWith(updatedAt: DateTime.now());
+    _notify();
     return _packs[pack.id]!;
   }
 
@@ -321,6 +131,7 @@ class InMemoryPackRepository implements PackRepository {
       updatedAt: DateTime.now(),
     );
     _packs[packId] = next;
+    _notify();
     return next;
   }
 
@@ -341,11 +152,34 @@ class InMemoryPackRepository implements PackRepository {
       updatedAt: DateTime.now(),
     );
     _packs[packId] = next;
+    _notify();
     return next;
   }
 
   @override
   Future<void> deletePack(String id) async {
     _packs.remove(id);
+    _notify();
+  }
+
+  @override
+  Future<StickerPack> save(StickerPack pack) async {
+    final count = pack.stickers.length;
+    if (count < WhatsAppPackRules.minStickers ||
+        count > WhatsAppPackRules.maxStickers) {
+      throw const ValidationException(
+        'WhatsApp packs must contain between ${WhatsAppPackRules.minStickers} and ${WhatsAppPackRules.maxStickers} stickers.',
+      );
+    }
+    if (pack.name.trim().isEmpty) {
+      throw const PackException('Give this pack a name.');
+    }
+    if (pack.author.trim().isEmpty) {
+      throw const PackException('Add an author name.');
+    }
+    final next = pack.copyWith(updatedAt: DateTime.now());
+    _packs[pack.id] = next;
+    _notify();
+    return next;
   }
 }

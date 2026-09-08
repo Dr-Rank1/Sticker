@@ -11,7 +11,7 @@ import 'logging/app_logger.dart';
 import 'onboarding/onboarding_controller.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'packs/pack_providers.dart';
-import 'packs/pack_repository.dart';
+import 'packs/sticker_repository.dart';
 import 'state/settings_store.dart';
 import 'state/theme_controller.dart';
 import 'theme/app_theme.dart';
@@ -26,7 +26,7 @@ Future<void> main() async {
 
   await runZonedGuarded(
     () async {
-      final repository = await HivePackRepository.open();
+      final repository = await StickerRepository.open();
       final settings = await HiveSettingsStore.open();
       var initialShare = const <SharedMediaFile>[];
       try {

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +5,7 @@ import '../packs/pack_detail_screen.dart';
 import '../packs/pack_form_sheet.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
+import '../packs/pack_tray_image.dart';
 import '../settings/settings_screen.dart';
 import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
@@ -156,7 +155,6 @@ class _PackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final tray = File(pack.trayIconPath);
 
     return Material(
       color: colors.surface,
@@ -184,18 +182,11 @@ class _PackCard extends StatelessWidget {
                   child: ColoredBox(
                     color: colors.surfaceMuted,
                     child: Center(
-                      child: tray.existsSync()
-                          ? Image.file(
-                              tray,
-                              width: 96,
-                              height: 96,
-                              fit: BoxFit.cover,
-                            )
-                          : Icon(
-                              Icons.auto_awesome_mosaic_rounded,
-                              color: colors.accent,
-                              size: 40,
-                            ),
+                      child: PackTrayImage(
+                        pack: pack,
+                        size: 96,
+                        borderRadius: AppTheme.radiusMd,
+                      ),
                     ),
                   ),
                 ),

@@ -24,8 +24,18 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
   PackRepository get _repo => ref.read(packRepositoryProvider);
 
   @override
-  Future<List<StickerPack>> build() {
-    return _repo.getAll();
+  Future<List<StickerPack>> build() async {
+    final repo = ref.watch(packRepositoryProvider);
+    final sub = repo.watchAll().listen(_onWatch);
+    ref.onDispose(sub.cancel);
+    return repo.getAll();
+  }
+
+  void _onWatch(List<StickerPack> packs) {
+    if (!state.hasValue) return;
+    final current = state.asData?.value;
+    if (_sameSnapshot(current, packs)) return;
+    state = AsyncData(packs);
   }
 
   Future<void> refresh() async {
@@ -84,6 +94,13 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
     await refresh();
   }
 
+  /// Validates WhatsApp sticker-count rules and persists the pack.
+  Future<StickerPack> savePack(StickerPack pack) async {
+    final saved = await _repo.save(pack);
+    await refresh();
+    return saved;
+  }
+
   /// Finds or creates the static "Comment stickers" pack and adds a WebP.
   Future<StickerPack> saveStaticStickerToLibrary(String sourcePath) async {
     final packs = await _repo.getAll();
@@ -107,6 +124,25 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
     );
     await refresh();
     return updated;
+  }
+
+  static bool _sameSnapshot(
+    List<StickerPack>? current,
+    List<StickerPack> next,
+  ) {
+    if (current == null || current.length != next.length) return false;
+    for (var i = 0; i < current.length; i++) {
+      final a = current[i];
+      final b = next[i];
+      if (a.id != b.id ||
+          a.name != b.name ||
+          a.author != b.author ||
+          a.stickers.length != b.stickers.length ||
+          a.updatedAt != b.updatedAt) {
+        return false;
+      }
+    }
+    return true;
   }
 }
 

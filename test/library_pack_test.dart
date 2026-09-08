@@ -169,4 +169,35 @@ void main() {
     expect(find.text('Install WhatsApp'), findsOneWidget);
     expect(find.text('Install WhatsApp Business'), findsOneWidget);
   });
+
+  testWidgets(
+    'library grid updates when a pack is added through the repository',
+    (tester) async {
+      final repo = InMemoryPackRepository();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            packRepositoryProvider.overrideWithValue(repo),
+            settingsStoreProvider.overrideWithValue(
+              InMemorySettingsStore(onboardingComplete: true),
+            ),
+            tikTokShareIntentProvider.overrideWithValue(
+              FakeTikTokShareIntent(),
+            ),
+          ],
+          child: const StikkApp(),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('No packs yet'), findsOneWidget);
+
+      await repo.createPack(name: 'Fresh pack', author: 'Ian');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Fresh pack'), findsOneWidget);
+      expect(find.text('No packs yet'), findsNothing);
+    },
+  );
 }

@@ -11,6 +11,7 @@ import '../tiktok/tiktok_import_sheet.dart';
 import 'pack_form_sheet.dart';
 import 'pack_models.dart';
 import 'pack_providers.dart';
+import 'pack_tray_image.dart';
 import 'whatsapp_export_service.dart';
 
 class PackDetailScreen extends ConsumerStatefulWidget {
@@ -87,7 +88,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: Row(
               children: [
-                _TrayView(path: pack.trayIconPath, size: 64),
+                PackTrayImage(pack: pack, size: 64),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -243,9 +244,10 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
   Future<void> _addToWhatsApp(StickerPack pack) async {
     setState(() => _exporting = true);
     try {
+      final saved = await ref.read(packsProvider.notifier).savePack(pack);
       final result = await ref
           .read(whatsAppExportServiceProvider)
-          .exportToWhatsApp(pack);
+          .exportToWhatsApp(saved);
       if (!mounted) return;
       _showFeedback(result.message);
     } on WhatsAppNotInstalledException {
@@ -409,34 +411,6 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
     await ref
         .read(packsProvider.notifier)
         .removeSticker(packId: pack.id, stickerId: sticker.id);
-  }
-}
-
-class _TrayView extends StatelessWidget {
-  const _TrayView({required this.path, required this.size});
-
-  final String path;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final file = File(path);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: file.existsSync()
-            ? Image.file(file, fit: BoxFit.cover)
-            : ColoredBox(
-                color: context.colors.accentSoft,
-                child: Icon(
-                  Icons.auto_awesome_mosaic_rounded,
-                  color: context.colors.accent,
-                ),
-              ),
-      ),
-    );
   }
 }
 

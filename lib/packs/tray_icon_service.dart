@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 import 'pack_models.dart';
 
 class TrayIconService {
-  Future<File> createDefault({
-    required Directory directory,
-    required String packId,
+  Future<List<int>> createDefaultBytes({
     required String name,
     Color background = const Color(0xFF00C48C),
   }) async {
@@ -16,7 +14,10 @@ class TrayIconService {
     final letter = name.trim().isEmpty ? 'S' : name.trim()[0].toUpperCase();
 
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()));
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
+    );
     final rect = Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble());
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, const Radius.circular(20)),
@@ -46,14 +47,23 @@ class TrayIconService {
     picture.dispose();
     image.dispose();
     if (bytes == null) {
-      throw const PackException('Could not create the 96×96 tray icon.');
+      throw const PackException('Could not create the 96x96 tray icon.');
     }
+    return bytes.buffer.asUint8List();
+  }
 
+  Future<File> createDefault({
+    required Directory directory,
+    required String packId,
+    required String name,
+    Color background = const Color(0xFF00C48C),
+  }) async {
+    final png = await createDefaultBytes(name: name, background: background);
     if (!directory.existsSync()) {
       directory.createSync(recursive: true);
     }
     final file = File('${directory.path}${Platform.pathSeparator}tray.png');
-    await file.writeAsBytes(bytes.buffer.asUint8List());
+    await file.writeAsBytes(png);
     return file;
   }
 }
