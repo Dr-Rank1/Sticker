@@ -6,15 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
-import 'package:stikk/main.dart';
-import 'package:stikk/state/settings_store.dart';
-import 'package:stikk/tiktok/apify_service.dart';
-import 'package:stikk/tiktok/comment_sticker_isolate.dart';
-import 'package:stikk/tiktok/comment_sticker_sheet.dart';
-import 'package:stikk/tiktok/tiktok_comment_service.dart';
-import 'package:stikk/tiktok/tiktok_app_links.dart';
-import 'package:stikk/tiktok/tiktok_share_intent.dart';
-import 'package:stikk/widgets/main_scaffold.dart';
+import 'package:stickr/main.dart';
+import 'package:stickr/state/settings_store.dart';
+import 'package:stickr/tiktok/apify_service.dart';
+import 'package:stickr/tiktok/comment_sticker_isolate.dart';
+import 'package:stickr/tiktok/comment_sticker_sheet.dart';
+import 'package:stickr/tiktok/tiktok_comment_service.dart';
+import 'package:stickr/tiktok/tiktok_app_links.dart';
+import 'package:stickr/tiktok/tiktok_share_intent.dart';
+import 'package:stickr/widgets/main_scaffold.dart';
 
 import 'tiktok_share_intent_support.dart';
 
@@ -117,6 +117,7 @@ void main() {
     ]);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(MainScaffold), findsNothing);
     expect(find.byKey(const Key('shared-tiktok-scan-page')), findsOneWidget);
@@ -158,7 +159,7 @@ void main() {
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
           tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
-        child: StikkApp(
+        child: StickrApp(
           initialSharedMedia: [
             SharedMediaFile(
               path: 'https://www.tiktok.com/@creator/video/1234567890',
@@ -260,13 +261,12 @@ Widget _shareApp({
         appLinks ?? FakeTikTokAppLinks(),
       ),
     ],
-    child: StikkApp(initialSharedMedia: initialSharedMedia),
+    child: StickrApp(initialSharedMedia: initialSharedMedia),
   );
 }
 
 class _FakeApifyService extends ApifyService {
-  _FakeApifyService({this.stickers = const [_sticker], this.gate})
-    : super(token: 'test-token');
+  _FakeApifyService({this.gate}) : super(token: 'test-token');
 
   static const _sticker = CommentSticker(
     id: '1_0',
@@ -275,7 +275,6 @@ class _FakeApifyService extends ApifyService {
     author: 'Ian',
   );
 
-  final List<CommentSticker> stickers;
   final Completer<void>? gate;
   String? lastUrl;
 
@@ -284,6 +283,6 @@ class _FakeApifyService extends ApifyService {
     lastUrl = postUrl;
     final pending = gate;
     if (pending != null) await pending.future;
-    return stickers;
+    return const [_sticker];
   }
 }

@@ -152,7 +152,7 @@ class MemeService {
     final safeId = template.id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '');
     final extension = uri.path.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
     final file = File(
-      '${temporary.path}${Platform.pathSeparator}stikk_meme_${safeId.isEmpty ? 'template' : safeId}_${DateTime.now().millisecondsSinceEpoch}.$extension',
+      '${temporary.path}${Platform.pathSeparator}stickr_meme_${safeId.isEmpty ? 'template' : safeId}_${DateTime.now().millisecondsSinceEpoch}.$extension',
     );
 
     try {

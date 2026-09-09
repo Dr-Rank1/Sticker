@@ -45,7 +45,7 @@ typedef TikwmApiGet = Future<Response<dynamic>> Function(
 );
 
 /// Resolves a TikTok share link through TikWM, then stores its clean MP4 in
-/// Stikk's temporary directory for the existing FFmpeg editor pipeline.
+/// Stickr's temporary directory for the existing FFmpeg editor pipeline.
 class TiktokImportService {
   TiktokImportService({
     Dio? dio,
@@ -243,7 +243,7 @@ class TiktokImportService {
         ? DateTime.now().millisecondsSinceEpoch
         : safeId;
     final file = File(
-      '${directory.path}${Platform.pathSeparator}stikk_${effectiveId}_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      '${directory.path}${Platform.pathSeparator}stickr_${effectiveId}_${DateTime.now().millisecondsSinceEpoch}.mp4',
     );
 
     try {

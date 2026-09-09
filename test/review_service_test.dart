@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:stikk/store/review_service.dart';
+import 'package:stickr/store/review_service.dart';
 
 void main() {
   late ReviewService service;

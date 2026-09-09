@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:stikk/main.dart';
-import 'package:stikk/onboarding/onboarding_screen.dart';
-import 'package:stikk/permissions/media_permission_service.dart';
-import 'package:stikk/state/settings_store.dart';
-import 'package:stikk/tiktok/tiktok_app_links.dart';
-import 'package:stikk/tiktok/tiktok_share_intent.dart';
+import 'package:stickr/main.dart';
+import 'package:stickr/onboarding/onboarding_screen.dart';
+import 'package:stickr/permissions/media_permission_service.dart';
+import 'package:stickr/state/settings_store.dart';
+import 'package:stickr/tiktok/tiktok_app_links.dart';
+import 'package:stickr/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
 
@@ -27,7 +27,7 @@ void main() {
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
           tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
-        child: const StikkApp(),
+        child: const StickrApp(),
       ),
     );
     await tester.pump();
@@ -73,7 +73,7 @@ void main() {
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
           tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
-        child: const StikkApp(),
+        child: const StickrApp(),
       ),
     );
     await tester.pump();
@@ -108,7 +108,7 @@ void main() {
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
           tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
-        child: const StikkApp(),
+        child: const StickrApp(),
       ),
     );
     await tester.pump();

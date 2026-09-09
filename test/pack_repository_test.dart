@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
-import 'package:stikk/packs/pack_models.dart';
-import 'package:stikk/packs/pack_repository.dart';
-import 'package:stikk/packs/sticker_repository.dart';
-import 'package:stikk/packs/whatsapp_export_service.dart';
+import 'package:stickr/packs/pack_models.dart';
+import 'package:stickr/packs/pack_repository.dart';
+import 'package:stickr/packs/sticker_repository.dart';
+import 'package:stickr/packs/whatsapp_export_service.dart';
 
 StickerPack _pack({
   int stickers = 0,
@@ -153,14 +153,14 @@ void main() {
     });
 
     Future<StickerRepository?> openRepo() async {
-      final dir = await Directory.systemTemp.createTemp('stikk_isar');
+      final dir = await Directory.systemTemp.createTemp('stickr_isar');
       addTearDown(() {
         if (dir.existsSync()) dir.deleteSync(recursive: true);
       });
       try {
         repo = await StickerRepository.open(
           directory: dir.path,
-          name: 'stikk_packs_${dir.path.hashCode}',
+          name: 'stickr_packs_${dir.path.hashCode}',
           documents: () async => dir,
         );
         return repo;

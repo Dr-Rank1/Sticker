@@ -19,7 +19,7 @@ class LayerTransform {
   }) {
     final dx = canvasSize.width * normalizedCenter.dx - layerSize.width / 2;
     final dy = canvasSize.height * normalizedCenter.dy - layerSize.height / 2;
-    return Matrix4.identity()..translate(dx, dy);
+    return Matrix4.identity()..translateByDouble(dx, dy, 0, 1);
   }
 
   /// Applies one scale-gesture frame from the **widget center**, then pans.
@@ -40,12 +40,12 @@ class LayerTransform {
     final clampedScale = _clampedScaleMultiplier(source, scaleMultiplier);
 
     next
-      ..translate(cx, cy)
+      ..translateByDouble(cx, cy, 0, 1)
       ..rotateZ(rotationRadians)
-      ..scale(clampedScale)
-      ..translate(-cx, -cy);
+      ..scaleByDouble(clampedScale, clampedScale, clampedScale, 1)
+      ..translateByDouble(-cx, -cy, 0, 1);
 
-    next.leftTranslate(focalPointDelta.dx, focalPointDelta.dy);
+    next.leftTranslateByDouble(focalPointDelta.dx, focalPointDelta.dy, 0, 1);
     return clampToCanvas(next, layerSize);
   }
 
@@ -58,7 +58,7 @@ class LayerTransform {
     final delta = clamped - center;
     if (delta == Offset.zero) return source;
     final next = Matrix4.copy(source);
-    next.leftTranslate(delta.dx, delta.dy);
+    next.leftTranslateByDouble(delta.dx, delta.dy, 0, 1);
     return next;
   }
 
@@ -111,7 +111,8 @@ class LayerTransform {
       layerSize.width + padding * 2,
       layerSize.height + padding * 2,
     );
-    final inset = Matrix4.copy(transform)..translate(-padding, -padding);
+    final inset = Matrix4.copy(transform)
+      ..translateByDouble(-padding, -padding, 0, 1);
     final corners = transformedCorners(inset, padded);
     if (_pointInConvexQuad(point, corners)) return true;
 

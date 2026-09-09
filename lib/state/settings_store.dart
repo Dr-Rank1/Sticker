@@ -8,8 +8,8 @@ abstract class SettingsStore {
 
 class InMemorySettingsStore implements SettingsStore {
   InMemorySettingsStore({bool onboardingComplete = false})
-      // ignore: prefer_initializing_formals
-      : _onboardingComplete = onboardingComplete;
+    // ignore: prefer_initializing_formals
+    : _onboardingComplete = onboardingComplete;
 
   bool _onboardingComplete;
 

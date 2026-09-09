@@ -20,16 +20,16 @@ class ThemeController extends Notifier<ThemeMode> {
   }
 
   String get label => switch (state) {
-        ThemeMode.system => 'System',
-        ThemeMode.light => 'Light',
-        ThemeMode.dark => 'Dark',
-      };
+    ThemeMode.system => 'System',
+    ThemeMode.light => 'Light',
+    ThemeMode.dark => 'Dark',
+  };
 
   IconData get icon => switch (state) {
-        ThemeMode.system => Icons.brightness_auto_rounded,
-        ThemeMode.light => Icons.light_mode_rounded,
-        ThemeMode.dark => Icons.dark_mode_rounded,
-      };
+    ThemeMode.system => Icons.brightness_auto_rounded,
+    ThemeMode.light => Icons.light_mode_rounded,
+    ThemeMode.dark => Icons.dark_mode_rounded,
+  };
 }
 
 final themeModeProvider = NotifierProvider<ThemeController, ThemeMode>(

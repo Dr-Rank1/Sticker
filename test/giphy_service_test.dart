@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/community/giphy_service.dart';
+import 'package:stickr/community/giphy_service.dart';
 
 void main() {
   test('requests fifty safe-rated trending stickers', () async {

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/storage/storage_utility.dart';
+import 'package:stickr/storage/storage_utility.dart';
 
 void main() {
   late Directory root;
@@ -10,7 +10,7 @@ void main() {
   late StorageUtility utility;
 
   setUp(() async {
-    root = await Directory.systemTemp.createTemp('stikk_storage_test_');
+    root = await Directory.systemTemp.createTemp('stickr_storage_test_');
     documents = Directory('${root.path}${Platform.pathSeparator}documents')
       ..createSync();
     temporary = Directory('${root.path}${Platform.pathSeparator}temporary')
@@ -25,12 +25,12 @@ void main() {
     if (await root.exists()) await root.delete(recursive: true);
   });
 
-  test('measures document storage and only Stikk cache files', () async {
+  test('measures document storage and only Stickr cache files', () async {
     final packs = Directory('${documents.path}${Platform.pathSeparator}packs')
       ..createSync();
     File('${packs.path}${Platform.pathSeparator}sticker.webp')
         .writeAsBytesSync(List.filled(2048, 1));
-    File('${temporary.path}${Platform.pathSeparator}stikk_raw.mp4')
+    File('${temporary.path}${Platform.pathSeparator}stickr_raw.mp4')
         .writeAsBytesSync(List.filled(1024, 1));
     File('${temporary.path}${Platform.pathSeparator}another_app.tmp')
         .writeAsBytesSync(List.filled(4096, 1));
@@ -46,10 +46,10 @@ void main() {
     'clearCache deletes raw videos and intermediates but preserves other files',
     () async {
       final raw = File(
-        '${temporary.path}${Platform.pathSeparator}stikk_raw.mp4',
+        '${temporary.path}${Platform.pathSeparator}stickr_raw.mp4',
       )..writeAsBytesSync(List.filled(100, 1));
       final intermediate = File(
-        '${temporary.path}${Platform.pathSeparator}stikk_overlay.png',
+        '${temporary.path}${Platform.pathSeparator}stickr_overlay.png',
       )..writeAsBytesSync(List.filled(50, 1));
       final unrelated = File(
         '${temporary.path}${Platform.pathSeparator}other_app.tmp',
@@ -67,7 +67,7 @@ void main() {
 
   test('cleanupTemporaryMedia deletes nested mp4 and png files and leaves webp', () async {
     final nested = Directory(
-      '${temporary.path}${Platform.pathSeparator}stikk_work${Platform.pathSeparator}raw',
+      '${temporary.path}${Platform.pathSeparator}stickr_work${Platform.pathSeparator}raw',
     )..createSync(recursive: true);
     final video = File('${nested.path}${Platform.pathSeparator}clip.mp4')
       ..writeAsBytesSync(List.filled(40, 1));
@@ -97,10 +97,10 @@ void main() {
     'post-save cleanup cannot delete files outside the temporary directory',
     () async {
       final raw = File(
-        '${temporary.path}${Platform.pathSeparator}stikk_raw.mp4',
+        '${temporary.path}${Platform.pathSeparator}stickr_raw.mp4',
       )..writeAsBytesSync(List.filled(100, 1));
       final saved = File(
-        '${documents.path}${Platform.pathSeparator}stikk_saved.webp',
+        '${documents.path}${Platform.pathSeparator}stickr_saved.webp',
       )..writeAsBytesSync(List.filled(80, 1));
 
       await utility.cleanupAfterStickerSaved([raw.path, saved.path]);

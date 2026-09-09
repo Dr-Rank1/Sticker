@@ -111,7 +111,7 @@ class ImageStickerService {
     var autoCropped = false;
 
     if (removeBackground) {
-      final probe = await _writePng(image, prefix: 'stikk_seg');
+      final probe = await _writePng(image, prefix: 'stickr_seg');
       BackgroundRemovalResult? removal;
       try {
         removal = await _backgroundRemovalService.removeBackground(probe);
@@ -138,7 +138,7 @@ class ImageStickerService {
     }
 
     final canvas = fitToStickerCanvas(image);
-    final file = await _writePng(canvas, prefix: 'stikk_photo');
+    final file = await _writePng(canvas, prefix: 'stickr_photo');
     return ImagePrepareResult(
       file: file,
       backgroundRemoved: backgroundRemoved,
@@ -183,7 +183,7 @@ class ImageStickerService {
 
     final temp = await _tempDirectory();
     final composedPng = File(
-      '${temp.path}${Platform.pathSeparator}stikk_static_${DateTime.now().millisecondsSinceEpoch}.png',
+      '${temp.path}${Platform.pathSeparator}stickr_static_${DateTime.now().millisecondsSinceEpoch}.png',
     );
     await composedPng.writeAsBytes(img.encodePng(composed));
 
@@ -196,7 +196,7 @@ class ImageStickerService {
         if (_cancelled) throw const StickerExportCancelled();
         final quality = _qualityLadder[i];
         final output = File(
-          '${temp.path}${Platform.pathSeparator}stikk_static_${DateTime.now().millisecondsSinceEpoch}_q$quality.webp',
+          '${temp.path}${Platform.pathSeparator}stickr_static_${DateTime.now().millisecondsSinceEpoch}_q$quality.webp',
         );
         leftovers.add(output);
         if (output.existsSync()) {

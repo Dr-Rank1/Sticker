@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/display/display_refresh.dart';
+import 'package:stickr/display/display_refresh.dart';
 
 void main() {
   tearDown(() {

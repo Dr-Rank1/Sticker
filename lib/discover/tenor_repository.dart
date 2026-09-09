@@ -12,7 +12,7 @@ class TenorConfig {
   /// Supply at build/run time with:
   /// `--dart-define=TENOR_API_KEY=your_google_tenor_key`
   static const apiKey = String.fromEnvironment('TENOR_API_KEY');
-  static const clientKey = 'stikk';
+  static const clientKey = 'stickr';
 }
 
 @immutable
@@ -168,7 +168,7 @@ class TenorRepository {
     final temporary = await _temporaryDirectory();
     final safeId = sticker.id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '');
     final file = File(
-      '${temporary.path}${Platform.pathSeparator}stikk_tenor_${safeId.isEmpty ? 'sticker' : safeId}_${DateTime.now().millisecondsSinceEpoch}.webp',
+      '${temporary.path}${Platform.pathSeparator}stickr_tenor_${safeId.isEmpty ? 'sticker' : safeId}_${DateTime.now().millisecondsSinceEpoch}.webp',
     );
 
     try {

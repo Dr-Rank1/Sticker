@@ -1,5 +1,5 @@
-# Google Play package id. Replace the placeholder before the first upload.
-package_name("com.yourdomain.stikk")
+# Stable Google Play package ID for Stickr releases.
+package_name("com.stikk.stikk")
 
 # Service account JSON downloaded from Google Play Console.
 # Path is relative to the android/ directory (where Fastlane is invoked).

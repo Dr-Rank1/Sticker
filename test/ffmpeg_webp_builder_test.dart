@@ -1,9 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/editor/editor_models.dart';
-import 'package:stikk/editor/ffmpeg_sticker_service.dart';
-import 'package:stikk/editor/ffmpeg_webp_builder.dart';
+import 'package:stickr/editor/editor_models.dart';
+import 'package:stickr/editor/ffmpeg_webp_builder.dart';
 
 void main() {
   group('FFmpegWebpBuilder command generation', () {
@@ -52,7 +51,7 @@ void main() {
 
   group('FFmpegWebpBuilder memory management', () {
     test('failed encodes delete temporary webp files in finally', () async {
-      final temp = await Directory.systemTemp.createTemp('stikk_webp_fail');
+      final temp = await Directory.systemTemp.createTemp('stickr_webp_fail');
       addTearDown(() => temp.deleteSync(recursive: true));
       final input = File('${temp.path}${Platform.pathSeparator}in.mp4')
         ..writeAsBytesSync(const [1, 2, 3, 4]);
@@ -77,7 +76,7 @@ void main() {
     });
 
     test('FFmpegKit.cancel hook drops in-progress output', () async {
-      final temp = await Directory.systemTemp.createTemp('stikk_webp_cancel');
+      final temp = await Directory.systemTemp.createTemp('stickr_webp_cancel');
       addTearDown(() => temp.deleteSync(recursive: true));
       final input = File('${temp.path}${Platform.pathSeparator}in.mp4')
         ..writeAsBytesSync(const [1, 2, 3, 4]);
@@ -105,7 +104,7 @@ void main() {
     });
 
     test('retries lower q:v until the file is under 500KB', () async {
-      final temp = await Directory.systemTemp.createTemp('stikk_webp_ladder');
+      final temp = await Directory.systemTemp.createTemp('stickr_webp_ladder');
       addTearDown(() => temp.deleteSync(recursive: true));
       final input = File('${temp.path}${Platform.pathSeparator}in.mp4')
         ..writeAsBytesSync(const [1, 2, 3, 4]);

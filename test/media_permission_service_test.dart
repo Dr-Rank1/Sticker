@@ -1,32 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:stikk/permissions/media_permission_service.dart';
+import 'package:stickr/permissions/media_permission_service.dart';
 
 void main() {
   group('MediaPermissionService', () {
     test('uses photos on Android 13+', () {
       final service = MediaPermissionService(platform: TargetPlatform.android);
-      expect(
-        service.permissionsFor(androidSdk: 33),
-        [Permission.photos],
-      );
-      expect(
-        service.permissionsFor(androidSdk: 36),
-        [Permission.photos],
-      );
+      expect(service.permissionsFor(androidSdk: 33), [Permission.photos]);
+      expect(service.permissionsFor(androidSdk: 36), [Permission.photos]);
     });
 
     test('uses storage on Android 12 and below', () {
       final service = MediaPermissionService(platform: TargetPlatform.android);
-      expect(
-        service.permissionsFor(androidSdk: 32),
-        [Permission.storage],
-      );
-      expect(
-        service.permissionsFor(androidSdk: 29),
-        [Permission.storage],
-      );
+      expect(service.permissionsFor(androidSdk: 32), [Permission.storage]);
+      expect(service.permissionsFor(androidSdk: 29), [Permission.storage]);
     });
 
     test('uses photos on iOS', () {
@@ -40,16 +28,19 @@ void main() {
       expect(service.permissionsFor(androidSdk: 34), isEmpty);
     });
 
-    test('hasAccess is true when every required permission is usable', () async {
-      final service = MediaPermissionService(
-        platform: TargetPlatform.android,
-        androidSdkInt: () async => 34,
-        readStatus: (permission) async => permission == Permission.photos
-            ? PermissionStatus.limited
-            : PermissionStatus.granted,
-      );
-      expect(await service.hasAccess(), isTrue);
-    });
+    test(
+      'hasAccess is true when every required permission is usable',
+      () async {
+        final service = MediaPermissionService(
+          platform: TargetPlatform.android,
+          androidSdkInt: () async => 34,
+          readStatus: (permission) async => permission == Permission.photos
+              ? PermissionStatus.limited
+              : PermissionStatus.granted,
+        );
+        expect(await service.hasAccess(), isTrue);
+      },
+    );
 
     test('requestMedia reports a grant on Android 13+', () async {
       final requested = <Permission>[];

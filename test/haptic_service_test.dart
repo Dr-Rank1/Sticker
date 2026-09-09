@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/haptics/haptic_service.dart';
+import 'package:stickr/haptics/haptic_service.dart';
 
 void main() {
   test(

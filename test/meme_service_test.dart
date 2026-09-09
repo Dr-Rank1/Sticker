@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/memes/meme_service.dart';
+import 'package:stickr/memes/meme_service.dart';
 
 void main() {
   test('loads and parses Imgflip meme templates', () async {
@@ -68,7 +68,7 @@ void main() {
   });
 
   test('downloads a selected template to temporary storage', () async {
-    final temporary = await Directory.systemTemp.createTemp('stikk_meme_');
+    final temporary = await Directory.systemTemp.createTemp('stickr_meme_');
     addTearDown(() async {
       if (await temporary.exists()) await temporary.delete(recursive: true);
     });
@@ -90,7 +90,7 @@ void main() {
     final file = await service.downloadTemplate(template);
 
     expect(file.parent.path, temporary.path);
-    expect(file.path, contains('stikk_meme_drakeunsafe_'));
+    expect(file.path, contains('stickr_meme_drakeunsafe_'));
     expect(file.path, endsWith('.jpg'));
     expect(await file.length(), 3);
   });

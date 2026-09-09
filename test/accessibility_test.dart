@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/editor/editor_models.dart';
-import 'package:stikk/editor/widgets/overlay_canvas.dart';
-import 'package:stikk/haptics/haptic_service.dart';
-import 'package:stikk/main.dart';
-import 'package:stikk/packs/pack_models.dart';
-import 'package:stikk/packs/pack_providers.dart';
-import 'package:stikk/packs/pack_repository.dart';
-import 'package:stikk/state/settings_store.dart';
-import 'package:stikk/theme/app_theme.dart';
-import 'package:stikk/tiktok/tiktok_app_links.dart';
-import 'package:stikk/tiktok/tiktok_share_intent.dart';
+import 'package:stickr/editor/editor_models.dart';
+import 'package:stickr/editor/widgets/overlay_canvas.dart';
+import 'package:stickr/haptics/haptic_service.dart';
+import 'package:stickr/main.dart';
+import 'package:stickr/packs/pack_models.dart';
+import 'package:stickr/packs/pack_providers.dart';
+import 'package:stickr/packs/pack_repository.dart';
+import 'package:stickr/state/settings_store.dart';
+import 'package:stickr/theme/app_theme.dart';
+import 'package:stickr/tiktok/tiktok_app_links.dart';
+import 'package:stickr/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
 
@@ -67,8 +67,7 @@ void main() {
       tester.getSemantics(find.byKey(const Key('sticker-canvas'))),
       matchesSemantics(
         label: 'Sticker canvas',
-        hint:
-            'Drag a sticker to move it. Pinch to resize. Rotate with two fingers.',
+        hint: 'Drag a sticker to move it. Pinch to resize. Rotate with two fingers.',
         isButton: true,
       ),
     );
@@ -176,7 +175,7 @@ void main() {
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
           tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
-        child: const StikkApp(),
+        child: const StickrApp(),
       ),
     );
     await tester.pumpAndSettle();

@@ -18,7 +18,7 @@ import 'onboarding/onboarding_screen.dart';
 import 'packs/pack_models.dart';
 import 'packs/pack_providers.dart';
 import 'packs/sticker_repository.dart';
-import 'packs/stikk_file_intent.dart';
+import 'packs/stickr_file_intent.dart';
 import 'state/settings_store.dart';
 import 'state/theme_controller.dart';
 import 'store/play_store_update_service.dart';
@@ -81,7 +81,7 @@ Future<void> main() async {
           packRepositoryProvider.overrideWithValue(repository),
           settingsStoreProvider.overrideWithValue(settings),
         ],
-        child: StikkApp(initialSharedMedia: initialShare),
+        child: StickrApp(initialSharedMedia: initialShare),
       ),
     );
   } catch (error, stack) {
@@ -103,18 +103,18 @@ class _StartupErrorApp extends StatelessWidget {
   }
 }
 
-class StikkApp extends ConsumerStatefulWidget {
-  const StikkApp({super.key, this.initialSharedMedia = const []});
+class StickrApp extends ConsumerStatefulWidget {
+  const StickrApp({super.key, this.initialSharedMedia = const []});
 
   final List<SharedMediaFile> initialSharedMedia;
 
   @override
-  ConsumerState<StikkApp> createState() => _StikkAppState();
+  ConsumerState<StickrApp> createState() => _StickrAppState();
 }
 
-class _StikkAppState extends ConsumerState<StikkApp> {
+class _StickrAppState extends ConsumerState<StickrApp> {
   StreamSubscription<List<SharedMediaFile>>? _shareSub;
-  StreamSubscription<String>? _stikkSub;
+  StreamSubscription<String>? _stickrSub;
   StreamSubscription<Uri>? _appLinksSub;
   String? _sharedTikTokUrl;
   final _navigatorKey = GlobalKey<NavigatorState>();
@@ -127,13 +127,13 @@ class _StikkAppState extends ConsumerState<StikkApp> {
     );
     if (_sharedTikTokUrl != null) unawaited(_consumeClipboard());
     _listenForSharedTikTokUrls();
-    _listenForStikkFiles();
+    _listenForStickrFiles();
     _listenForTikTokAppLinks();
   }
 
   void _listenForSharedTikTokUrls() {
     final shareIntent = ref.read(tikTokShareIntentProvider);
-    // App already running in the background: new Share -> Stikk intents.
+    // App already running in the background: new Share -> Stickr intents.
     _shareSub = shareIntent.getMediaStream().listen(
       _handleSharedMedia,
       onError: (Object error) {
@@ -141,7 +141,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
       },
     );
 
-    // Cold start: the OS launched Stikk because the user shared a link.
+    // Cold start: the OS launched Stickr because the user shared a link.
     unawaited(_loadInitialSharedMedia(shareIntent));
   }
 
@@ -156,9 +156,9 @@ class _StikkAppState extends ConsumerState<StikkApp> {
   }
 
   void _handleSharedMedia(List<SharedMediaFile> files) {
-    final stikkPath = extractStikkPathFromSharedMedia(files);
-    if (stikkPath != null) {
-      unawaited(_importStikkFile(stikkPath));
+    final stickrPath = extractStickrPathFromSharedMedia(files);
+    if (stickrPath != null) {
+      unawaited(_importStickrFile(stickrPath));
       return;
     }
     final url = extractTikTokUrlFromSharedMedia(files);
@@ -186,34 +186,36 @@ class _StikkAppState extends ConsumerState<StikkApp> {
     setState(() => _sharedTikTokUrl = url);
   }
 
-  void _listenForStikkFiles() {
-    final intent = ref.read(stikkFileIntentProvider);
-    _stikkSub = intent.fileStream().listen(
-      _importStikkFile,
+  void _listenForStickrFiles() {
+    final intent = ref.read(stickrFileIntentProvider);
+    _stickrSub = intent.fileStream().listen(
+      _importStickrFile,
       onError: (Object error) {
-        appLogger.d('Stikk file stream unavailable: $error');
+        appLogger.d('Stickr file stream unavailable: $error');
       },
     );
-    unawaited(_loadInitialStikkFile(intent));
+    unawaited(_loadInitialStickrFile(intent));
   }
 
-  Future<void> _loadInitialStikkFile(StikkFileIntent intent) async {
+  Future<void> _loadInitialStickrFile(StickrFileIntent intent) async {
     try {
       final path = await intent.getInitialFile();
-      if (path != null) await _importStikkFile(path);
+      if (path != null) await _importStickrFile(path);
     } catch (error) {
-      appLogger.d('Stikk file intent unavailable: $error');
+      appLogger.d('Stickr file intent unavailable: $error');
     }
   }
 
-  Future<void> _importStikkFile(String path) async {
+  Future<void> _importStickrFile(String path) async {
     try {
-      final pack = await ref.read(packsProvider.notifier).importStikkFile(path);
+      final pack = await ref
+          .read(packsProvider.notifier)
+          .importStickrFile(path);
       _showMessage('Imported ${pack.name}.');
     } on PackException catch (error) {
       _showMessage(error.message);
     } catch (error) {
-      appLogger.e('Failed to import .stikk pack', error: error);
+      appLogger.e('Failed to import .stickr pack', error: error);
       _showMessage('Could not import this pack.');
     }
   }
@@ -244,7 +246,7 @@ class _StikkAppState extends ConsumerState<StikkApp> {
   @override
   void dispose() {
     _shareSub?.cancel();
-    _stikkSub?.cancel();
+    _stickrSub?.cancel();
     _appLinksSub?.cancel();
     super.dispose();
   }

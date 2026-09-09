@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:stikk/editor/editor_models.dart';
-import 'package:stikk/editor/image_sticker_service.dart';
+import 'package:stickr/editor/editor_models.dart';
+import 'package:stickr/editor/image_sticker_service.dart';
 
 void main() {
   img.Image solid({
@@ -90,7 +90,7 @@ void main() {
     });
 
     test('prepareForEditor writes a 512 PNG without a person mask', () async {
-      final temp = await Directory.systemTemp.createTemp('stikk_photo');
+      final temp = await Directory.systemTemp.createTemp('stickr_photo');
       addTearDown(() => temp.deleteSync(recursive: true));
       final sourceFile = File('${temp.path}${Platform.pathSeparator}in.png')
         ..writeAsBytesSync(
@@ -114,7 +114,7 @@ void main() {
     });
 
     test('prepareForEditor cuts out and auto-crops a masked subject', () async {
-      final temp = await Directory.systemTemp.createTemp('stikk_cut');
+      final temp = await Directory.systemTemp.createTemp('stickr_cut');
       addTearDown(() => temp.deleteSync(recursive: true));
       final source = solid(width: 32, height: 32, r: 200, g: 40, b: 40);
       final sourceFile = File('${temp.path}${Platform.pathSeparator}in.png')
@@ -144,7 +144,7 @@ void main() {
     });
 
     test('retries until the static sticker is under 100KB', () async {
-      final temp = await Directory.systemTemp.createTemp('stikk_static');
+      final temp = await Directory.systemTemp.createTemp('stickr_static');
       addTearDown(() => temp.deleteSync(recursive: true));
       final input = File('${temp.path}${Platform.pathSeparator}in.png')
         ..writeAsBytesSync(
@@ -179,7 +179,7 @@ void main() {
           .where(
             (file) =>
                 file.path.endsWith('.webp') ||
-                file.path.contains('stikk_static_'),
+                file.path.contains('stickr_static_'),
           )
           .toList();
       expect(generated, hasLength(1));

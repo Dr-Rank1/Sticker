@@ -5,7 +5,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'media_permission_service.dart';
 
-/// Explains why Stikk needs photos and videos, then requests them.
+/// Explains why Stickr needs photos and videos, then requests them.
 Future<bool> showMediaPermissionDialog(
   BuildContext context, {
   MediaPermissionService? service,
@@ -88,7 +88,9 @@ class MediaPermissionDialog extends ConsumerWidget {
               onPressed: () => Navigator.pop(context, false),
               child: Text(
                 'Not now',
-                style: textTheme.titleSmall?.copyWith(color: colors.textSecondary),
+                style: textTheme.titleSmall?.copyWith(
+                  color: colors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -130,20 +132,14 @@ Future<void> showOpenSettingsDialog(
 }
 
 /// Shows the rationale when needed, then requests media access.
-Future<bool> ensureMediaPermission(
-  BuildContext context,
-  WidgetRef ref,
-) async {
+Future<bool> ensureMediaPermission(BuildContext context, WidgetRef ref) async {
   final media = ref.read(mediaPermissionServiceProvider);
   if (await media.hasAccess()) return true;
   if (!context.mounted) return false;
   return showMediaPermissionDialog(context, service: media);
 }
 
-Future<bool> ensureCameraPermission(
-  BuildContext context,
-  WidgetRef ref,
-) async {
+Future<bool> ensureCameraPermission(BuildContext context, WidgetRef ref) async {
   final media = ref.read(mediaPermissionServiceProvider);
   if (!media.needsRuntimePrompt) return true;
   if (!context.mounted) return false;

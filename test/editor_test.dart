@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/editor/editor_controller.dart';
-import 'package:stikk/editor/editor_models.dart';
-import 'package:stikk/editor/ffmpeg_sticker_service.dart';
+import 'package:stickr/editor/editor_controller.dart';
+import 'package:stickr/editor/editor_models.dart';
+import 'package:stickr/editor/ffmpeg_sticker_service.dart';
 
 void main() {
   group('EditorController undo/redo', () {
@@ -106,7 +106,7 @@ void main() {
     });
 
     test('retries until the file is under 500KB', () async {
-      final temp = await Directory.systemTemp.createTemp('stikk_ffmpeg');
+      final temp = await Directory.systemTemp.createTemp('stickr_ffmpeg');
       addTearDown(() => temp.deleteSync(recursive: true));
       final input = File('${temp.path}${Platform.pathSeparator}in.mp4')
         ..writeAsBytesSync(const [1, 2, 3, 4]);

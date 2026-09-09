@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/editor/editor_screen.dart';
-import 'package:stikk/editor/widgets/text_font_picker.dart';
+import 'package:stickr/editor/editor_screen.dart';
+import 'package:stickr/editor/widgets/text_font_picker.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 void main() {

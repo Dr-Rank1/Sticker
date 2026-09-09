@@ -2,7 +2,7 @@ import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/tiktok/apify_service.dart';
+import 'package:stickr/tiktok/apify_service.dart';
 
 void main() {
   const postUrl = 'https://www.tiktok.com/@creator/video/1234567890123456789';

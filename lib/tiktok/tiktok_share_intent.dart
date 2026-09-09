@@ -8,7 +8,7 @@ abstract class TikTokShareIntent {
   Future<void> reset();
 }
 
-/// Production client: Android Share -> Stikk via `receive_sharing_intent`.
+/// Production client: Android Share -> Stickr via `receive_sharing_intent`.
 class PluginTikTokShareIntent implements TikTokShareIntent {
   const PluginTikTokShareIntent();
 

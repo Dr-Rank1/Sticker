@@ -176,7 +176,7 @@ class FFmpegWebpBuilder {
         _throwIfCancelled();
         final quality = qualityLadder[i];
         final output = File(
-          '${temp.path}${Platform.pathSeparator}stikk_${DateTime.now().millisecondsSinceEpoch}_${fps}q$quality.webp',
+          '${temp.path}${Platform.pathSeparator}stickr_${DateTime.now().millisecondsSinceEpoch}_${fps}q$quality.webp',
         );
         leftovers.add(output);
         if (output.existsSync()) {

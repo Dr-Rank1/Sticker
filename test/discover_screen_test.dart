@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/discover/discover_screen.dart';
-import 'package:stikk/discover/tenor_repository.dart';
-import 'package:stikk/packs/pack_models.dart';
-import 'package:stikk/packs/pack_providers.dart';
-import 'package:stikk/packs/pack_repository.dart';
-import 'package:stikk/theme/app_theme.dart';
+import 'package:stickr/discover/discover_screen.dart';
+import 'package:stickr/discover/tenor_repository.dart';
+import 'package:stickr/packs/pack_models.dart';
+import 'package:stickr/packs/pack_providers.dart';
+import 'package:stickr/packs/pack_repository.dart';
+import 'package:stickr/theme/app_theme.dart';
 
 void main() {
   setUpAll(() {
@@ -20,7 +20,7 @@ void main() {
     tester,
   ) async {
     final temporary = Directory(
-      '${Directory.systemTemp.path}/stikk_discover_${DateTime.now().microsecondsSinceEpoch}',
+      '${Directory.systemTemp.path}/stickr_discover_${DateTime.now().microsecondsSinceEpoch}',
     )..createSync(recursive: true);
     addTearDown(() {
       if (temporary.existsSync()) temporary.deleteSync(recursive: true);
@@ -119,7 +119,7 @@ class _FakeTenorRepository extends TenorRepository {
     TenorSticker sticker, {
     void Function(double? progress)? onProgress,
   }) async {
-    final file = File('${temporary.path}/stikk_tenor_test.webp');
+    final file = File('${temporary.path}/stickr_tenor_test.webp');
     file.writeAsBytesSync([1, 2, 3, 4]);
     downloadedFile = file;
     onProgress?.call(1);

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/error/app_error_fallback.dart';
+import 'package:stickr/error/app_error_fallback.dart';
 
 void main() {
   testWidgets('fallback UI shows a generic recovery message', (tester) async {

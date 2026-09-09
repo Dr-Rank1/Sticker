@@ -44,7 +44,7 @@ class CanvasExporter {
     final bytes = await capturePng(key, size: size);
     if (bytes == null || bytes.isEmpty) return null;
     final file = File(
-      '${directory.path}${Platform.pathSeparator}stikk_overlays_${DateTime.now().millisecondsSinceEpoch}.png',
+      '${directory.path}${Platform.pathSeparator}stickr_overlays_${DateTime.now().millisecondsSinceEpoch}.png',
     );
     await file.writeAsBytes(bytes);
     return file;

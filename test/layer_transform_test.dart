@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/editor/layer_transform.dart';
+import 'package:stickr/editor/layer_transform.dart';
 
 void main() {
   const layerSize = Size(80, 40);

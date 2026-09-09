@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Semantic color tokens for light and dark Stikk surfaces.
+/// Semantic color tokens for light and dark Stickr surfaces.
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({

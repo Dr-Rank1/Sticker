@@ -15,8 +15,8 @@ import java.io.File
 class MainActivity : FlutterFragmentActivity() {
 
     private var pendingResult: MethodChannel.Result? = null
-    private var stikkChannel: MethodChannel? = null
-    private var pendingStikkPath: String? = null
+    private var stickrChannel: MethodChannel? = null
+    private var pendingStickrPath: String? = null
 
     private val addPackLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -33,32 +33,32 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
-        stikkChannel = MethodChannel(
+        stickrChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            STIKK_CHANNEL,
+            STICKR_CHANNEL,
         ).apply {
             setMethodCallHandler { call, result ->
                 when (call.method) {
-                    METHOD_GET_INITIAL_STIKK -> {
-                        result.success(pendingStikkPath)
-                        pendingStikkPath = null
+                    METHOD_GET_INITIAL_STICKR -> {
+                        result.success(pendingStickrPath)
+                        pendingStickrPath = null
                     }
                     else -> result.notImplemented()
                 }
             }
         }
-        val initialStikk = extractStikkPath(intent)
-        if (initialStikk != null) {
-            pendingStikkPath = initialStikk
+        val initialStickr = extractStickrPath(intent)
+        if (initialStickr != null) {
+            pendingStickrPath = initialStickr
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val path = extractStikkPath(intent) ?: return
-        pendingStikkPath = path
-        stikkChannel?.invokeMethod(METHOD_ON_STIKK_FILE, path)
+        val path = extractStickrPath(intent) ?: return
+        pendingStickrPath = path
+        stickrChannel?.invokeMethod(METHOD_ON_STICKR_FILE, path)
     }
 
     private fun addStickerPack(call: MethodCall, result: MethodChannel.Result) {
@@ -169,29 +169,29 @@ class MainActivity : FlutterFragmentActivity() {
         super.onDestroy()
     }
 
-    private fun extractStikkPath(intent: Intent?): String? {
+    private fun extractStickrPath(intent: Intent?): String? {
         if (intent == null) return null
         val uri = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> extraStream(intent)
             else -> null
         } ?: return null
-        if (!looksLikeStikk(intent, uri)) return null
+        if (!looksLikeStickr(intent, uri)) return null
         return copyUriToCache(uri)
     }
 
-    private fun looksLikeStikk(intent: Intent, uri: Uri): Boolean {
-        // VIEW filters only match .stikk files or our pack MIME type.
+    private fun looksLikeStickr(intent: Intent, uri: Uri): Boolean {
+        // VIEW filters only match .stickr files or our pack MIME type.
         if (intent.action == Intent.ACTION_VIEW) return true
         val mime = (intent.type ?: contentResolver.getType(uri) ?: "").lowercase()
-        if (mime.contains("stikk") ||
+        if (mime.contains("stickr") ||
             mime == "application/zip" ||
             mime == "application/octet-stream"
         ) {
             return true
         }
         val path = (uri.lastPathSegment ?: uri.toString()).lowercase()
-        return path.contains(".stikk")
+        return path.contains(".stickr")
     }
 
     private fun extraStream(intent: Intent): Uri? {
@@ -209,7 +209,7 @@ class MainActivity : FlutterFragmentActivity() {
             if (!path.isNullOrBlank() && File(path).exists()) return path
         }
         return try {
-            val out = File(cacheDir, "import_${System.currentTimeMillis()}.stikk")
+            val out = File(cacheDir, "import_${System.currentTimeMillis()}.stickr")
             contentResolver.openInputStream(uri)?.use { input ->
                 out.outputStream().use { output -> input.copyTo(output) }
             } ?: return null
@@ -222,9 +222,9 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         const val CHANNEL = "com.stickerapp/whatsapp_export"
         const val METHOD_ADD_STICKER_PACK = "addStickerPack"
-        const val STIKK_CHANNEL = "com.stikk.stikk/stikk_files"
-        const val METHOD_GET_INITIAL_STIKK = "getInitialStikkFile"
-        const val METHOD_ON_STIKK_FILE = "onStikkFile"
+        const val STICKR_CHANNEL = "com.stikk.stikk/stickr_files"
+        const val METHOD_GET_INITIAL_STICKR = "getInitialStickrFile"
+        const val METHOD_ON_STICKR_FILE = "onStickrFile"
 
         const val ACTION_ENABLE_STICKER_PACK = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
         const val EXTRA_STICKER_PACK_ID = "sticker_pack_id"

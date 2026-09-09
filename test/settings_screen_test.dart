@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/settings/settings_screen.dart';
-import 'package:stikk/storage/storage_utility.dart';
-import 'package:stikk/theme/app_theme.dart';
+import 'package:stickr/settings/settings_screen.dart';
+import 'package:stickr/storage/storage_utility.dart';
+import 'package:stickr/theme/app_theme.dart';
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('shows storage usage and clears temporary Stikk files', (
+  testWidgets('shows storage usage and clears temporary Stickr files', (
     tester,
   ) async {
     final utility = _FakeStorageUtility();

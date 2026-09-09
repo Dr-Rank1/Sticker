@@ -68,7 +68,7 @@ class OverlayComposer {
     if (byteData == null) return null;
 
     final file = File(
-      '${directory.path}${Platform.pathSeparator}stikk_overlays_${DateTime.now().millisecondsSinceEpoch}.png',
+      '${directory.path}${Platform.pathSeparator}stickr_overlays_${DateTime.now().millisecondsSinceEpoch}.png',
     );
     await file.writeAsBytes(byteData.buffer.asUint8List());
     return file;

@@ -8,30 +8,28 @@ import 'package:share_plus/share_plus.dart';
 import 'pack_models.dart';
 import 'pack_repository.dart';
 
-/// Custom Stikk pack archive (`application/vnd.stikk.pack`).
+/// Custom Stickr pack archive (`application/vnd.stickr.pack`).
 class ExportService {
   ExportService({
-    required PackRepository repository,
+    required this.repository,
     Future<Directory> Function()? temporaryDirectory,
-    Future<void> Function(String filePath, String fileName)? shareFile,
-  }) : _repository = repository,
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
-       _shareFile = shareFile;
+    this.shareFile,
+  }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
 
-  static const fileExtension = '.stikk';
-  static const mimeType = 'application/vnd.stikk.pack';
+  static const fileExtension = '.stickr';
+  static const mimeType = 'application/vnd.stickr.pack';
   static const manifestFileName = 'manifest.json';
   static const trayFileName = 'tray.png';
   static const stickersDirectory = 'stickers';
 
-  final PackRepository _repository;
+  final PackRepository repository;
   final Future<Directory> Function() _temporaryDirectory;
-  final Future<void> Function(String filePath, String fileName)? _shareFile;
+  final Future<void> Function(String filePath, String fileName)? shareFile;
 
-  /// Builds a `.stikk` zip for [packId] containing `manifest.json`, the tray
+  /// Builds a `.stickr` zip for [packId] containing `manifest.json`, the tray
   /// icon, and every associated `.webp` sticker.
   Future<File> exportPack(String packId) async {
-    final pack = await _repository.getById(packId);
+    final pack = await repository.getById(packId);
     if (pack == null) {
       throw const PackException('That pack no longer exists.');
     }
@@ -78,13 +76,13 @@ class ExportService {
     return out;
   }
 
-  /// Exports [packId] and opens the native share sheet with the `.stikk` file.
+  /// Exports [packId] and opens the native share sheet with the `.stickr` file.
   Future<File> sharePack(String packId) async {
     final file = await exportPack(packId);
     final name = file.uri.pathSegments.isEmpty
         ? archiveFileName('pack')
         : file.uri.pathSegments.last;
-    final share = _shareFile;
+    final share = shareFile;
     if (share != null) {
       await share(file.path, name);
     } else {
@@ -98,23 +96,23 @@ class ExportService {
     return file;
   }
 
-  /// Extracts a `.stikk` archive into local pack storage (Isar in production).
+  /// Extracts a `.stickr` archive into local pack storage (Isar in production).
   Future<StickerPack> importPack(String archivePath) async {
     final source = File(archivePath);
     if (!source.existsSync()) {
-      throw const PackException('The .stikk file could not be found.');
+      throw const PackException('The .stickr file could not be found.');
     }
 
     late final Archive archive;
     try {
       archive = ZipDecoder().decodeBytes(source.readAsBytesSync());
     } catch (_) {
-      throw const PackException('This is not a valid .stikk pack.');
+      throw const PackException('This is not a valid .stickr pack.');
     }
 
     final manifestEntry = archive.findFile(manifestFileName);
     if (manifestEntry == null) {
-      throw const PackException('This is not a valid .stikk pack.');
+      throw const PackException('This is not a valid .stickr pack.');
     }
     final manifest = _readManifest(manifestEntry.content);
     final trayEntry = archive.findFile(trayFileName);
@@ -126,12 +124,12 @@ class ExportService {
         if (entry.isFile && entry.name.toLowerCase().endsWith('.webp')) entry,
     ]..sort((a, b) => a.name.compareTo(b.name));
 
-    final created = await _repository.createPack(
+    final created = await repository.createPack(
       name: manifest.name,
       author: manifest.publisher,
     );
     if (trayBytes.isNotEmpty) {
-      await _repository.updatePack(created.copyWith(trayIconBytes: trayBytes));
+      await repository.updatePack(created.copyWith(trayIconBytes: trayBytes));
     }
 
     final temp = await _temporaryDirectory();
@@ -143,11 +141,11 @@ class ExportService {
       if (imported.isFull) break;
       final bytes = webpEntries[i].content;
       final extracted = File(
-        '${temp.path}${Platform.pathSeparator}stikk_import_$i.webp',
+        '${temp.path}${Platform.pathSeparator}stickr_import_$i.webp',
       );
       await extracted.writeAsBytes(bytes, flush: true);
       try {
-        imported = await _repository.addSticker(
+        imported = await repository.addSticker(
           packId: created.id,
           sourcePath: extracted.path,
           animated: _webpLooksAnimated(extracted.path),
@@ -163,7 +161,7 @@ class ExportService {
         break;
       }
     }
-    return (await _repository.getById(created.id)) ?? imported;
+    return (await repository.getById(created.id)) ?? imported;
   }
 
   static String archiveFileName(String packName) {
@@ -186,22 +184,22 @@ class ExportService {
     return file.readAsBytesSync();
   }
 
-  _StikkManifest _readManifest(List<int> bytes) {
+  _StickrManifest _readManifest(List<int> bytes) {
     try {
       final decoded = jsonDecode(utf8.decode(bytes));
       if (decoded is! Map) {
-        throw const PackException('This is not a valid .stikk pack.');
+        throw const PackException('This is not a valid .stickr pack.');
       }
       final name = (decoded['name'] as String?)?.trim() ?? '';
       final publisher = (decoded['publisher'] as String?)?.trim() ?? '';
       if (name.isEmpty || publisher.isEmpty) {
         throw const PackException('This pack is missing a name or publisher.');
       }
-      return _StikkManifest(name: name, publisher: publisher);
+      return _StickrManifest(name: name, publisher: publisher);
     } on PackException {
       rethrow;
     } catch (_) {
-      throw const PackException('This is not a valid .stikk pack.');
+      throw const PackException('This is not a valid .stickr pack.');
     }
   }
 
@@ -218,8 +216,8 @@ class ExportService {
   }
 }
 
-class _StikkManifest {
-  const _StikkManifest({required this.name, required this.publisher});
+class _StickrManifest {
+  const _StickrManifest({required this.name, required this.publisher});
   final String name;
   final String publisher;
 }

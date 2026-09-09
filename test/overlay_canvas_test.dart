@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/editor/canvas_exporter.dart';
-import 'package:stikk/editor/editor_models.dart';
-import 'package:stikk/editor/widgets/layer_content.dart';
-import 'package:stikk/editor/widgets/overlay_canvas.dart';
+import 'package:stickr/editor/canvas_exporter.dart';
+import 'package:stickr/editor/editor_models.dart';
+import 'package:stickr/editor/widgets/layer_content.dart';
+import 'package:stickr/editor/widgets/overlay_canvas.dart';
 
 void main() {
   setUpAll(() {

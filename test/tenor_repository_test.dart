@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/discover/tenor_repository.dart';
+import 'package:stickr/discover/tenor_repository.dart';
 
 void main() {
   test(
@@ -81,35 +81,38 @@ void main() {
     );
   });
 
-  test('downloads the transparent WebP into Stikk temporary storage', () async {
-    final temporary = await Directory.systemTemp.createTemp('stikk_tenor_');
-    addTearDown(() async {
-      if (await temporary.exists()) await temporary.delete(recursive: true);
-    });
-    late String requestedUrl;
-    final repository = TenorRepository(
-      apiKey: 'test-key',
-      temporaryDirectory: () async => temporary,
-      fileDownload: (url, destination, onProgress) async {
-        requestedUrl = url;
-        await File(destination).writeAsBytes([1, 2, 3, 4]);
-        onProgress?.call(4, 4);
-      },
-    );
-    const sticker = TenorSticker(
-      id: 'cat/unsafe',
-      title: 'Cat',
-      webpUrl: 'https://media.tenor.com/cat.webp',
-      width: 320,
-      height: 320,
-      duration: 0,
-    );
+  test(
+    'downloads the transparent WebP into Stickr temporary storage',
+    () async {
+      final temporary = await Directory.systemTemp.createTemp('stickr_tenor_');
+      addTearDown(() async {
+        if (await temporary.exists()) await temporary.delete(recursive: true);
+      });
+      late String requestedUrl;
+      final repository = TenorRepository(
+        apiKey: 'test-key',
+        temporaryDirectory: () async => temporary,
+        fileDownload: (url, destination, onProgress) async {
+          requestedUrl = url;
+          await File(destination).writeAsBytes([1, 2, 3, 4]);
+          onProgress?.call(4, 4);
+        },
+      );
+      const sticker = TenorSticker(
+        id: 'cat/unsafe',
+        title: 'Cat',
+        webpUrl: 'https://media.tenor.com/cat.webp',
+        width: 320,
+        height: 320,
+        duration: 0,
+      );
 
-    final file = await repository.downloadSticker(sticker);
+      final file = await repository.downloadSticker(sticker);
 
-    expect(requestedUrl, sticker.webpUrl);
-    expect(file.parent.path, temporary.path);
-    expect(file.path, contains('stikk_tenor_catunsafe_'));
-    expect(await file.length(), 4);
-  });
+      expect(requestedUrl, sticker.webpUrl);
+      expect(file.parent.path, temporary.path);
+      expect(file.path, contains('stickr_tenor_catunsafe_'));
+      expect(await file.length(), 4);
+    },
+  );
 }

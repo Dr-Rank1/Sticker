@@ -46,7 +46,7 @@ class CommentSticker {
       'commentId': commentId,
       'imageUrl': imageUrl,
       'author': author,
-      if (localPath != null) 'localPath': localPath!,
+      'localPath': ?localPath,
     };
   }
 

@@ -10,9 +10,8 @@ class QueuedImageDownloader {
   QueuedImageDownloader({
     Dio? dio,
     this.maxConcurrent = defaultMaxConcurrent,
-    Future<void> Function(String url, String savePath)? save,
-  }) : _dio = dio ?? Dio(_defaultOptions),
-       _save = save;
+    this.save,
+  }) : _dio = dio ?? Dio(_defaultOptions);
 
   static const defaultMaxConcurrent = 5;
 
@@ -26,7 +25,7 @@ class QueuedImageDownloader {
 
   final Dio _dio;
   final int maxConcurrent;
-  final Future<void> Function(String url, String savePath)? _save;
+  final Future<void> Function(String url, String savePath)? save;
 
   Future<void> downloadAll({
     required List<CommentSticker> stickers,
@@ -66,9 +65,9 @@ class QueuedImageDownloader {
   ) async {
     final safeId = sticker.id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
     final path = '$directory${Platform.pathSeparator}comment_$safeId.img';
-    final save = _save;
-    if (save != null) {
-      await save(sticker.imageUrl, path);
+    final customSave = save;
+    if (customSave != null) {
+      await customSave(sticker.imageUrl, path);
     } else {
       final response = await _dio.get<List<int>>(sticker.imageUrl);
       final bytes = response.data;

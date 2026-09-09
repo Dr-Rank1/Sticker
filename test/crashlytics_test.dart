@@ -4,11 +4,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
-import 'package:stikk/crashlytics/crash_reporter.dart';
-import 'package:stikk/editor/ffmpeg_webp_builder.dart';
-import 'package:stikk/error/app_error_handlers.dart';
-import 'package:stikk/logging/app_logger.dart';
-import 'package:stikk/tiktok/apify_service.dart';
+import 'package:stickr/crashlytics/crash_reporter.dart';
+import 'package:stickr/editor/ffmpeg_webp_builder.dart';
+import 'package:stickr/error/app_error_handlers.dart';
+import 'package:stickr/logging/app_logger.dart';
+import 'package:stickr/tiktok/apify_service.dart';
 
 void main() {
   late CrashReporter previousReporter;
@@ -121,7 +121,7 @@ void main() {
   test('FFmpeg logs input size before a heavy encode', () async {
     final recorder = RecordingCrashReporter();
     crashReporter = recorder;
-    final temp = await Directory.systemTemp.createTemp('stikk_crash_ffmpeg_');
+    final temp = await Directory.systemTemp.createTemp('stickr_crash_ffmpeg_');
     addTearDown(() {
       if (temp.existsSync()) temp.deleteSync(recursive: true);
     });

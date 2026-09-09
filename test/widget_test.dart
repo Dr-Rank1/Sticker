@@ -5,21 +5,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/community/giphy_service.dart';
-import 'package:stikk/main.dart';
-import 'package:stikk/state/settings_store.dart';
-import 'package:stikk/storage/storage_utility.dart';
-import 'package:stikk/tiktok/tiktok_app_links.dart';
-import 'package:stikk/tiktok/tiktok_share_intent.dart';
+import 'package:stickr/community/giphy_service.dart';
+import 'package:stickr/main.dart';
+import 'package:stickr/state/settings_store.dart';
+import 'package:stickr/storage/storage_utility.dart';
+import 'package:stickr/tiktok/tiktok_app_links.dart';
+import 'package:stickr/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
 
 ProviderScope appWithOnboardingDone() {
   final documents = Directory(
-    '${Directory.systemTemp.path}/stikk_widget_documents',
+    '${Directory.systemTemp.path}/stickr_widget_documents',
   )..createSync(recursive: true);
   final temporary = Directory(
-    '${Directory.systemTemp.path}/stikk_widget_temporary',
+    '${Directory.systemTemp.path}/stickr_widget_temporary',
   )..createSync(recursive: true);
   return ProviderScope(
     overrides: [
@@ -48,7 +48,7 @@ ProviderScope appWithOnboardingDone() {
       tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
       tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
     ],
-    child: const StikkApp(),
+    child: const StickrApp(),
   );
 }
 

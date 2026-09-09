@@ -57,9 +57,9 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
     final text = data?.text?.trim() ?? '';
     if (text.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your clipboard is empty.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Your clipboard is empty.')));
       return;
     }
     _linkController.text = text;
@@ -68,9 +68,9 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
   }
 
   Future<void> _submit() async {
-    await ref.read(tiktokImportProvider.notifier).importFromLink(
-          _linkController.text,
-        );
+    await ref
+        .read(tiktokImportProvider.notifier)
+        .importFromLink(_linkController.text);
   }
 
   @override
@@ -98,10 +98,7 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
         Future.microtask(() {
           navigator.push(
             MaterialPageRoute<void>(
-              builder: (_) => EditorScreen(
-                videoPath: path,
-                caption: caption,
-              ),
+              builder: (_) => EditorScreen(videoPath: path, caption: caption),
             ),
           );
         });
@@ -161,7 +158,10 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
                   suffixIcon: IconButton(
                     tooltip: 'Paste',
                     onPressed: importState.isBusy ? null : _pasteFromClipboard,
-                    icon: Icon(Icons.content_paste_rounded, color: colors.accent),
+                    icon: Icon(
+                      Icons.content_paste_rounded,
+                      color: colors.accent,
+                    ),
                   ),
                 ),
               ),
@@ -172,15 +172,16 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
                 width: double.infinity,
                 child: FilledButton(
                   key: const Key('tiktok-import-button'),
-                  onPressed: importState.isBusy || _linkController.text.trim().isEmpty
+                  onPressed:
+                      importState.isBusy || _linkController.text.trim().isEmpty
                       ? null
                       : _submit,
                   child: Text(
                     importState.phase == TiktokImportPhase.resolving
                         ? 'Finding video...'
                         : importState.phase == TiktokImportPhase.downloading
-                            ? 'Downloading...'
-                            : 'Import video',
+                        ? 'Downloading...'
+                        : 'Import video',
                   ),
                 ),
               ),
@@ -201,7 +202,8 @@ class _ImportProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final textTheme = Theme.of(context).textTheme;
-    final visible = state.phase == TiktokImportPhase.resolving ||
+    final visible =
+        state.phase == TiktokImportPhase.resolving ||
         state.phase == TiktokImportPhase.downloading;
 
     return AnimatedSwitcher(

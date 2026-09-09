@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="assets/branding/app_icon.png" width="128" alt="Stikk app icon">
+  <img src="assets/branding/app_icon.png" width="128" alt="Stickr app icon">
 </p>
 
-<h1 align="center">Stikk</h1>
+<h1 align="center">Stickr</h1>
 
 <p align="center">
   A polished Flutter app for creating, organizing, and exporting custom
   WhatsApp sticker packs.
 </p>
 
-Stikk turns photos, TikTok clips, popular meme templates, and transparent
+Stickr turns photos, TikTok clips, popular meme templates, and transparent
 stickers into WhatsApp-ready WebP files. It includes an editor for trimming
 video, adding text and emoji overlays, selecting downloadable fonts, and
 removing photo backgrounds on-device.
@@ -17,7 +17,7 @@ removing photo backgrounds on-device.
 The app stores packs locally, enforces WhatsApp's sticker requirements, and
 exports complete packs to WhatsApp on Android.
 
-## What can Stikk do?
+## What can Stickr do?
 
 ### Create from a photo
 
@@ -46,7 +46,7 @@ TikTok links, including `tiktok.com`, `vm.tiktok.com`, and related mobile share
 hosts. A consumed link is cleared to prevent the same scan from opening
 repeatedly.
 
-If comment scanning is configured, Stikk can request comments, keep only
+If comment scanning is configured, Stickr can request comments, keep only
 comments that expose actual image attachments, and present the images in a
 selectable grid. Selected images are padded on a transparent 512×512 canvas,
 encoded as static WebP, and can be saved to a local pack.
@@ -59,7 +59,7 @@ run succeeds, and keeps only dataset items that include a sticker or image URL.
 - Load current meme templates from Imgflip.
 - Search and browse templates in a grid.
 - Download a selected template.
-- Prepare it at 512×512 and continue editing it in Stikk.
+- Prepare it at 512×512 and continue editing it in Stickr.
 - Add custom text before saving it as a static sticker.
 
 ### Discover transparent stickers
@@ -69,7 +69,7 @@ run succeeds, and keeps only dataset items that include a sticker or image URL.
 - Browse results in a masonry grid.
 - Download a sticker directly into one of your packs.
 
-Stikk sends `searchfilter=sticker` and
+Stickr sends `searchfilter=sticker` and
 `media_filter=webp_transparent` to Tenor so regular GIF results are excluded.
 
 ### Edit stickers
@@ -96,7 +96,7 @@ The editor supports:
 
 ### Export to WhatsApp
 
-On Android, Stikk checks whether consumer WhatsApp or WhatsApp Business can
+On Android, Stickr checks whether consumer WhatsApp or WhatsApp Business can
 handle the export before launching the native pack flow. If WhatsApp is
 missing, the app displays a friendly installation guide.
 
@@ -131,7 +131,7 @@ directly to a pack.
 
 ## Platform support
 
-Stikk is developed primarily for Android.
+Stickr is developed primarily for Android.
 
 - Android 7.0 / API 24 or newer is the configured minimum.
 - Native WhatsApp pack export is implemented for Android.
@@ -370,7 +370,7 @@ flutter test test/apify_service_test.dart
 - Network-backed features depend on third-party availability, quotas, terms,
   and response formats.
 - TikTok web comment APIs often expose only a `[Sticker]` text placeholder.
-  Stikk can import a comment sticker only when the selected provider returns a
+  Stickr can import a comment sticker only when the selected provider returns a
   real image URL.
 - Dynamic fonts require network access the first time a font is requested.
 - A production signing configuration has not yet been added.

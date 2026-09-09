@@ -4,19 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/community/community_models.dart';
-import 'package:stikk/community/community_sticker_feed.dart';
-import 'package:stikk/community/giphy_service.dart';
-import 'package:stikk/editor/image_sticker_service.dart';
-import 'package:stikk/main.dart';
-import 'package:stikk/packs/pack_models.dart';
-import 'package:stikk/packs/pack_providers.dart';
-import 'package:stikk/packs/pack_repository.dart';
-import 'package:stikk/packs/whatsapp_export_service.dart';
-import 'package:stikk/state/settings_store.dart';
-import 'package:stikk/tiktok/comment_sticker_formatter.dart';
-import 'package:stikk/tiktok/tiktok_app_links.dart';
-import 'package:stikk/tiktok/tiktok_share_intent.dart';
+import 'package:stickr/community/community_models.dart';
+import 'package:stickr/community/community_sticker_feed.dart';
+import 'package:stickr/community/giphy_service.dart';
+import 'package:stickr/editor/image_sticker_service.dart';
+import 'package:stickr/main.dart';
+import 'package:stickr/packs/pack_models.dart';
+import 'package:stickr/packs/pack_providers.dart';
+import 'package:stickr/packs/pack_repository.dart';
+import 'package:stickr/packs/whatsapp_export_service.dart';
+import 'package:stickr/state/settings_store.dart';
+import 'package:stickr/tiktok/comment_sticker_formatter.dart';
+import 'package:stickr/tiktok/tiktok_app_links.dart';
+import 'package:stickr/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
 
@@ -77,7 +77,7 @@ ProviderScope communityApp({
       tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
       tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
     ],
-    child: const StikkApp(),
+    child: const StickrApp(),
   );
 }
 

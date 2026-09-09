@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/packs/whatsapp_export_service.dart';
+import 'package:stickr/packs/whatsapp_export_service.dart';
 
 void main() {
   test('WhatsApp ContentProvider authority is applicationId.stickercontentprovider', () {

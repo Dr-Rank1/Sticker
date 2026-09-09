@@ -22,7 +22,7 @@ class CacheClearResult {
   final int filesDeleted;
 }
 
-/// Measures app-owned storage and removes Stikk's disposable working files.
+/// Measures app-owned storage and removes Stickr's disposable working files.
 ///
 /// Pack stickers under the documents directory are never treated as cache.
 class StorageUtility {
@@ -41,7 +41,7 @@ class StorageUtility {
     final temporary = await _temporaryDirectory();
     return StorageUsage(
       documentsBytes: await directorySize(documents),
-      cacheBytes: await _stikkCacheSize(temporary),
+      cacheBytes: await _stickrCacheSize(temporary),
     );
   }
 
@@ -115,7 +115,7 @@ class StorageUtility {
     var bytesFreed = 0;
     var filesDeleted = 0;
     await for (final entity in temporary.list(followLinks: false)) {
-      if (!_isStikkEntity(entity)) continue;
+      if (!_isStickrEntity(entity)) continue;
       final result = await _deleteEntity(entity);
       bytesFreed += result.bytesFreed;
       filesDeleted += result.filesDeleted;
@@ -124,7 +124,7 @@ class StorageUtility {
   }
 
   /// Removes known raw and intermediate files after the final WebP is copied
-  /// to permanent app storage. Paths outside Stikk's temp directory are ignored.
+  /// to permanent app storage. Paths outside Stickr's temp directory are ignored.
   Future<CacheClearResult> cleanupAfterStickerSaved(
     Iterable<String?> paths,
   ) async {
@@ -136,7 +136,7 @@ class StorageUtility {
     for (final path in paths.whereType<String>().toSet()) {
       final entity = File(path);
       final absolutePath = entity.absolute.path;
-      if (!absolutePath.startsWith(root) || !_isStikkEntity(entity)) continue;
+      if (!absolutePath.startsWith(root) || !_isStickrEntity(entity)) continue;
       final result = await _deleteEntity(entity);
       bytesFreed += result.bytesFreed;
       filesDeleted += result.filesDeleted;
@@ -145,11 +145,11 @@ class StorageUtility {
     return CacheClearResult(bytesFreed: bytesFreed, filesDeleted: filesDeleted);
   }
 
-  Future<int> _stikkCacheSize(Directory temporary) async {
+  Future<int> _stickrCacheSize(Directory temporary) async {
     if (!await temporary.exists()) return 0;
     var bytes = 0;
     await for (final entity in temporary.list(followLinks: false)) {
-      if (_isStikkEntity(entity)) {
+      if (_isStickrEntity(entity)) {
         bytes += entity is Directory
             ? await directorySize(entity)
             : await _fileSize(entity);
@@ -158,9 +158,9 @@ class StorageUtility {
     return bytes;
   }
 
-  bool _isStikkEntity(FileSystemEntity entity) {
+  bool _isStickrEntity(FileSystemEntity entity) {
     final name = entity.path.split(Platform.pathSeparator).last;
-    return name.startsWith('stikk_');
+    return name.startsWith('stickr_');
   }
 
   Future<CacheClearResult> _deleteEntity(FileSystemEntity entity) async {

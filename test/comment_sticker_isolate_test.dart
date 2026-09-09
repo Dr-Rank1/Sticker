@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/tiktok/comment_sticker_isolate.dart';
-import 'package:stikk/tiktok/tiktok_comment_service.dart';
+import 'package:stickr/tiktok/comment_sticker_isolate.dart';
+import 'package:stickr/tiktok/tiktok_comment_service.dart';
 
 void main() {
   test('progress maps match the UI contract', () {
@@ -63,7 +63,7 @@ void main() {
     });
 
     final base = 'http://${server.address.host}:${server.port}';
-    final directory = await Directory.systemTemp.createTemp('stikk_iso_');
+    final directory = await Directory.systemTemp.createTemp('stickr_iso_');
     addTearDown(() async {
       if (directory.existsSync()) {
         await directory.delete(recursive: true);

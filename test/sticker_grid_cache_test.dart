@@ -3,14 +3,14 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/images/sticker_grid_cache.dart';
-import 'package:stikk/images/sticker_grid_image.dart';
+import 'package:stickr/images/sticker_grid_cache.dart';
+import 'package:stickr/images/sticker_grid_image.dart';
 
 void main() {
   test('sticker grid cache caps objects and decode size', () {
     expect(StickerGridCacheManager.maxDecodeExtent, 256);
     expect(StickerGridCacheManager.maxCachedObjects, 64);
-    expect(StickerGridCacheManager.cacheKey, 'stikkStickerGrid');
+    expect(StickerGridCacheManager.cacheKey, 'stickrStickerGrid');
   });
 
   test('findStickerGridChildIndex maps ValueKeys back to list order', () {

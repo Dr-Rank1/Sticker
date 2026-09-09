@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/packs/export_service.dart';
-import 'package:stikk/packs/pack_models.dart';
-import 'package:stikk/packs/pack_repository.dart';
+import 'package:stickr/packs/export_service.dart';
+import 'package:stickr/packs/pack_models.dart';
+import 'package:stickr/packs/pack_repository.dart';
 
 void main() {
   late Directory root;
@@ -14,7 +14,7 @@ void main() {
   late InMemoryPackRepository repo;
 
   setUp(() async {
-    root = await Directory.systemTemp.createTemp('stikk_export_');
+    root = await Directory.systemTemp.createTemp('stickr_export_');
     documents = Directory('${root.path}${Platform.pathSeparator}documents')
       ..createSync();
     temporary = Directory('${root.path}${Platform.pathSeparator}temporary')
@@ -37,7 +37,7 @@ void main() {
   }
 
   test(
-    'exportPack writes a .stikk zip with manifest, tray, and webp files',
+    'exportPack writes a .stickr zip with manifest, tray, and webp files',
     () async {
       final pack = await seedPack();
       String? sharedPath;
@@ -53,8 +53,8 @@ void main() {
 
       final file = await service.exportPack(pack.id);
 
-      expect(file.path, endsWith('.stikk'));
-      expect(file.path, endsWith('my_pack.stikk'));
+      expect(file.path, endsWith('.stickr'));
+      expect(file.path, endsWith('my_pack.stickr'));
       expect(file.existsSync(), isTrue);
 
       final archive = ZipDecoder().decodeBytes(file.readAsBytesSync());
@@ -72,8 +72,8 @@ void main() {
 
       await service.sharePack(pack.id);
       expect(sharedPath, isNotNull);
-      expect(sharedPath, endsWith('.stikk'));
-      expect(sharedName, 'my_pack.stikk');
+      expect(sharedPath, endsWith('.stickr'));
+      expect(sharedName, 'my_pack.stickr');
     },
   );
 
@@ -84,7 +84,7 @@ void main() {
       final service = ExportService(
         repository: repo,
         temporaryDirectory: () async => temporary,
-        shareFile: (_, __) async {},
+        shareFile: (_, _) async {},
       );
       final archiveFile = await service.exportPack(pack.id);
 
@@ -104,7 +104,7 @@ void main() {
   );
 
   test('importPack rejects archives without a manifest', () async {
-    final bogus = File('${temporary.path}${Platform.pathSeparator}bad.stikk')
+    final bogus = File('${temporary.path}${Platform.pathSeparator}bad.stickr')
       ..writeAsBytesSync(const [0, 1, 2, 3, 4, 5, 6, 7]);
     final service = ExportService(
       repository: repo,
@@ -121,7 +121,7 @@ void main() {
     final archive = Archive()
       ..addFile(ArchiveFile.bytes('stickers/0.webp', const [1, 2, 3, 4]));
     final missingManifest = File(
-      '${temporary.path}${Platform.pathSeparator}no_manifest.stikk',
+      '${temporary.path}${Platform.pathSeparator}no_manifest.stickr',
     )..writeAsBytesSync(ZipEncoder().encodeBytes(archive));
     final service = ExportService(
       repository: repo,
@@ -134,8 +134,8 @@ void main() {
     );
   });
 
-  test('archiveFileName uses the .stikk extension', () {
-    expect(ExportService.archiveFileName('My Pack'), 'my_pack.stikk');
-    expect(ExportService.archiveFileName('  '), 'pack.stikk');
+  test('archiveFileName uses the .stickr extension', () {
+    expect(ExportService.archiveFileName('My Pack'), 'my_pack.stickr');
+    expect(ExportService.archiveFileName('  '), 'pack.stickr');
   });
 }

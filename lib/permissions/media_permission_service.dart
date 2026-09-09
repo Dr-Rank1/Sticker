@@ -6,9 +6,10 @@ import 'package:permission_handler/permission_handler.dart';
 typedef PermissionStatusLookup = Future<PermissionStatus> Function(
   Permission permission,
 );
-typedef PermissionRequestFn = Future<Map<Permission, PermissionStatus>> Function(
-  List<Permission> permissions,
-);
+typedef PermissionRequestFn =
+    Future<Map<Permission, PermissionStatus>> Function(
+      List<Permission> permissions,
+    );
 
 class MediaPermissionResult {
   const MediaPermissionResult({
@@ -20,7 +21,7 @@ class MediaPermissionResult {
   final bool permanentlyDenied;
 }
 
-/// Resolves and requests the gallery permissions Stikk needs to pick photos,
+/// Resolves and requests the gallery permissions Stickr needs to pick photos,
 /// using Android 13+ granular photo access on API 33+.
 class MediaPermissionService {
   MediaPermissionService({
@@ -29,13 +30,13 @@ class MediaPermissionService {
     PermissionStatusLookup? readStatus,
     PermissionRequestFn? requestPermissions,
     Future<bool> Function()? openSettings,
-  })  : _platform = platform ?? defaultTargetPlatform,
-        // ignore: prefer_initializing_formals
-        _androidSdkInt = androidSdkInt,
-        _readStatus = readStatus ?? ((permission) => permission.status),
-        _requestPermissions =
-            requestPermissions ?? ((permissions) => permissions.request()),
-        _openSettings = openSettings ?? openAppSettings;
+  }) : _platform = platform ?? defaultTargetPlatform,
+       // ignore: prefer_initializing_formals
+       _androidSdkInt = androidSdkInt,
+       _readStatus = readStatus ?? ((permission) => permission.status),
+       _requestPermissions =
+           requestPermissions ?? ((permissions) => permissions.request()),
+       _openSettings = openSettings ?? openAppSettings;
 
   static const android13 = 33;
 
@@ -47,7 +48,8 @@ class MediaPermissionService {
 
   bool get needsRuntimePrompt {
     if (kIsWeb) return false;
-    return _platform == TargetPlatform.android || _platform == TargetPlatform.iOS;
+    return _platform == TargetPlatform.android ||
+        _platform == TargetPlatform.iOS;
   }
 
   /// Permissions to request for the current OS / SDK.

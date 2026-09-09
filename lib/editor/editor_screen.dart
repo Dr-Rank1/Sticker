@@ -156,7 +156,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         folder.createSync(recursive: true);
       }
       final saved = await result.file.copy(
-        '${folder.path}${Platform.pathSeparator}stikk_${DateTime.now().millisecondsSinceEpoch}.webp',
+        '${folder.path}${Platform.pathSeparator}stickr_${DateTime.now().millisecondsSinceEpoch}.webp',
       );
       await ref.read(storageUtilityProvider).cleanupAfterStickerSaved([
         widget.videoPath,

@@ -55,11 +55,7 @@ final imageStickerServiceProvider = Provider<ImageStickerService>((ref) {
 });
 
 final photoPickerProvider = Provider<PhotoPickFn>((ref) {
-  return ({
-    required ImageSource source,
-    double? maxWidth,
-    int? imageQuality,
-  }) {
+  return ({required ImageSource source, double? maxWidth, int? imageQuality}) {
     return ImagePicker().pickImage(
       source: source,
       maxWidth: maxWidth,
@@ -70,8 +66,8 @@ final photoPickerProvider = Provider<PhotoPickFn>((ref) {
 
 final photoImportProvider =
     NotifierProvider<PhotoImportController, PhotoImportState>(
-  PhotoImportController.new,
-);
+      PhotoImportController.new,
+    );
 
 class PhotoImportController extends Notifier<PhotoImportState> {
   @override
@@ -79,7 +75,8 @@ class PhotoImportController extends Notifier<PhotoImportState> {
 
   ImageStickerService get _service => ref.read(imageStickerServiceProvider);
 
-  void reset() => state = PhotoImportState(removeBackground: state.removeBackground);
+  void reset() =>
+      state = PhotoImportState(removeBackground: state.removeBackground);
 
   void setRemoveBackground(bool value) {
     if (state.isBusy) return;
@@ -93,10 +90,7 @@ class PhotoImportController extends Notifier<PhotoImportState> {
   Future<void> import(ImageSource source) async {
     if (state.isBusy) return;
 
-    state = state.copyWith(
-      phase: PhotoImportPhase.picking,
-      clearError: true,
-    );
+    state = state.copyWith(phase: PhotoImportPhase.picking, clearError: true);
 
     try {
       final picker = ref.read(photoPickerProvider);

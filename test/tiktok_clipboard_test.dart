@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
-import 'package:stikk/tiktok/tiktok_url.dart';
-import 'package:stikk/widgets/main_scaffold.dart';
+import 'package:stickr/tiktok/tiktok_url.dart';
 
 void main() {
   test('extracts standard TikTok links from clipboard text', () {

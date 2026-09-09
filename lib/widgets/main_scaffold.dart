@@ -96,7 +96,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold>
             CommunityScreen(),
           ],
         ),
-        bottomNavigationBar: StikkBottomBar(
+        bottomNavigationBar: StickrBottomBar(
           current: tab,
           onSelect: (next) {
             ref.read(navigationProvider.notifier).select(next);
@@ -110,8 +110,8 @@ class _MainScaffoldState extends ConsumerState<MainScaffold>
   }
 }
 
-class StikkBottomBar extends StatelessWidget {
-  const StikkBottomBar({
+class StickrBottomBar extends StatelessWidget {
+  const StickrBottomBar({
     super.key,
     required this.current,
     required this.onSelect,

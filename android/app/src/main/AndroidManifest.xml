@@ -63,7 +63,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
             </intent-filter>
-            <!-- Open a .stikk pack from email, files, or another app. -->
+            <!-- Open a .stickr pack from email, files, or another app. -->
             <intent-filter android:label="Stickr">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -71,7 +71,7 @@
                 <data android:scheme="content"/>
                 <data android:scheme="file"/>
                 <data android:host="*"/>
-                <data android:mimeType="application/vnd.stikk.pack"/>
+                <data android:mimeType="application/vnd.stickr.pack"/>
             </intent-filter>
             <intent-filter android:label="Stickr">
                 <action android:name="android.intent.action.VIEW"/>
@@ -80,15 +80,15 @@
                 <data android:scheme="content"/>
                 <data android:scheme="file"/>
                 <data android:host="*"/>
-                <data android:pathPattern=".*\\.stikk"/>
-                <data android:pathPattern=".*\\..*\\.stikk"/>
-                <data android:pathPattern=".*\\..*\\..*\\.stikk"/>
+                <data android:pathPattern=".*\\.stickr"/>
+                <data android:pathPattern=".*\\..*\\.stickr"/>
+                <data android:pathPattern=".*\\..*\\..*\\.stickr"/>
                 <data android:mimeType="*/*"/>
             </intent-filter>
             <intent-filter android:label="Stickr">
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
-                <data android:mimeType="application/vnd.stikk.pack"/>
+                <data android:mimeType="application/vnd.stickr.pack"/>
                 <data android:mimeType="application/octet-stream"/>
                 <data android:mimeType="application/zip"/>
             </intent-filter>

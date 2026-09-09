@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/packs/pack_models.dart';
-import 'package:stikk/packs/pack_providers.dart';
-import 'package:stikk/packs/pack_repository.dart';
+import 'package:stickr/packs/pack_models.dart';
+import 'package:stickr/packs/pack_providers.dart';
+import 'package:stickr/packs/pack_repository.dart';
 
 void main() {
   test('saves formatted comment stickers into a Library pack', () async {

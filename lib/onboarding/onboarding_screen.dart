@@ -81,8 +81,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: brightness == Brightness.dark
-          ? SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent)
-          : SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+          ? SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: Colors.transparent,
+            )
+          : SystemUiOverlayStyle.dark.copyWith(
+              statusBarColor: Colors.transparent,
+            ),
       child: Scaffold(
         backgroundColor: colors.background,
         body: SafeArea(
@@ -97,9 +101,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onPressed: _finish,
                     child: Text(
                       'Skip',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: colors.textSecondary,
-                          ),
+                      style: Theme.of(context).textTheme.titleSmall
+                          ?.copyWith(color: colors.textSecondary),
                     ),
                   ),
                 ),

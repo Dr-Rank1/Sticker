@@ -189,9 +189,11 @@ class StickerLayer {
     final oldCenter = LayerTransform.centerOf(transform, size);
     final nextTransform = Matrix4.copy(transform);
     final newCenter = LayerTransform.centerOf(nextTransform, nextSize);
-    nextTransform.leftTranslate(
+    nextTransform.leftTranslateByDouble(
       oldCenter.dx - newCenter.dx,
       oldCenter.dy - newCenter.dy,
+      0,
+      1,
     );
     return copyWith(
       widget: nextWidget,

@@ -106,7 +106,7 @@ class BackgroundRemovalService {
 
     final temporary = await _temporaryDirectory();
     final output = File(
-      '${temporary.path}${Platform.pathSeparator}stikk_segmented_${DateTime.now().millisecondsSinceEpoch}.png',
+      '${temporary.path}${Platform.pathSeparator}stickr_segmented_${DateTime.now().millisecondsSinceEpoch}.png',
     );
     await output.writeAsBytes(pngBytes, flush: true);
     return BackgroundRemovalResult(

@@ -48,8 +48,8 @@ final tiktokImportServiceProvider = Provider<TiktokImportService>((ref) {
 
 final tiktokImportProvider =
     NotifierProvider<TiktokImportController, TiktokImportState>(
-  TiktokImportController.new,
-);
+      TiktokImportController.new,
+    );
 
 class TiktokImportController extends Notifier<TiktokImportState> {
   @override
@@ -65,8 +65,7 @@ class TiktokImportController extends Notifier<TiktokImportState> {
     if (!_service.isValidTikTokUrl(rawLink)) {
       state = const TiktokImportState(
         phase: TiktokImportPhase.error,
-        errorMessage:
-            'That doesn\'t look like a TikTok link. Paste a video URL and try again.',
+        errorMessage: 'That doesn\'t look like a TikTok link. Paste a video URL and try again.',
       );
       return;
     }

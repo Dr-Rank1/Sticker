@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/packs/pack_models.dart';
-import 'package:stikk/packs/whatsapp_export_service.dart';
+import 'package:stickr/packs/pack_models.dart';
+import 'package:stickr/packs/whatsapp_export_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

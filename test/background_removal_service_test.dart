@@ -2,13 +2,15 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:stikk/editor/background_removal_service.dart';
+import 'package:stickr/editor/background_removal_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('renders the ML foreground onto a transparent PNG canvas', () async {
-    final temporary = await Directory.systemTemp.createTemp('stikk_bg_remove_');
+    final temporary = await Directory.systemTemp.createTemp(
+      'stickr_bg_remove_',
+    );
     addTearDown(() => temporary.deleteSync(recursive: true));
     final source = img.Image(width: 16, height: 12, numChannels: 4);
     for (final pixel in source) {
@@ -44,7 +46,9 @@ void main() {
   test(
     'returns null when ML Kit cannot identify a foreground subject',
     () async {
-      final temporary = await Directory.systemTemp.createTemp('stikk_bg_none_');
+      final temporary = await Directory.systemTemp.createTemp(
+        'stickr_bg_none_',
+      );
       addTearDown(() => temporary.deleteSync(recursive: true));
       final sourceFile = File('${temporary.path}/source.png')
         ..writeAsBytesSync(

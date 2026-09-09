@@ -4,21 +4,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
-/// Incoming `.stikk` archives from ACTION_VIEW / ACTION_SEND.
-abstract class StikkFileIntent {
+/// Incoming `.stickr` archives from ACTION_VIEW / ACTION_SEND.
+abstract class StickrFileIntent {
   Future<String?> getInitialFile();
   Stream<String> fileStream();
 }
 
-class PluginStikkFileIntent implements StikkFileIntent {
-  PluginStikkFileIntent({MethodChannel? channel})
+class PluginStickrFileIntent implements StickrFileIntent {
+  PluginStickrFileIntent({MethodChannel? channel})
     : _channel = channel ?? const MethodChannel(channelName) {
     _channel.setMethodCallHandler(_onNativeCall);
   }
 
-  static const channelName = 'com.stikk.stikk/stikk_files';
-  static const getInitialMethod = 'getInitialStikkFile';
-  static const onFileMethod = 'onStikkFile';
+  static const channelName = 'com.stikk.stikk/stickr_files';
+  static const getInitialMethod = 'getInitialStickrFile';
+  static const onFileMethod = 'onStickrFile';
 
   final MethodChannel _channel;
   final _files = StreamController<String>.broadcast();
@@ -39,8 +39,8 @@ class PluginStikkFileIntent implements StikkFileIntent {
   }
 }
 
-class FakeStikkFileIntent implements StikkFileIntent {
-  FakeStikkFileIntent({this.initialFile, Stream<String>? files})
+class FakeStickrFileIntent implements StickrFileIntent {
+  FakeStickrFileIntent({this.initialFile, Stream<String>? files})
     : _fileStream = files ?? const Stream.empty();
 
   final String? initialFile;
@@ -53,14 +53,14 @@ class FakeStikkFileIntent implements StikkFileIntent {
   Stream<String> fileStream() => _fileStream;
 }
 
-final stikkFileIntentProvider = Provider<StikkFileIntent>((ref) {
-  return PluginStikkFileIntent();
+final stickrFileIntentProvider = Provider<StickrFileIntent>((ref) {
+  return PluginStickrFileIntent();
 });
 
-String? extractStikkPathFromSharedMedia(List<SharedMediaFile> files) {
+String? extractStickrPathFromSharedMedia(List<SharedMediaFile> files) {
   for (final file in files) {
     final path = file.path;
-    if (path.toLowerCase().endsWith('.stikk')) return path;
+    if (path.toLowerCase().endsWith('.stickr')) return path;
   }
   return null;
 }

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_update/in_app_update.dart';
-import 'package:stikk/store/play_store_update_service.dart';
+import 'package:stickr/store/play_store_update_service.dart';
 
 void main() {
   tearDown(() {

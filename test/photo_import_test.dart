@@ -7,10 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
-import 'package:stikk/editor/image_sticker_service.dart';
-import 'package:stikk/photos/photo_import_controller.dart';
-import 'package:stikk/photos/photo_import_sheet.dart';
-import 'package:stikk/screens/create_screen.dart';
+import 'package:stickr/editor/image_sticker_service.dart';
+import 'package:stickr/photos/photo_import_controller.dart';
+import 'package:stickr/photos/photo_import_sheet.dart';
+import 'package:stickr/screens/create_screen.dart';
 
 void main() {
   setUpAll(() {
@@ -39,7 +39,7 @@ void main() {
   });
 
   test('gallery pick prepares a 512 photo for the editor', () async {
-    final temp = await Directory.systemTemp.createTemp('stikk_photo_ui');
+    final temp = await Directory.systemTemp.createTemp('stickr_photo_ui');
     addTearDown(() => temp.deleteSync(recursive: true));
 
     final source = img.Image(width: 64, height: 48, numChannels: 4);
@@ -84,7 +84,7 @@ void main() {
     tester,
   ) async {
     final temporary = Directory(
-      '${Directory.systemTemp.path}/stikk_scan_${DateTime.now().microsecondsSinceEpoch}',
+      '${Directory.systemTemp.path}/stickr_scan_${DateTime.now().microsecondsSinceEpoch}',
     )..createSync(recursive: true);
     addTearDown(() {
       if (temporary.existsSync()) temporary.deleteSync(recursive: true);

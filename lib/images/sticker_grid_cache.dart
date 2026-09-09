@@ -16,7 +16,7 @@ class StickerGridCacheManager extends CacheManager {
         ),
       );
 
-  static const cacheKey = 'stikkStickerGrid';
+  static const cacheKey = 'stickrStickerGrid';
   static const maxCachedObjects = 64;
   static const maxDecodeExtent = 256;
 

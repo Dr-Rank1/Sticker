@@ -110,7 +110,7 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
     await ref.read(exportServiceProvider).sharePack(packId);
   }
 
-  Future<StickerPack> importStikkFile(String archivePath) async {
+  Future<StickerPack> importStickrFile(String archivePath) async {
     final pack = await ref.read(exportServiceProvider).importPack(archivePath);
     await refresh();
     return pack;

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/tiktok/tiktok_import_service.dart';
+import 'package:stickr/tiktok/tiktok_import_service.dart';
 
 void main() {
   late TiktokImportService service;

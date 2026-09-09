@@ -3,15 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/main.dart';
-import 'package:stikk/packs/pack_detail_screen.dart';
-import 'package:stikk/packs/pack_models.dart';
-import 'package:stikk/packs/pack_providers.dart';
-import 'package:stikk/packs/pack_repository.dart';
-import 'package:stikk/packs/whatsapp_export_service.dart';
-import 'package:stikk/state/settings_store.dart';
-import 'package:stikk/tiktok/tiktok_app_links.dart';
-import 'package:stikk/tiktok/tiktok_share_intent.dart';
+import 'package:stickr/main.dart';
+import 'package:stickr/packs/pack_detail_screen.dart';
+import 'package:stickr/packs/pack_models.dart';
+import 'package:stickr/packs/pack_providers.dart';
+import 'package:stickr/packs/pack_repository.dart';
+import 'package:stickr/packs/whatsapp_export_service.dart';
+import 'package:stickr/state/settings_store.dart';
+import 'package:stickr/tiktok/tiktok_app_links.dart';
+import 'package:stickr/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
 
@@ -50,7 +50,7 @@ void main() {
           tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
           tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
         ],
-        child: const StikkApp(),
+        child: const StickrApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -197,7 +197,7 @@ void main() {
             ),
             tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
           ],
-          child: const StikkApp(),
+          child: const StickrApp(),
         ),
       );
       await tester.pump();

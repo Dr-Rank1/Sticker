@@ -26,7 +26,7 @@ class StickerRepository implements PackRepository {
 
   static Future<StickerRepository> open({
     String? directory,
-    String name = 'stikk_packs',
+    String name = 'stickr_packs',
     Future<Directory> Function()? documents,
     TrayIconService? trayIcons,
   }) async {

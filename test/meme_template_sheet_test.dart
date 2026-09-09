@@ -4,18 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:stikk/editor/editor_screen.dart';
-import 'package:stikk/editor/image_sticker_service.dart';
-import 'package:stikk/memes/meme_service.dart';
-import 'package:stikk/photos/photo_import_controller.dart';
-import 'package:stikk/screens/create_screen.dart';
+import 'package:stickr/editor/editor_screen.dart';
+import 'package:stickr/editor/image_sticker_service.dart';
+import 'package:stickr/memes/meme_service.dart';
+import 'package:stickr/photos/photo_import_controller.dart';
+import 'package:stickr/screens/create_screen.dart';
 
 void main() {
   testWidgets('meme picker loads templates and hands a square image to editor', (
     tester,
   ) async {
     final temporary = Directory(
-      '${Directory.systemTemp.path}/stikk_meme_ui_${DateTime.now().microsecondsSinceEpoch}',
+      '${Directory.systemTemp.path}/stickr_meme_ui_${DateTime.now().microsecondsSinceEpoch}',
     )..createSync(recursive: true);
     addTearDown(() {
       try {
@@ -83,7 +83,7 @@ class _FakeMemeService extends MemeService {
     MemeTemplate template, {
     void Function(double? progress)? onProgress,
   }) async {
-    downloaded = File('${temporary.path}/stikk_meme_drake.jpg')
+    downloaded = File('${temporary.path}/stickr_meme_drake.jpg')
       ..writeAsBytesSync([1, 2, 3]);
     return downloaded!;
   }
@@ -105,7 +105,7 @@ class _FakeImageService extends ImageStickerService {
     prepared = true;
     this.removeBackground = removeBackground;
     final image = img.Image(width: 512, height: 512, numChannels: 4);
-    final output = File('${temporary.path}/stikk_photo_meme.png')
+    final output = File('${temporary.path}/stickr_photo_meme.png')
       ..writeAsBytesSync(img.encodePng(image));
     return ImagePrepareResult(
       file: output,

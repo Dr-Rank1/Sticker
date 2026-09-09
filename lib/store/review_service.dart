@@ -8,12 +8,11 @@ import '../logging/app_logger.dart';
 /// once, after the third pack is added.
 class ReviewService {
   ReviewService({
-    SharedPreferences? preferences,
+    this.preferences,
     Future<SharedPreferences> Function()? loadPreferences,
     Future<bool> Function()? isReviewAvailable,
     Future<void> Function()? requestReview,
-  }) : _preferences = preferences,
-       _loadPreferences = loadPreferences ?? SharedPreferences.getInstance,
+  }) : _loadPreferences = loadPreferences ?? SharedPreferences.getInstance,
        _isReviewAvailable = isReviewAvailable ?? _playReviewAvailable,
        _requestReview = requestReview ?? _playRequestReview;
 
@@ -30,13 +29,13 @@ class ReviewService {
   static const reviewPromptedKey = 'play_in_app_review_prompted';
   static const promptAfterSuccessfulExports = 3;
 
-  SharedPreferences? _preferences;
+  SharedPreferences? preferences;
   final Future<SharedPreferences> Function() _loadPreferences;
   final Future<bool> Function() _isReviewAvailable;
   final Future<void> Function() _requestReview;
 
   Future<SharedPreferences> _prefs() async {
-    return _preferences ??= await _loadPreferences();
+    return preferences ??= await _loadPreferences();
   }
 
   Future<int> successfulExportCount() async {

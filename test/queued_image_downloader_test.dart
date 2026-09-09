@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stikk/tiktok/queued_image_downloader.dart';
-import 'package:stikk/tiktok/tiktok_comment_service.dart';
+import 'package:stickr/tiktok/queued_image_downloader.dart';
+import 'package:stickr/tiktok/tiktok_comment_service.dart';
 
 void main() {
   test('caps in-flight downloads at five connections', () async {

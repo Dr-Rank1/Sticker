@@ -31,7 +31,7 @@ class DefaultFirebaseOptions {
     apiKey: 'REPLACE_WITH_ANDROID_API_KEY',
     appId: 'REPLACE_WITH_ANDROID_APP_ID',
     messagingSenderId: 'REPLACE_WITH_SENDER_ID',
-    projectId: 'stikk',
+    projectId: 'stickr',
     storageBucket: 'stikk.appspot.com',
   );
 
@@ -39,7 +39,7 @@ class DefaultFirebaseOptions {
     apiKey: 'REPLACE_WITH_IOS_API_KEY',
     appId: 'REPLACE_WITH_IOS_APP_ID',
     messagingSenderId: 'REPLACE_WITH_SENDER_ID',
-    projectId: 'stikk',
+    projectId: 'stickr',
     storageBucket: 'stikk.appspot.com',
     iosBundleId: 'com.stikk.stikk',
   );
