@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import 'pack_models.dart';
 
 class TrayIconService {
@@ -11,7 +12,10 @@ class TrayIconService {
     Color background = const Color(0xFF00C48C),
   }) async {
     const size = WhatsAppPackRules.traySize;
-    final letter = name.trim().isEmpty ? 'S' : name.trim()[0].toUpperCase();
+    final fallbackName = serviceLocalizations.appTitle;
+    final letter = name.trim().isEmpty
+        ? fallbackName[0].toUpperCase()
+        : name.trim()[0].toUpperCase();
 
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(
@@ -47,7 +51,7 @@ class TrayIconService {
     picture.dispose();
     image.dispose();
     if (bytes == null) {
-      throw const PackException('Could not create the 96x96 tray icon.');
+      throw PackException(serviceLocalizations.couldNotCreateTrayIcon);
     }
     return bytes.buffer.asUint8List();
   }

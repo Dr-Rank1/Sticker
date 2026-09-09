@@ -8,6 +8,7 @@ import '../editor/ffmpeg_sticker_service.dart';
 import '../haptics/haptic_service.dart';
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
+import '../l10n/l10n.dart';
 import '../packs/batch_export_use_case.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
@@ -32,13 +33,13 @@ class CommentScanLoadingDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AlertDialog(
+    return AlertDialog(
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Scanning comments for stickers...'),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(context.l10n.scanningComments),
         ],
       ),
     );
@@ -52,6 +53,7 @@ Future<void> scanAndShowCommentStickers(
   required String videoUrl,
   bool showLoadingDialog = true,
 }) async {
+  final l10n = context.l10n;
   if (showLoadingDialog) showCommentScanDialog(context);
 
   List<CommentSticker> stickers = const [];
@@ -63,7 +65,7 @@ Future<void> scanAndShowCommentStickers(
   } on ApifyException catch (error) {
     errorMessage = error.message;
   } catch (_) {
-    errorMessage = 'Couldn’t scan those comments. Please try again.';
+    errorMessage = l10n.couldNotScanComments;
   }
 
   if (!context.mounted) return;
@@ -245,7 +247,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
         result = progress.result ?? result;
       }
       if (result == null) {
-        throw const PackException('The batch export did not complete.');
+        throw PackException(context.l10n.batchExportIncomplete);
       }
       if (!mounted) return;
 
@@ -269,7 +271,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
     } catch (_) {
       if (mounted) {
         hapticService.error();
-        _showMessage('Couldn’t export those stickers. Please try again.');
+        _showMessage(context.l10n.couldNotExportStickers);
       }
     } finally {
       if (mounted) {
@@ -323,7 +325,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Comment stickers',
+                            context.l10n.commentStickers,
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           if (widget.prefetchDownloads && _total > 0)
@@ -340,7 +342,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Close',
+                      tooltip: context.l10n.close,
                       onPressed: !_exporting
                           ? () => Navigator.pop(context)
                           : null,
@@ -373,8 +375,14 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                   : const Icon(Icons.ios_share_rounded),
               label: Text(
                 _exporting && _exportTotal > 0
-                    ? 'Export $_exportCompleted/$_exportTotal'
-                    : 'Export (${_selectedUrls.length}/${WhatsAppPackRules.maxStickers})',
+                    ? context.l10n.exportProgress(
+                        _exportCompleted,
+                        _exportTotal,
+                      )
+                    : context.l10n.exportSelection(
+                        _selectedUrls.length,
+                        WhatsAppPackRules.maxStickers,
+                      ),
                 key: const Key('comment-sticker-export-progress'),
               ),
             ),
@@ -393,9 +401,9 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_visible.isEmpty) {
-      return const _MessageState(
+      return _MessageState(
         icon: Icons.search_off_rounded,
-        message: 'No image stickers were found in the scanned comments.',
+        message: context.l10n.noCommentStickers,
       );
     }
 
@@ -526,7 +534,7 @@ class _SharedTikTokScanPageState extends ConsumerState<SharedTikTokScanPage> {
               child: const CircularProgressIndicator(),
             ),
             const SizedBox(height: 16),
-            const Text('Scanning comments for stickers...'),
+            Text(context.l10n.scanningComments),
           ],
         ),
       ),

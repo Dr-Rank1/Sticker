@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 
 class TiktokImportException implements Exception {
@@ -133,9 +134,7 @@ class TiktokImportService {
   }) async {
     final url = extractTikTokUrl(rawLink);
     if (url == null || !isValidTikTokUrl(url)) {
-      throw const TiktokImportException(
-        'That doesn\'t look like a TikTok link. Paste a video URL and try again.',
-      );
+      throw TiktokImportException(serviceLocalizations.invalidTikTokLink);
     }
 
     onProgress?.call(const TiktokImportProgress.resolving());
@@ -162,9 +161,7 @@ class TiktokImportService {
     } on DioException catch (error) {
       throw TiktokImportException(_friendlyDioMessage(error));
     } on SocketException {
-      throw const TiktokImportException(
-        'No internet connection. Check your network and try again.',
-      );
+      throw TiktokImportException(serviceLocalizations.noInternetConnection);
     }
   }
 
@@ -187,13 +184,9 @@ class TiktokImportService {
     } on DioException catch (error) {
       throw TiktokImportException(_friendlyDioMessage(error, resolving: true));
     } on FormatException {
-      throw const TiktokImportException(
-        'TikWM returned an unreadable response. Please try again.',
-      );
+      throw TiktokImportException(serviceLocalizations.unreadableTikwmResponse);
     } on SocketException {
-      throw const TiktokImportException(
-        'No internet connection. Check your network and try again.',
-      );
+      throw TiktokImportException(serviceLocalizations.noInternetConnection);
     }
   }
 
@@ -207,9 +200,7 @@ class TiktokImportService {
 
     final rawData = body['data'];
     if (rawData is! Map) {
-      throw const TiktokImportException(
-        'TikWM couldn\'t find a video at that link. Check it and try again.',
-      );
+      throw TiktokImportException(serviceLocalizations.tikwmVideoNotFound);
     }
     final data = Map<String, dynamic>.from(rawData);
     final play = data['play']?.toString().trim() ?? '';
@@ -217,9 +208,7 @@ class TiktokImportService {
     if (play.isEmpty ||
         playUri == null ||
         !(playUri.scheme == 'http' || playUri.scheme == 'https')) {
-      throw const TiktokImportException(
-        'TikWM found that post, but no downloadable video was available.',
-      );
+      throw TiktokImportException(serviceLocalizations.tikwmNoDownload);
     }
 
     final id = data['id']?.toString().trim();
@@ -265,9 +254,7 @@ class TiktokImportService {
 
     if (!file.existsSync() || file.lengthSync() == 0) {
       await _deletePartialDownload(file);
-      throw const TiktokImportException(
-        'The download finished, but the video file was empty.',
-      );
+      throw TiktokImportException(serviceLocalizations.emptyVideoDownload);
     }
     return file;
   }
@@ -276,9 +263,9 @@ class TiktokImportService {
     if (error is TiktokImportException) return error.message;
     if (error is DioException) return _friendlyDioMessage(error);
     if (error is SocketException) {
-      return 'No internet connection. Check your network and try again.';
+      return serviceLocalizations.noInternetConnection;
     }
-    return 'Something went wrong while importing that TikTok. Please try again.';
+    return serviceLocalizations.tiktokImportFailed;
   }
 
   Map<String, dynamic> _asJsonMap(dynamic value) {
@@ -301,16 +288,16 @@ class TiktokImportService {
         lower.contains('rate') ||
         lower.contains('too many') ||
         lower.contains('limit')) {
-      return 'TikWM is receiving too many requests right now. Wait a moment and try again.';
+      return serviceLocalizations.tikwmRateLimited;
     }
     if (code == 400 ||
         code == 404 ||
         lower.contains('invalid') ||
         lower.contains('not found') ||
         lower.contains('url')) {
-      return 'TikWM couldn\'t find that TikTok. Check the link or try another public video.';
+      return serviceLocalizations.tikwmTikTokNotFound;
     }
-    return 'TikWM couldn\'t process that video right now. Please try again shortly.';
+    return serviceLocalizations.tikwmProcessFailed;
   }
 
   String _friendlyDioMessage(DioException error, {bool resolving = false}) {
@@ -318,29 +305,29 @@ class TiktokImportService {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'The connection timed out. Try again on a stronger network.';
+        return serviceLocalizations.connectionTimedOut;
       case DioExceptionType.connectionError:
-        return 'No internet connection. Check your network and try again.';
+        return serviceLocalizations.noInternetConnection;
       case DioExceptionType.badResponse:
         final code = error.response?.statusCode;
         if (code == 429) {
-          return 'TikWM is receiving too many requests right now. Wait a moment and try again.';
+          return serviceLocalizations.tikwmRateLimited;
         }
         if (code == 400 || code == 404) {
-          return 'TikWM couldn\'t find that TikTok. Check the link or try another public video.';
+          return serviceLocalizations.tikwmTikTokNotFound;
         }
         return resolving
-            ? 'TikWM couldn\'t look up that video right now. Please try again.'
-            : 'We couldn\'t download that video right now. Please try again.';
+            ? serviceLocalizations.tikwmLookupFailed
+            : serviceLocalizations.videoDownloadFailed;
       case DioExceptionType.cancel:
-        return 'The download was cancelled.';
+        return serviceLocalizations.downloadCancelled;
       default:
         if (error.error is SocketException) {
-          return 'No internet connection. Check your network and try again.';
+          return serviceLocalizations.noInternetConnection;
         }
         return resolving
-            ? 'TikWM couldn\'t look up that video right now. Please try again.'
-            : 'Something went wrong while downloading. Please try again.';
+            ? serviceLocalizations.tikwmLookupFailed
+            : serviceLocalizations.downloadFailed;
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'package:image/image.dart' as img;
 
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 import 'ffmpeg_sticker_service.dart';
 
@@ -91,7 +92,7 @@ class BackgroundRemovalService {
 
   Future<BackgroundRemovalResult?> removeBackground(File source) async {
     if (!await source.exists()) {
-      throw const StickerExportException('That photo is no longer available.');
+      throw StickerExportException(serviceLocalizations.photoUnavailable);
     }
 
     final mask = await _segmenter.segment(source);
@@ -99,7 +100,7 @@ class BackgroundRemovalService {
 
     final decoded = img.decodeImage(await source.readAsBytes());
     if (decoded == null) {
-      throw const StickerExportException('The photo couldn’t be opened.');
+      throw StickerExportException(serviceLocalizations.photoOpenFailed);
     }
     final oriented = img.bakeOrientation(decoded);
     final foreground = applySubjectMask(oriented, mask);
@@ -157,8 +158,8 @@ class BackgroundRemovalService {
     picture.dispose();
     rendered.dispose();
     if (bytes == null) {
-      throw const StickerExportException(
-        'Couldn’t render the transparent foreground.',
+      throw StickerExportException(
+        serviceLocalizations.transparentForegroundRenderFailed,
       );
     }
     return bytes.buffer.asUint8List();

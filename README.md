@@ -161,6 +161,7 @@ an exported ContentProvider documented in `AndroidManifest.xml`.
 The project uses:
 
 - Flutter and Dart for the application.
+- Flutter localization generation with ARB resources and an English fallback.
 - Riverpod for application state and dependency injection.
 - Isar for pack persistence and Hive for settings persistence.
 - Dio for TikWM, Giphy, Imgflip, ScrapeBadger, Apify, and file downloads.
@@ -336,6 +337,19 @@ dart run flutter_native_splash:create
 
 The corresponding settings are in `flutter_launcher_icons.yaml` and
 `flutter_native_splash.yaml`.
+
+## Localization
+
+English source strings live in `lib/l10n/app_en.arb`. Localization generation
+is configured in `l10n.yaml` and runs automatically during Flutter builds.
+Regenerate the Dart localization classes after changing an ARB file:
+
+```sh
+flutter gen-l10n
+```
+
+Add another locale by creating a matching `app_<locale>.arb` file. Unsupported
+device locales resolve to English.
 
 ## Quality checks
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../accessibility/accessible_tap.dart';
 import '../editor/editor_screen.dart';
 import '../editor/local_video_import_service.dart';
+import '../l10n/l10n.dart';
 import '../memes/meme_template_sheet.dart';
 import '../photos/photo_import_sheet.dart';
 import '../theme/app_colors.dart';
@@ -65,6 +66,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return CustomScrollView(
       slivers: [
         SliverPadding(
@@ -76,12 +78,12 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Create',
+                    l10n.create,
                     style: Theme.of(context).textTheme.displaySmall,
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Turn any moment into a WhatsApp sticker.',
+                    l10n.createSubtitle,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -95,30 +97,30 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
             children: [
               _CreateSourceCard(
                 icon: Icons.photo_library_rounded,
-                title: 'From a photo',
-                subtitle: 'Auto crop, remove the background, add text.',
+                title: l10n.fromPhoto,
+                subtitle: l10n.fromPhotoSubtitle,
                 onTap: () => showPhotoImportSheet(context),
               ),
               const SizedBox(height: 12),
               _CreateSourceCard(
                 icon: Icons.add_photo_alternate_rounded,
-                title: 'Start from Meme',
-                subtitle: 'Pick a popular template and add your own text.',
+                title: l10n.startFromMeme,
+                subtitle: l10n.startFromMemeSubtitle,
                 onTap: () => showMemeTemplateSheet(context),
               ),
               const SizedBox(height: 12),
               _CreateSourceCard(
                 icon: Icons.videocam_rounded,
-                title: 'From TikTok',
-                subtitle: 'Paste a link and pick the perfect clip.',
+                title: l10n.fromTikTok,
+                subtitle: l10n.fromTikTokSubtitle,
                 onTap: () => showTiktokImportSheet(context),
               ),
               const SizedBox(height: 12),
               _CreateSourceCard(
                 key: const Key('create-local-video'),
                 icon: Icons.gif_box_rounded,
-                title: 'From a video',
-                subtitle: 'Make an animated sticker in seconds.',
+                title: l10n.fromVideo,
+                subtitle: l10n.fromVideoSubtitle,
                 onTap: _importLocalVideo,
                 trailing: _importingVideo
                     ? const SizedBox.square(
@@ -232,7 +234,7 @@ class _FreeForeverNote extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Stickr is 100% free. No accounts, no paywalls.',
+              context.l10n.freeForeverNote,
               style: Theme.of(context).textTheme.titleSmall
                   ?.copyWith(color: colors.accentDim),
             ),

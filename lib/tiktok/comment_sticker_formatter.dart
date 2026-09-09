@@ -6,6 +6,7 @@ import 'package:image/image.dart' as img;
 import '../editor/editor_models.dart';
 import '../editor/ffmpeg_sticker_service.dart';
 import '../editor/image_sticker_service.dart';
+import '../l10n/l10n.dart';
 import '../photos/photo_import_controller.dart';
 import '../storage/storage_utility.dart';
 
@@ -26,16 +27,16 @@ class CommentStickerFormatter {
     try {
       final decoded = _imageService.decodePhoto(await source.readAsBytes());
       if (decoded == null) {
-        throw const StickerExportException(
-          'That comment sticker could not be opened.',
+        throw StickerExportException(
+          serviceLocalizations.commentStickerOpenFailed,
         );
       }
 
       final canvas = _imageService.fitToStickerCanvas(decoded);
       if (canvas.width != WhatsAppStickerSpec.size ||
           canvas.height != WhatsAppStickerSpec.size) {
-        throw const StickerExportException(
-          'The sticker canvas could not be sized to 512×512.',
+        throw StickerExportException(
+          serviceLocalizations.stickerCanvasSizeFailed,
         );
       }
 
@@ -60,7 +61,7 @@ class CommentStickerFormatter {
       );
       if (encoded.bytes > WhatsAppStickerSpec.maxStaticBytes) {
         throw StickerExportException(
-          'Could not keep the sticker under 100KB. Try another comment image.',
+          serviceLocalizations.commentStickerTooLarge,
         );
       }
       if (output.existsSync()) output.deleteSync();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/l10n.dart';
 import 'pack_models.dart';
 
 class WhatsAppExportResult {
@@ -13,8 +14,8 @@ class WhatsAppExportResult {
 }
 
 class WhatsAppNotInstalledException extends PackException {
-  const WhatsAppNotInstalledException()
-    : super('WhatsApp isn’t installed on this device.');
+  WhatsAppNotInstalledException()
+    : super(serviceLocalizations.whatsAppNotInstalledDevice);
 }
 
 class WhatsAppExportService {
@@ -46,8 +47,8 @@ class WhatsAppExportService {
               defaultTargetPlatform == TargetPlatform.windows ||
               defaultTargetPlatform == TargetPlatform.linux ||
               defaultTargetPlatform == TargetPlatform.macOS
-          ? 'This pack is WhatsApp-ready (${pack.stickers.length} stickers, 96×96 tray). Add to WhatsApp from an Android or iOS build.'
-          : 'This pack meets WhatsApp’s rules. Connect it from a device build with WhatsApp installed.',
+          ? serviceLocalizations.whatsAppReadyDesktop(pack.stickers.length)
+          : serviceLocalizations.whatsAppReadyDevice,
     );
   }
 
@@ -55,13 +56,11 @@ class WhatsAppExportService {
     prepare(pack);
 
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      throw const PackException(
-        'Add to WhatsApp is available on Android with WhatsApp installed.',
-      );
+      throw PackException(serviceLocalizations.whatsAppAndroidOnly);
     }
 
     if (!await isWhatsAppInstalled()) {
-      throw const WhatsAppNotInstalledException();
+      throw WhatsAppNotInstalledException();
     }
 
     try {
@@ -74,13 +73,14 @@ class WhatsAppExportService {
         'imageDataVersion': pack.imageDataVersion,
         'animated': pack.stickers.any((sticker) => sticker.animated),
       });
-      return WhatsAppExportResult(pack: pack, message: 'Added to WhatsApp.');
+      return WhatsAppExportResult(
+        pack: pack,
+        message: serviceLocalizations.addedToWhatsApp,
+      );
     } on PlatformException catch (error) {
       throw PackException(_messageFor(error));
     } on MissingPluginException {
-      throw const PackException(
-        'Couldn’t reach the WhatsApp export on this device.',
-      );
+      throw PackException(serviceLocalizations.couldNotReachWhatsAppExport);
     }
   }
 
@@ -99,22 +99,23 @@ class WhatsAppExportService {
   String _messageFor(PlatformException error) {
     switch (error.code) {
       case 'WHATSAPP_NOT_INSTALLED':
-        throw const WhatsAppNotInstalledException();
+        throw WhatsAppNotInstalledException();
       case 'CANCELLED':
-        return 'WhatsApp didn’t add the pack.';
+        return serviceLocalizations.whatsAppDidNotAddPack;
       case 'VALIDATION_ERROR':
         final detail = error.message?.trim();
         return (detail == null || detail.isEmpty)
-            ? 'WhatsApp rejected this pack.'
+            ? serviceLocalizations.whatsAppRejectedPack
             : detail;
       case 'FILE_COPY_FAILED':
-        return error.message ?? 'Couldn’t prepare sticker files for WhatsApp.';
+        return error.message ??
+            serviceLocalizations.couldNotPrepareWhatsAppFiles;
       case 'ALREADY_IN_PROGRESS':
-        return 'An export is already in progress.';
+        return serviceLocalizations.exportAlreadyInProgress;
       case 'INVALID_ARGUMENTS':
-        return 'This pack is missing data WhatsApp needs.';
+        return serviceLocalizations.packMissingWhatsAppData;
       default:
-        return error.message ?? 'Couldn’t add this pack to WhatsApp.';
+        return error.message ?? serviceLocalizations.couldNotAddPackToWhatsApp;
     }
   }
 }

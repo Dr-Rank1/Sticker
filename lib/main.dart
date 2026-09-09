@@ -13,6 +13,7 @@ import 'crashlytics/crash_reporter.dart';
 import 'display/display_refresh.dart';
 import 'error/app_error_fallback.dart';
 import 'error/app_error_handlers.dart';
+import 'l10n/l10n.dart';
 import 'logging/app_logger.dart';
 import 'onboarding/onboarding_controller.dart';
 import 'onboarding/onboarding_screen.dart';
@@ -99,9 +100,12 @@ class _StartupErrorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: AppErrorFallback(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localeResolutionCallback: resolveStickrLocale,
+      home: const AppErrorFallback(),
     );
   }
 }
@@ -216,16 +220,17 @@ class _StickrAppState extends ConsumerState<StickrApp> {
   }
 
   Future<void> _importStickrFile(String path) async {
+    final l10n = context.l10n;
     try {
       final pack = await ref
           .read(packsProvider.notifier)
           .importStickrFile(path);
-      _showMessage('Imported ${pack.name}.');
+      _showMessage(l10n.importedPack(pack.name));
     } on PackException catch (error) {
       _showMessage(error.message);
     } catch (error) {
       appLogger.e('Failed to import .stickr pack', error: error);
-      _showMessage('Could not import this pack.');
+      _showMessage(l10n.couldNotImportPack);
     }
   }
 
@@ -281,17 +286,36 @@ class _StickrAppState extends ConsumerState<StickrApp> {
     }
 
     return MaterialApp(
-      title: 'Stickr',
+      onGenerateTitle: (context) => context.l10n.appTitle,
       navigatorKey: _navigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       builder: AppTheme.appBuilder,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localeResolutionCallback: resolveStickrLocale,
       home: AnimatedSwitcher(
         duration: const Duration(milliseconds: 280),
         child: home,
       ),
     );
   }
+}
+
+Locale resolveStickrLocale(
+  Locale? requested,
+  Iterable<Locale> supportedLocales,
+) {
+  if (requested != null) {
+    for (final supported in supportedLocales) {
+      if (supported.languageCode == requested.languageCode) {
+        setServiceLocale(supported);
+        return supported;
+      }
+    }
+  }
+  setServiceLocale(fallbackLocale);
+  return fallbackLocale;
 }

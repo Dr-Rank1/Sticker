@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 
+import '../l10n/l10n.dart';
 import 'tiktok_comment_service.dart';
 
 /// Downloads sticker images with a hard cap on in-flight HTTP connections.
@@ -72,8 +73,8 @@ class QueuedImageDownloader {
       final response = await _dio.get<List<int>>(sticker.imageUrl);
       final bytes = response.data;
       if (bytes == null || bytes.isEmpty) {
-        throw const TikTokCommentException(
-          'TikTok returned an empty sticker image.',
+        throw TikTokCommentException(
+          serviceLocalizations.emptyTikTokStickerImage,
         );
       }
       await File(path).writeAsBytes(bytes, flush: true);

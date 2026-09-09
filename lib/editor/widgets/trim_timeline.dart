@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../../theme/app_colors.dart';
 
 class TrimTimeline extends StatelessWidget {
@@ -41,8 +42,10 @@ class TrimTimeline extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '${_format(end - start)} / '
-                '${_format(maxSelectionDuration)} max',
+                context.l10n.trimMaximum(
+                  _format(end - start),
+                  _format(maxSelectionDuration),
+                ),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: colors.accent,
                   fontWeight: FontWeight.w700,
@@ -66,11 +69,12 @@ class TrimTimeline extends StatelessWidget {
               final total = duration <= 0 ? 1.0 : duration;
               return Semantics(
                 button: true,
-                label: 'Clip trim range',
-                hint:
-                    'Drag the handles to set a clip up to '
-                    '${_format(maxSelectionDuration)}',
-                value: '${_format(start)} to ${_format(end)}',
+                label: context.l10n.clipTrimRange,
+                hint: context.l10n.clipTrimHint(_format(maxSelectionDuration)),
+                value: context.l10n.trimRangeValue(
+                  _format(start),
+                  _format(end),
+                ),
                 child: GestureDetector(
                   onHorizontalDragStart: (details) {
                     onChangeStart();

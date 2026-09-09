@@ -7,6 +7,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 import 'background_removal_service.dart';
 import 'editor_models.dart';
@@ -96,14 +97,12 @@ class ImageStickerService {
     bool removeBackground = true,
   }) async {
     if (!source.existsSync()) {
-      throw const StickerExportException('That photo is no longer available.');
+      throw StickerExportException(serviceLocalizations.photoUnavailable);
     }
 
     final decoded = decodePhoto(await source.readAsBytes());
     if (decoded == null) {
-      throw const StickerExportException(
-        'That photo couldn’t be opened. Try another one.',
-      );
+      throw StickerExportException(serviceLocalizations.photoOpenTryAnother);
     }
 
     var image = constrainLongestSide(decoded, 1280);
@@ -152,19 +151,19 @@ class ImageStickerService {
     void Function(double progress)? onProgress,
   }) async {
     if (kIsWeb) {
-      throw const StickerExportException(
-        'Saving stickers needs the mobile or desktop app.',
+      throw StickerExportException(
+        serviceLocalizations.savingStickersUnsupported,
       );
     }
 
     final input = File(imagePath);
     if (!input.existsSync()) {
-      throw const StickerExportException('The photo is no longer available.');
+      throw StickerExportException(serviceLocalizations.photoUnavailable);
     }
 
     var composed = decodePhoto(await input.readAsBytes());
     if (composed == null) {
-      throw const StickerExportException('The photo couldn’t be opened.');
+      throw StickerExportException(serviceLocalizations.photoOpenFailed);
     }
     if (composed.width != WhatsAppStickerSpec.size ||
         composed.height != WhatsAppStickerSpec.size) {
@@ -193,7 +192,7 @@ class ImageStickerService {
     Object? lastError;
     try {
       for (var i = 0; i < _qualityLadder.length; i++) {
-        if (_cancelled) throw const StickerExportCancelled();
+        if (_cancelled) throw StickerExportCancelled();
         final quality = _qualityLadder[i];
         final output = File(
           '${temp.path}${Platform.pathSeparator}stickr_static_${DateTime.now().millisecondsSinceEpoch}_q$quality.webp',
@@ -216,17 +215,17 @@ class ImageStickerService {
             },
           );
           if (_cancelled || code == ReturnCode.cancel) {
-            throw const StickerExportCancelled();
+            throw StickerExportCancelled();
           }
           if (code != ReturnCode.success) {
             lastError = StickerExportException(
-              'FFmpeg failed while creating the sticker (code $code).',
+              serviceLocalizations.ffmpegStickerFailed(code),
             );
             continue;
           }
           if (!output.existsSync() || output.lengthSync() == 0) {
-            lastError = const StickerExportException(
-              'FFmpeg did not write a sticker file.',
+            lastError = StickerExportException(
+              serviceLocalizations.ffmpegNoStickerFile,
             );
             continue;
           }
@@ -245,7 +244,7 @@ class ImageStickerService {
             );
           }
           lastError = StickerExportException(
-            'Sticker was ${(bytes / 1024).round()}KB. Trying a smaller encode...',
+            serviceLocalizations.stickerEncodeRetry((bytes / 1024).round()),
           );
         } on StickerExportCancelled {
           rethrow;
@@ -255,8 +254,7 @@ class ImageStickerService {
       }
 
       throw StickerExportException(
-        lastError?.toString() ??
-            'Could not keep the sticker under 100KB. Try a simpler photo.',
+        lastError?.toString() ?? serviceLocalizations.staticStickerTooLarge,
       );
     } finally {
       if (kept == null) {

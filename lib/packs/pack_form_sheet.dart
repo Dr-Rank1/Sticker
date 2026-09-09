@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../haptics/haptic_service.dart';
+import '../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'pack_models.dart';
 import 'pack_providers.dart';
@@ -44,7 +45,9 @@ class _PackFormSheetState extends ConsumerState<_PackFormSheet> {
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.existing?.name ?? '');
-    _author = TextEditingController(text: widget.existing?.author ?? 'Me');
+    _author = TextEditingController(
+      text: widget.existing?.author ?? fallbackLocalizations.me,
+    );
   }
 
   @override
@@ -72,8 +75,11 @@ class _PackFormSheetState extends ConsumerState<_PackFormSheet> {
       if (!mounted) return;
       hapticService.error();
       setState(() => _saving = false);
+      final message = error is PackException
+          ? error.message
+          : context.l10n.couldNotSavePack;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$error')));
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -86,12 +92,14 @@ class _PackFormSheetState extends ConsumerState<_PackFormSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.existing == null ? 'New pack' : 'Edit pack',
+            widget.existing == null
+                ? context.l10n.newPack
+                : context.l10n.editPack,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 6),
           Text(
-            'WhatsApp needs a pack name, an author, and a 96×96 tray icon. We’ll make the tray icon for you.',
+            context.l10n.packFormDescription,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 20),
@@ -99,9 +107,9 @@ class _PackFormSheetState extends ConsumerState<_PackFormSheet> {
             controller: _name,
             textCapitalization: TextCapitalization.sentences,
             maxLength: WhatsAppPackRules.maxNameLength,
-            decoration: const InputDecoration(
-              labelText: 'Pack name',
-              hintText: 'Monday moods',
+            decoration: InputDecoration(
+              labelText: context.l10n.packName,
+              hintText: context.l10n.packNameHint,
             ),
           ),
           const SizedBox(height: 8),
@@ -109,9 +117,9 @@ class _PackFormSheetState extends ConsumerState<_PackFormSheet> {
             controller: _author,
             textCapitalization: TextCapitalization.words,
             maxLength: WhatsAppPackRules.maxAuthorLength,
-            decoration: const InputDecoration(
-              labelText: 'Author',
-              hintText: 'Your name',
+            decoration: InputDecoration(
+              labelText: context.l10n.author,
+              hintText: context.l10n.authorHint,
             ),
           ),
           const SizedBox(height: 12),
@@ -130,7 +138,11 @@ class _PackFormSheetState extends ConsumerState<_PackFormSheet> {
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
-              child: Text(widget.existing == null ? 'Create pack' : 'Save'),
+              child: Text(
+                widget.existing == null
+                    ? context.l10n.createPack
+                    : context.l10n.save,
+              ),
             ),
           ),
         ],

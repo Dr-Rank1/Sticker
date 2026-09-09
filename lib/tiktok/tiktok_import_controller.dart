@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import 'tiktok_import_service.dart';
 
 enum TiktokImportPhase { idle, resolving, downloading, completed, error }
@@ -63,9 +64,9 @@ class TiktokImportController extends Notifier<TiktokImportState> {
     if (state.isBusy) return;
 
     if (!_service.isValidTikTokUrl(rawLink)) {
-      state = const TiktokImportState(
+      state = TiktokImportState(
         phase: TiktokImportPhase.error,
-        errorMessage: 'That doesn\'t look like a TikTok link. Paste a video URL and try again.',
+        errorMessage: serviceLocalizations.invalidTikTokLink,
       );
       return;
     }

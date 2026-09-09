@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 import 'tiktok_import_controller.dart';
 
@@ -157,8 +158,8 @@ class TikTokCommentService {
 
   Future<List<CommentSticker>> fetchStickers(String videoUrl) async {
     if (_credential.isEmpty && apiGet == null) {
-      throw const TikTokCommentException(
-        'Comment scanning is not configured. Add SCRAPEBADGER_API_KEY to the app build.',
+      throw TikTokCommentException(
+        serviceLocalizations.commentScanNotConfigured,
       );
     }
 
@@ -185,8 +186,8 @@ class TikTokCommentService {
         _throwForStatus(response.statusCode);
         final body = _asMap(response.data);
         if (body == null) {
-          throw const TikTokCommentException(
-            'The comment service returned an unreadable response.',
+          throw TikTokCommentException(
+            serviceLocalizations.commentServiceUnreadable,
           );
         }
 
@@ -206,9 +207,7 @@ class TikTokCommentService {
     } on DioException catch (error) {
       throw TikTokCommentException(_messageForDio(error));
     } on SocketException {
-      throw const TikTokCommentException(
-        'No internet connection. Check your network and try again.',
-      );
+      throw TikTokCommentException(serviceLocalizations.noInternetConnection);
     }
   }
 
@@ -246,8 +245,8 @@ class TikTokCommentService {
       final response = await _dio.download(sticker.imageUrl, file.path);
       _throwForImageStatus(response.statusCode);
       if (!file.existsSync() || file.lengthSync() == 0) {
-        throw const TikTokCommentException(
-          'TikTok returned an empty sticker image.',
+        throw TikTokCommentException(
+          serviceLocalizations.emptyTikTokStickerImage,
         );
       }
       return file;
@@ -262,8 +261,8 @@ class TikTokCommentService {
 
   void _throwForImageStatus(int? status) {
     if (status != null && status >= 400) {
-      throw const TikTokCommentException(
-        'That comment sticker is no longer available.',
+      throw TikTokCommentException(
+        serviceLocalizations.commentStickerUnavailable,
       );
     }
   }
@@ -273,22 +272,20 @@ class TikTokCommentService {
     if (directId != null) return directId;
     final resolver = videoIdResolver;
     if (resolver == null) {
-      throw const TikTokCommentException(
-        'The shortened TikTok link could not be resolved.',
+      throw TikTokCommentException(
+        serviceLocalizations.shortTikTokLinkUnresolved,
       );
     }
     try {
       final id = (await resolver(videoUrl)).trim();
       if (!RegExp(r'^\d+$').hasMatch(id)) {
-        throw const TikTokCommentException(
-          'TikTok did not return a valid video ID.',
-        );
+        throw TikTokCommentException(serviceLocalizations.invalidTikTokVideoId);
       }
       return id;
     } catch (error) {
       if (error is TikTokCommentException) rethrow;
       throw TikTokCommentException(
-        'Could not resolve that TikTok link: $error',
+        serviceLocalizations.couldNotResolveTikTokLink(error.toString()),
       );
     }
   }
@@ -296,17 +293,17 @@ class TikTokCommentService {
   void _throwForStatus(int? status) {
     if (status == null || status < 400) return;
     if (status == 401 || status == 403) {
-      throw const TikTokCommentException(
-        'Comment scanning is not authorized. Check the ScrapeBadger API key.',
+      throw TikTokCommentException(
+        serviceLocalizations.commentScanUnauthorized,
       );
     }
     if (status == 402 || status == 429) {
-      throw const TikTokCommentException(
-        'The comment scan limit has been reached. Please try again later.',
+      throw TikTokCommentException(
+        serviceLocalizations.commentScanLimitReached,
       );
     }
-    throw const TikTokCommentException(
-      'TikTok comments are unavailable right now. Please try again.',
+    throw TikTokCommentException(
+      serviceLocalizations.tiktokCommentsUnavailable,
     );
   }
 
@@ -315,11 +312,11 @@ class TikTokCommentService {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'The comment scan timed out. Please try again.';
+        return serviceLocalizations.commentScanTimedOut;
       case DioExceptionType.connectionError:
-        return 'Could not connect to the comment service.';
+        return serviceLocalizations.commentServiceConnectionFailed;
       default:
-        return 'Could not scan TikTok comments. Please try again.';
+        return serviceLocalizations.commentScanFailed;
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../editor/editor_screen.dart';
 import '../editor/ffmpeg_sticker_service.dart';
 import '../images/sticker_grid_cache.dart';
+import '../l10n/l10n.dart';
 import '../photos/photo_import_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -58,7 +59,7 @@ class _MemeTemplateSheetState extends ConsumerState<MemeTemplateSheet> {
         _templates = templates;
         _loading = false;
         if (templates.isEmpty) {
-          _error = 'Imgflip didn’t return any meme templates.';
+          _error = context.l10n.noMemeTemplates;
         }
       });
     } on MemeServiceException catch (error) {
@@ -70,7 +71,7 @@ class _MemeTemplateSheetState extends ConsumerState<MemeTemplateSheet> {
       _showMessage(error.message);
     } catch (_) {
       if (!mounted) return;
-      const message = 'Couldn’t load meme templates. Please try again.';
+      final message = context.l10n.memeTemplatesLoadFailed;
       setState(() {
         _loading = false;
         _error = message;
@@ -110,7 +111,7 @@ class _MemeTemplateSheetState extends ConsumerState<MemeTemplateSheet> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _selectedId = null);
-      _showMessage('Couldn’t prepare that meme. Try another template.');
+      _showMessage(context.l10n.couldNotPrepareMeme);
     } finally {
       if (source != null) {
         try {
@@ -163,19 +164,19 @@ class _MemeTemplateSheetState extends ConsumerState<MemeTemplateSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Start from a meme',
+                            context.l10n.startFromMemeSheet,
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Pick a template, then add your own text.',
+                            context.l10n.memeSheetSubtitle,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Close',
+                      tooltip: context.l10n.close,
                       onPressed: _selectedId == null
                           ? () => Navigator.pop(context)
                           : null,
@@ -200,7 +201,7 @@ class _MemeTemplateSheetState extends ConsumerState<MemeTemplateSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Templates are center-cropped to 1:1 and prepared at 512×512.',
+                    context.l10n.memeCropDescription,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -240,7 +241,7 @@ class _MemeTemplateSheetState extends ConsumerState<MemeTemplateSheet> {
                 key: const Key('retry-meme-templates'),
                 onPressed: _loadTemplates,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Try again'),
+                label: Text(context.l10n.tryAgain),
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../accessibility/accessible_tap.dart';
 import '../discover/discover_screen.dart';
+import '../l10n/l10n.dart';
 import '../screens/community_screen.dart';
 import '../screens/create_screen.dart';
 import '../screens/library_screen.dart';
@@ -123,6 +124,7 @@ class StickrBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final l10n = context.l10n;
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -149,7 +151,7 @@ class StickrBottomBar extends StatelessWidget {
               child: _NavItem(
                 key: const Key('nav-library'),
                 icon: Icons.grid_view_rounded,
-                label: 'Library',
+                label: l10n.library,
                 selected: current == AppTab.library,
                 onTap: () => onSelect(AppTab.library),
               ),
@@ -158,7 +160,7 @@ class StickrBottomBar extends StatelessWidget {
               child: _NavItem(
                 key: const Key('nav-create'),
                 icon: Icons.add_circle_rounded,
-                label: 'Create',
+                label: l10n.create,
                 selected: current == AppTab.create,
                 onTap: () => onSelect(AppTab.create),
               ),
@@ -167,7 +169,7 @@ class StickrBottomBar extends StatelessWidget {
               child: _NavItem(
                 key: const Key('nav-discover'),
                 icon: Icons.auto_awesome_rounded,
-                label: 'Discover',
+                label: l10n.discover,
                 selected: current == AppTab.discover,
                 onTap: () => onSelect(AppTab.discover),
               ),
@@ -176,7 +178,7 @@ class StickrBottomBar extends StatelessWidget {
               child: _NavItem(
                 key: const Key('nav-community'),
                 icon: Icons.public_rounded,
-                label: 'Community',
+                label: l10n.community,
                 selected: current == AppTab.community,
                 onTap: () => onSelect(AppTab.community),
               ),
@@ -205,11 +207,12 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final l10n = context.l10n;
     final color = selected ? colors.accent : colors.navInactive;
 
     return AccessibleTap(
       label: label,
-      hint: selected ? 'Current tab' : 'Switches to the $label tab',
+      hint: selected ? l10n.currentTab : l10n.switchesToTab(label),
       selected: selected,
       borderRadius: BorderRadius.circular(AppTheme.radiusXl),
       onTap: onTap,

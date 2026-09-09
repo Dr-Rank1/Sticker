@@ -1,0 +1,543 @@
+{
+  "@@locale": "en",
+  "appTitle": "Stickr",
+  "cancel": "Cancel",
+  "close": "Close",
+  "continueLabel": "Continue",
+  "retry": "Retry",
+  "tryAgain": "Try again",
+  "search": "Search",
+  "skip": "Skip",
+  "next": "Next",
+  "getStarted": "Get started",
+  "notNow": "Not now",
+  "openSettings": "Open settings",
+  "library": "Library",
+  "create": "Create",
+  "discover": "Discover",
+  "community": "Community",
+  "settings": "Settings",
+  "currentTab": "Current tab",
+  "switchesToTab": "Switches to the {label} tab",
+  "@switchesToTab": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingTikTokTitle": "Paste TikTok links",
+  "onboardingTikTokBody": "Drop in any video URL. We fetch a clean clip so you can turn a moment into a sticker.",
+  "onboardingEditTitle": "Edit & remove backgrounds",
+  "onboardingEditBody": "Trim, add text, and cut out the subject on this device. No account. No uploads.",
+  "onboardingWhatsAppTitle": "Export to WhatsApp",
+  "onboardingWhatsAppBody": "Pack your stickers and add them to WhatsApp in a tap. Always free, forever.",
+  "createSubtitle": "Turn any moment into a WhatsApp sticker.",
+  "fromPhoto": "From a photo",
+  "fromPhotoSubtitle": "Auto crop, remove the background, add text.",
+  "startFromMeme": "Start from Meme",
+  "startFromMemeSubtitle": "Pick a popular template and add your own text.",
+  "fromTikTok": "From TikTok",
+  "fromTikTokSubtitle": "Paste a link and pick the perfect clip.",
+  "fromVideo": "From a video",
+  "fromVideoSubtitle": "Make an animated sticker in seconds.",
+  "freeForeverNote": "Stickr is 100% free. No accounts, no paywalls.",
+  "storage": "Storage",
+  "storageDescription": "See what Stickr uses on this device and remove disposable working files.",
+  "appDocuments": "App documents",
+  "savedPacksAndStickers": "Saved packs and stickers",
+  "temporaryCache": "Temporary cache",
+  "rawVideosAndWorkingFiles": "Raw videos and working files",
+  "totalAppStorage": "Total app storage",
+  "clearing": "Clearing…",
+  "clearCache": "Clear Cache",
+  "savedPacksNotDeleted": "Your saved sticker packs will not be deleted.",
+  "appearance": "Appearance",
+  "systemTheme": "System",
+  "lightTheme": "Light",
+  "darkTheme": "Dark",
+  "cacheAlreadyClear": "Cache is already clear.",
+  "freedStorage": "Freed {size}.",
+  "@freedStorage": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "couldNotClearCache": "Could not clear the cache. Try again.",
+  "couldNotReadStorage": "Could not read storage. Try again",
+  "librarySubtitle": "Your packs. Always free, forever.",
+  "newPack": "New pack",
+  "noPacksYet": "No packs yet",
+  "noPacksMessage": "Create stickers from photos, videos, or TikToks and group them into packs for WhatsApp.",
+  "createSticker": "Create a sticker",
+  "opensReadyPack": "Opens this pack. Ready for WhatsApp, {countLabel}.",
+  "@opensReadyPack": {
+    "placeholders": {
+      "countLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "opensBlockedPack": "Opens this pack. {reason}",
+  "@opensBlockedPack": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "readyCount": "Ready · {countLabel}",
+  "@readyCount": {
+    "placeholders": {
+      "countLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "unexpectedErrorTitle": "Something went wrong",
+  "unexpectedErrorMessage": "Stickr hit an unexpected problem. You can keep using the rest of the app.",
+  "allowPhotosVideos": "Allow access to photos & videos",
+  "mediaPermissionDescription": "Stickr only reads files you pick so you can cut out stickers and export them to WhatsApp. Nothing is uploaded.",
+  "allowAccess": "Allow access",
+  "permissionTurnedOff": "Permission turned off",
+  "permissionSettingsDescription": "To pick photos and videos, allow access in system settings.",
+  "useCamera": "Use your camera",
+  "cameraPermissionDescription": "Stickr uses the camera so you can snap a photo and turn it into a sticker.",
+  "noStickersFound": "No stickers found. Try another search.",
+  "couldNotSearchStickers": "Couldn’t search for stickers. Please try again.",
+  "couldNotLoadMoreStickers": "Couldn’t load more stickers. Please try again.",
+  "couldNotSaveSticker": "Couldn’t save that sticker. Please try again.",
+  "addedToPack": "Added to {packName} ({countLabel}).",
+  "@addedToPack": {
+    "placeholders": {
+      "packName": {
+        "type": "String"
+      },
+      "countLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSubtitle": "Find stickers powered by Giphy.",
+  "discoverSearchHint": "Search reactions, cats, anime…",
+  "missingGiphyApiKey": "Add a Giphy API key at build time to enable Discover.",
+  "discoverEmptyMessage": "Search for a mood, reaction, or character.",
+  "readyToDiscover": "Ready to discover",
+  "noStickersYet": "No stickers yet",
+  "importedPack": "Imported {packName}.",
+  "@importedPack": {
+    "placeholders": {
+      "packName": {
+        "type": "String"
+      }
+    }
+  },
+  "couldNotImportPack": "Could not import this pack.",
+  "photoImportDescription": "Pick a picture. We’ll cut out the subject on this device, then you can add text and emojis.",
+  "removeBackground": "Remove Background",
+  "onDeviceMlDescription": "Private, on-device processing with no API limits.",
+  "chooseFromGallery": "Choose from gallery",
+  "takePhoto": "Take a photo",
+  "openingPhotos": "Opening photos...",
+  "cuttingOutSubject": "Cutting out the subject...",
+  "preparingPhoto": "Preparing your photo...",
+  "scanningLocally": "Scanning locally",
+  "clipboardEmpty": "Your clipboard is empty.",
+  "tiktokImportDescription": "Paste a video link and we will fetch a clean MP4 for your animated sticker.",
+  "tiktokUrlHint": "https://www.tiktok.com/@user/video/...",
+  "paste": "Paste",
+  "findingVideo": "Finding video...",
+  "downloading": "Downloading...",
+  "importVideo": "Import video",
+  "lookingUpTikTok": "Looking up that TikTok...",
+  "downloadingVideo": "Downloading video...",
+  "me": "Me",
+  "editPack": "Edit pack",
+  "packFormDescription": "WhatsApp needs a pack name, an author, and a 96×96 tray icon. We’ll make the tray icon for you.",
+  "packName": "Pack name",
+  "packNameHint": "Monday moods",
+  "author": "Author",
+  "authorHint": "Your name",
+  "createPack": "Create pack",
+  "save": "Save",
+  "saveToPack": "Save to a pack",
+  "saveAnimatedStickerDescription": "WhatsApp packs need 3–30 stickers of the same type. Pick a pack with room, or make a new one.",
+  "saveStaticStickerDescription": "Photo stickers are static. WhatsApp packs can’t mix them with animated clips.",
+  "noPacksAvailable": "You don’t have any packs yet.",
+  "fullStickerPack": "Full ({count} stickers)",
+  "@fullStickerPack": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "packForPhotoStickers": "This pack is for photo stickers",
+  "packForAnimatedStickers": "This pack is for animated stickers",
+  "packAuthorCount": "{author} · {countLabel}",
+  "@packAuthorCount": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "countLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "textTool": "Text",
+  "emojiTool": "Emojis",
+  "speed": "Speed",
+  "addTextHint": "Adds a text sticker to the canvas",
+  "addEmojiHint": "Adds an emoji sticker to the canvas",
+  "speedOptionsHint": "Opens playback speed options",
+  "couldNotPrepareMeme": "Could not prepare that meme. Try another template.",
+  "startFromMemeSheet": "Start from a meme",
+  "memeSheetSubtitle": "Pick a template, then add your own text.",
+  "memeCropDescription": "Templates are center-cropped to 1:1 and prepared at 512×512.",
+  "couldNotLoadTrending": "Could not load trending stickers. Please retry.",
+  "myPackCapacity": "My Pack can hold up to 30 stickers.",
+  "myPack": "My Pack",
+  "batchExportIncomplete": "The batch export did not complete.",
+  "couldNotExportMyPack": "Couldn’t export My Pack. Please try again.",
+  "communitySubtitle": "Collect trending stickers and build your next pack.",
+  "addedToMyPack": "Added to My Pack",
+  "addToMyPack": "Add to My Pack",
+  "animatedBadge": "GIF",
+  "myPackCount": "My Pack  {count}/{maximum}",
+  "@myPackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "maximum": {
+        "type": "int"
+      }
+    }
+  },
+  "exportProgress": "Export {completed}/{total}",
+  "@exportProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "exportToWhatsApp": "Export to WhatsApp",
+  "communityTrayHint": "Tap + on at least 3 stickers to start a pack.",
+  "scanningComments": "Scanning comments for stickers...",
+  "couldNotScanComments": "Couldn’t scan those comments. Please try again.",
+  "couldNotExportStickers": "Couldn’t export those stickers. Please try again.",
+  "commentStickers": "Comment stickers",
+  "exportSelection": "Export ({selected}/{maximum})",
+  "@exportSelection": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "maximum": {
+        "type": "int"
+      }
+    }
+  },
+  "noCommentStickers": "No image stickers were found in the scanned comments.",
+  "pack": "Pack",
+  "packDeleted": "This pack was deleted.",
+  "sharePack": "Share pack",
+  "deletePack": "Delete pack",
+  "noStickersInPack": "No stickers in this pack yet.",
+  "stickerInPack": "Sticker in {packName}",
+  "@stickerInPack": {
+    "placeholders": {
+      "packName": {
+        "type": "String"
+      }
+    }
+  },
+  "removeStickerHint": "Double tap and hold to remove this sticker",
+  "addStickers": "Add stickers",
+  "adding": "Adding...",
+  "addToWhatsApp": "Add to WhatsApp",
+  "whatsAppMinimumStickers": "WhatsApp requires at least 3 stickers in a pack. Add {remaining} more to continue.",
+  "@whatsAppMinimumStickers": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "couldNotSharePack": "Could not share this pack.",
+  "whatsAppNotInstalled": "WhatsApp isn’t installed",
+  "installWhatsAppDescription": "Install WhatsApp or WhatsApp Business, then come back to add your sticker pack.",
+  "installWhatsApp": "Install WhatsApp",
+  "installWhatsAppBusiness": "Install WhatsApp Business",
+  "couldNotOpenAppStore": "Couldn’t open the app store. Please try again.",
+  "deletePackQuestion": "Delete pack?",
+  "deletePackDescription": "“{packName}” and its stickers will be removed from this device.",
+  "@deletePackDescription": {
+    "placeholders": {
+      "packName": {
+        "type": "String"
+      }
+    }
+  },
+  "delete": "Delete",
+  "remove": "Remove",
+  "removeStickerQuestion": "Remove sticker?",
+  "removeStickerDescription": "It will be deleted from this pack.",
+  "packDetailSummary": "{countLabel} stickers · 96×96 tray",
+  "@packDetailSummary": {
+    "placeholders": {
+      "countLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSaved": "Sticker saved ({kilobytes} KB). Add it to a pack from Library.",
+  "@stickerSaved": {
+    "placeholders": {
+      "kilobytes": {
+        "type": "int"
+      }
+    }
+  },
+  "addText": "Add text",
+  "textHint": "Say something",
+  "add": "Add",
+  "makingSticker": "Making your sticker…",
+  "closeEditor": "Close editor",
+  "undo": "Undo",
+  "redo": "Redo",
+  "trimMaximum": "{selection} / {maximum} max",
+  "@trimMaximum": {
+    "placeholders": {
+      "selection": {
+        "type": "String"
+      },
+      "maximum": {
+        "type": "String"
+      }
+    }
+  },
+  "clipTrimRange": "Clip trim range",
+  "clipTrimHint": "Drag the handles to set a clip up to {maximum}",
+  "@clipTrimHint": {
+    "placeholders": {
+      "maximum": {
+        "type": "String"
+      }
+    }
+  },
+  "trimRangeValue": "{start} to {end}",
+  "@trimRangeValue": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerCanvas": "Sticker canvas",
+  "stickerCanvasHint": "Drag a sticker to move it. Pinch to resize. Rotate with two fingers.",
+  "deleteSticker": "Delete sticker",
+  "deleteStickerHint": "Removes this sticker from the canvas",
+  "packNoLongerExists": "That pack no longer exists.",
+  "packMissingTrayIcon": "This pack is missing a tray icon.",
+  "packStickerFileMissing": "A sticker file is missing from this pack.",
+  "stickrFileNotFound": "The .stickr file could not be found.",
+  "invalidStickrPack": "This is not a valid .stickr pack.",
+  "packMissingNameOrPublisher": "This pack is missing a name or publisher.",
+  "packNameRequired": "Give this pack a name.",
+  "packAuthorRequired": "Add an author name.",
+  "packIdentifierExists": "A pack with that identifier already exists.",
+  "packMaximumStickers": "WhatsApp packs can hold at most {maximum} stickers.",
+  "@packMaximumStickers": {
+    "placeholders": {"maximum": {"type": "int"}}
+  },
+  "packStaticOnly": "This pack is for static stickers. Create a new pack for animated ones.",
+  "packAnimatedOnly": "This pack is for animated stickers. Create a new pack for photo stickers.",
+  "packStickerCountRange": "WhatsApp packs must contain between {minimum} and {maximum} stickers.",
+  "@packStickerCountRange": {
+    "placeholders": {
+      "minimum": {"type": "int"},
+      "maximum": {"type": "int"}
+    }
+  },
+  "stickerFileMissing": "The sticker file is missing.",
+  "packNameTooLong": "Pack names can be at most {maximum} characters.",
+  "@packNameTooLong": {
+    "placeholders": {"maximum": {"type": "int"}}
+  },
+  "packAuthorTooLong": "Author names can be at most {maximum} characters.",
+  "@packAuthorTooLong": {
+    "placeholders": {"maximum": {"type": "int"}}
+  },
+  "trayIconRequired": "Add a {size}x{size} tray icon.",
+  "@trayIconRequired": {
+    "placeholders": {"size": {"type": "int"}}
+  },
+  "addStickersToExport": "{count, plural, =1{Add 1 more sticker to export (minimum {minimum}).} other{Add {count} more stickers to export (minimum {minimum}).}}",
+  "@addStickersToExport": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "minimum": {"type": "int"}
+    }
+  },
+  "removeStickersToExport": "{count, plural, =1{Remove 1 sticker to export (maximum {maximum}).} other{Remove {count} stickers to export (maximum {maximum}).}}",
+  "@removeStickersToExport": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "maximum": {"type": "int"}
+    }
+  },
+  "stickerCountOfMaximum": "{count} / {maximum}",
+  "@stickerCountOfMaximum": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "maximum": {"type": "int"}
+    }
+  },
+  "couldNotCreateTrayIcon": "Could not create the 96x96 tray icon.",
+  "whatsAppNotInstalledDevice": "WhatsApp isn’t installed on this device.",
+  "whatsAppReadyDesktop": "This pack is WhatsApp-ready ({count} stickers, 96×96 tray). Add to WhatsApp from an Android or iOS build.",
+  "@whatsAppReadyDesktop": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "whatsAppReadyDevice": "This pack meets WhatsApp’s rules. Connect it from a device build with WhatsApp installed.",
+  "whatsAppAndroidOnly": "Add to WhatsApp is available on Android with WhatsApp installed.",
+  "addedToWhatsApp": "Added to WhatsApp.",
+  "couldNotReachWhatsAppExport": "Couldn’t reach the WhatsApp export on this device.",
+  "whatsAppDidNotAddPack": "WhatsApp didn’t add the pack.",
+  "whatsAppRejectedPack": "WhatsApp rejected this pack.",
+  "couldNotPrepareWhatsAppFiles": "Couldn’t prepare sticker files for WhatsApp.",
+  "exportAlreadyInProgress": "An export is already in progress.",
+  "packMissingWhatsAppData": "This pack is missing data WhatsApp needs.",
+  "couldNotAddPackToWhatsApp": "Couldn’t add this pack to WhatsApp.",
+  "invalidTikTokLink": "That doesn't look like a TikTok link. Paste a video URL and try again.",
+  "noInternetConnection": "No internet connection. Check your network and try again.",
+  "unreadableTikwmResponse": "TikWM returned an unreadable response. Please try again.",
+  "tikwmVideoNotFound": "TikWM couldn’t find a video at that link. Check it and try again.",
+  "tikwmNoDownload": "TikWM found that post, but no downloadable video was available.",
+  "emptyVideoDownload": "The download finished, but the video file was empty.",
+  "tiktokImportFailed": "Something went wrong while importing that TikTok. Please try again.",
+  "tikwmRateLimited": "TikWM is receiving too many requests right now. Wait a moment and try again.",
+  "tikwmTikTokNotFound": "TikWM couldn’t find that TikTok. Check the link or try another public video.",
+  "tikwmProcessFailed": "TikWM couldn’t process that video right now. Please try again shortly.",
+  "connectionTimedOut": "The connection timed out. Try again on a stronger network.",
+  "tikwmLookupFailed": "TikWM couldn’t look up that video right now. Please try again.",
+  "videoDownloadFailed": "We couldn’t download that video right now. Please try again.",
+  "downloadCancelled": "The download was cancelled.",
+  "downloadFailed": "Something went wrong while downloading. Please try again.",
+  "commentScanNotConfigured": "Comment scanning is not configured. Add SCRAPEBADGER_API_KEY to the app build.",
+  "commentServiceUnreadable": "The comment service returned an unreadable response.",
+  "emptyTikTokStickerImage": "TikTok returned an empty sticker image.",
+  "commentStickerUnavailable": "That comment sticker is no longer available.",
+  "shortTikTokLinkUnresolved": "The shortened TikTok link could not be resolved.",
+  "invalidTikTokVideoId": "TikTok did not return a valid video ID.",
+  "couldNotResolveTikTokLink": "Could not resolve that TikTok link: {error}",
+  "@couldNotResolveTikTokLink": {
+    "placeholders": {"error": {"type": "String"}}
+  },
+  "commentScanUnauthorized": "Comment scanning is not authorized. Check the ScrapeBadger API key.",
+  "commentScanLimitReached": "The comment scan limit has been reached. Please try again later.",
+  "tiktokCommentsUnavailable": "TikTok comments are unavailable right now. Please try again.",
+  "commentScanTimedOut": "The comment scan timed out. Please try again.",
+  "commentServiceConnectionFailed": "Could not connect to the comment service.",
+  "commentScanFailed": "Could not scan TikTok comments. Please try again.",
+  "apifyNetworkError": "No internet connection. Check your network and try again.",
+  "apifyLimitReached": "Apify request limit was reached. Please try again later.",
+  "apifyUnreadableResponse": "Apify returned an unreadable dataset response.",
+  "apifyRunFailed": "Could not run the synchronous Apify scraper: {error}",
+  "@apifyRunFailed": {
+    "placeholders": {"error": {"type": "String"}}
+  },
+  "invalidHttpsTikTokUrl": "Provide a valid HTTPS TikTok post URL.",
+  "apifyNotConfigured": "Apify is not configured. Add APIFY_API_TOKEN to the app build.",
+  "apifyRejectedToken": "Apify rejected the API token.",
+  "apifyTimedOut": "The Apify request timed out. Please try again.",
+  "apifyConnectionFailed": "Could not connect to Apify.",
+  "apifyRequestFailed": "Apify could not complete the scraper request.",
+  "commentStickerOpenFailed": "That comment sticker could not be opened.",
+  "stickerCanvasSizeFailed": "The sticker canvas could not be sized to 512×512.",
+  "commentStickerTooLarge": "Could not keep the sticker under 100KB. Try another comment image.",
+  "savingStickersUnsupported": "Saving stickers needs the mobile or desktop app.",
+  "photoUnavailable": "That photo is no longer available.",
+  "photoOpenFailed": "The photo couldn’t be opened.",
+  "photoOpenTryAnother": "That photo couldn’t be opened. Try another one.",
+  "ffmpegStickerFailed": "FFmpeg failed while creating the sticker (code {code}).",
+  "@ffmpegStickerFailed": {
+    "placeholders": {"code": {"type": "int"}}
+  },
+  "ffmpegNoStickerFile": "FFmpeg did not write a sticker file.",
+  "stickerEncodeRetry": "Sticker was {kilobytes}KB. Trying a smaller encode...",
+  "@stickerEncodeRetry": {
+    "placeholders": {"kilobytes": {"type": "int"}}
+  },
+  "staticStickerTooLarge": "Could not keep the sticker under 100KB. Try a simpler photo.",
+  "animatedStickerTooLarge": "Could not keep the sticker under 500KB. Try a shorter clip.",
+  "exportCancelled": "Export cancelled.",
+  "sourceVideoUnavailable": "The source video is no longer available.",
+  "videoEmptyOrUnavailable": "The selected video is empty or unavailable.",
+  "videoTooLarge": "Choose a video smaller than 250 MB.",
+  "videoInspectionFailed": "Couldn’t inspect that video. Choose a different file.",
+  "videoDurationUnreadable": "The selected video has no readable duration.",
+  "videoTooLong": "Choose a video that is 10 minutes or shorter.",
+  "videoCodecUnsupported": "The {codec} video codec is not supported.",
+  "@videoCodecUnsupported": {
+    "placeholders": {"codec": {"type": "String"}}
+  },
+  "unknownCodec": "unknown",
+  "videoInvalidDimensions": "The selected video has invalid dimensions.",
+  "videoDimensionsTooLarge": "Choose a video no larger than 4096 by 4096 pixels.",
+  "fileNotReadableVideo": "The selected file is not a readable video.",
+  "fileMissingVideoTrack": "The selected file does not contain a video track.",
+  "transparentForegroundRenderFailed": "Couldn’t render the transparent foreground.",
+  "textSticker": "Text sticker",
+  "textStickerWithText": "Text sticker, {text}",
+  "@textStickerWithText": {
+    "placeholders": {"text": {"type": "String"}}
+  },
+  "emojiSticker": "Emoji sticker",
+  "imageSticker": "Image sticker",
+  "selectedStickerHint": "Drag to move, pinch to scale, and rotate with two fingers",
+  "unselectedStickerHint": "Double tap to select this sticker",
+  "giphyRateLimitReached": "Giphy request limit was reached. Please try again later.",
+  "giphyTrendingUnavailable": "Trending stickers are unavailable because Giphy is not configured.",
+  "giphySearchRequired": "Type something to search for stickers.",
+  "giphySearchUnavailable": "Sticker search is unavailable because Giphy is not configured.",
+  "couldNotSearchGiphy": "Could not search Giphy. Please retry.",
+  "invalidStickerDownloadUrl": "That sticker has an invalid download URL.",
+  "giphyEmptySticker": "Giphy downloaded an empty sticker.",
+  "stickerDownloadFailed": "Could not download that sticker. Please retry.",
+  "trendingSticker": "Trending sticker",
+  "giphyUnreadableResponse": "Giphy returned an unreadable sticker response.",
+  "giphyConnectionFailed": "Could not connect to Giphy. Check your connection and retry.",
+  "giphyRejectedApiKey": "Giphy rejected the API key. Check GIPHY_API_KEY.",
+  "giphyTimedOut": "The Giphy request timed out. Please retry.",
+  "giphyRequestFailed": "Giphy could not complete the request. Please retry.",
+  "imgflipUnreadableResponse": "Imgflip returned an unreadable response. Please try again.",
+  "imgflipTemplatesFailed": "Imgflip couldn’t load meme templates right now.",
+  "memeTemplate": "Meme template",
+  "invalidMemeImageLink": "That meme template has an invalid image link.",
+  "memeDownloadFailed": "Couldn’t download that meme template. Please try again.",
+  "imgflipEmptyTemplate": "Imgflip downloaded an empty meme template.",
+  "imgflipTimedOut": "Imgflip took too long to respond. Please try again.",
+  "imgflipBusy": "Imgflip is busy right now. Wait a moment and try again.",
+  "imgflipTemplateDownloadFailed": "Imgflip couldn’t download that template.",
+  "imgflipTemplatesUnavailable": "Imgflip templates are unavailable right now.",
+  "templateDownloadCancelled": "The template download was cancelled.",
+  "templateLoadingCancelled": "Loading meme templates was cancelled.",
+  "memeTemplatesLoadFailed": "Couldn’t load meme templates. Please try again.",
+  "photoPrepareFailed": "Couldn’t prepare that photo. Please try another one.",
+  "noMemeTemplates": "The meme service did not return any templates.",
+  "couldNotLoadPacks": "Could not load your sticker packs. Please try again.",
+  "couldNotSavePack": "Could not save this pack. Please try again.",
+  "couldNotAddStickerToPack": "Could not add this sticker to the pack. Please try again."
+}

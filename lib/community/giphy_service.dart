@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_environment.dart';
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 
 class GiphyException implements Exception {
@@ -17,8 +18,7 @@ class GiphyException implements Exception {
 }
 
 class GiphyRateLimitException extends GiphyException {
-  const GiphyRateLimitException()
-    : super('Giphy request limit was reached. Please try again later.');
+  GiphyRateLimitException() : super(serviceLocalizations.giphyRateLimitReached);
 }
 
 @immutable
@@ -81,9 +81,7 @@ class GiphyService {
 
   Future<GiphyStickerPage> fetchTrending({int offset = 0}) async {
     if (!hasApiKey) {
-      throw const GiphyException(
-        'Trending stickers are unavailable because Giphy is not configured.',
-      );
+      throw GiphyException(serviceLocalizations.giphyTrendingUnavailable);
     }
 
     final parameters = <String, dynamic>{
@@ -96,19 +94,17 @@ class GiphyService {
     return _fetchPage(
       endpoint: endpoint,
       parameters: parameters,
-      fallbackMessage: 'Could not load trending stickers. Please retry.',
+      fallbackMessage: serviceLocalizations.couldNotLoadTrending,
     );
   }
 
   Future<GiphyStickerPage> search(String query, {int offset = 0}) async {
     final term = query.trim();
     if (term.isEmpty) {
-      throw const GiphyException('Type something to search for stickers.');
+      throw GiphyException(serviceLocalizations.giphySearchRequired);
     }
     if (!hasApiKey) {
-      throw const GiphyException(
-        'Sticker search is unavailable because Giphy is not configured.',
-      );
+      throw GiphyException(serviceLocalizations.giphySearchUnavailable);
     }
 
     return _fetchPage(
@@ -120,7 +116,7 @@ class GiphyService {
         'rating': 'g',
         'offset': offset,
       },
-      fallbackMessage: 'Could not search Giphy. Please retry.',
+      fallbackMessage: serviceLocalizations.couldNotSearchGiphy,
     );
   }
 
@@ -130,7 +126,7 @@ class GiphyService {
   }) async {
     final uri = Uri.tryParse(url);
     if (uri == null || !(uri.scheme == 'https' || uri.scheme == 'http')) {
-      throw const GiphyException('That sticker has an invalid download URL.');
+      throw GiphyException(serviceLocalizations.invalidStickerDownloadUrl);
     }
 
     final directory = await _temporaryDirectory();
@@ -142,7 +138,7 @@ class GiphyService {
     try {
       await _dio.download(url, file.path);
       if (!await file.exists() || await file.length() == 0) {
-        throw const GiphyException('Giphy downloaded an empty sticker.');
+        throw GiphyException(serviceLocalizations.giphyEmptySticker);
       }
       return file;
     } on GiphyException {
@@ -152,9 +148,7 @@ class GiphyService {
       throw _fromDio(error);
     } catch (_) {
       if (await file.exists()) await file.delete();
-      throw const GiphyException(
-        'Could not download that sticker. Please retry.',
-      );
+      throw GiphyException(serviceLocalizations.stickerDownloadFailed);
     }
   }
 
@@ -185,7 +179,9 @@ class GiphyService {
       stickers.add(
         GiphySticker(
           id: item['id']?.toString() ?? 'giphy_${stickers.length}',
-          title: item['title']?.toString().trim() ?? 'Trending sticker',
+          title:
+              item['title']?.toString().trim() ??
+              serviceLocalizations.trendingSticker,
           url: url,
           width: _asInt(image['width']),
           height: _asInt(image['height']),
@@ -223,13 +219,9 @@ class GiphyService {
     } on DioException catch (error) {
       throw _fromDio(error);
     } on FormatException {
-      throw const GiphyException(
-        'Giphy returned an unreadable sticker response.',
-      );
+      throw GiphyException(serviceLocalizations.giphyUnreadableResponse);
     } on SocketException {
-      throw const GiphyException(
-        'Could not connect to Giphy. Check your connection and retry.',
-      );
+      throw GiphyException(serviceLocalizations.giphyConnectionFailed);
     } catch (_) {
       throw GiphyException(fallbackMessage);
     }
@@ -237,27 +229,19 @@ class GiphyService {
 
   GiphyException _fromDio(DioException error) {
     final status = error.response?.statusCode;
-    if (status == 429) return const GiphyRateLimitException();
+    if (status == 429) return GiphyRateLimitException();
     if (status == 401 || status == 403) {
-      return const GiphyException(
-        'Giphy rejected the API key. Check GIPHY_API_KEY.',
-      );
+      return GiphyException(serviceLocalizations.giphyRejectedApiKey);
     }
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return const GiphyException(
-          'The Giphy request timed out. Please retry.',
-        );
+        return GiphyException(serviceLocalizations.giphyTimedOut);
       case DioExceptionType.connectionError:
-        return const GiphyException(
-          'Could not connect to Giphy. Check your connection and retry.',
-        );
+        return GiphyException(serviceLocalizations.giphyConnectionFailed);
       default:
-        return const GiphyException(
-          'Giphy could not complete the request. Please retry.',
-        );
+        return GiphyException(serviceLocalizations.giphyRequestFailed);
     }
   }
 }

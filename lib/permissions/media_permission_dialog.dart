@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'media_permission_service.dart';
@@ -54,13 +55,13 @@ class MediaPermissionDialog extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              'Allow access to photos & videos',
+              context.l10n.allowPhotosVideos,
               textAlign: TextAlign.center,
               style: textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Stickr only reads files you pick so you can cut out stickers and export them to WhatsApp. Nothing is uploaded.',
+              context.l10n.mediaPermissionDescription,
               textAlign: TextAlign.center,
               style: textTheme.bodyMedium,
             ),
@@ -79,7 +80,7 @@ class MediaPermissionDialog extends ConsumerWidget {
                   }
                   Navigator.pop(context, result.hasAccess);
                 },
-                child: const Text('Allow access'),
+                child: Text(context.l10n.allowAccess),
               ),
             ),
             const SizedBox(height: 8),
@@ -87,7 +88,7 @@ class MediaPermissionDialog extends ConsumerWidget {
               key: const Key('permission-not-now'),
               onPressed: () => Navigator.pop(context, false),
               child: Text(
-                'Not now',
+                context.l10n.notNow,
                 style: textTheme.titleSmall?.copyWith(
                   color: colors.textSecondary,
                 ),
@@ -108,14 +109,12 @@ Future<void> showOpenSettingsDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text('Permission turned off'),
-        content: const Text(
-          'To pick photos and videos, allow access in system settings.',
-        ),
+        title: Text(context.l10n.permissionTurnedOff),
+        content: Text(context.l10n.permissionSettingsDescription),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             key: const Key('permission-open-settings'),
@@ -123,7 +122,7 @@ Future<void> showOpenSettingsDialog(
               Navigator.pop(context);
               await (service ?? MediaPermissionService()).openSettings();
             },
-            child: const Text('Open settings'),
+            child: Text(context.l10n.openSettings),
           ),
         ],
       );
@@ -149,19 +148,17 @@ Future<bool> ensureCameraPermission(BuildContext context, WidgetRef ref) async {
     builder: (context) {
       final colors = context.colors;
       return AlertDialog(
-        title: const Text('Use your camera'),
-        content: const Text(
-          'Stickr uses the camera so you can snap a photo and turn it into a sticker.',
-        ),
+        title: Text(context.l10n.useCamera),
+        content: Text(context.l10n.cameraPermissionDescription),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Not now'),
+            child: Text(context.l10n.notNow),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: colors.accent),
-            child: const Text('Continue'),
+            child: Text(context.l10n.continueLabel),
           ),
         ],
       );

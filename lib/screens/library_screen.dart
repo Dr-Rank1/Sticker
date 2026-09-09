@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../accessibility/accessible_tap.dart';
 import '../haptics/haptic_service.dart';
+import '../l10n/l10n.dart';
 import '../packs/pack_detail_screen.dart';
 import '../packs/pack_form_sheet.dart';
 import '../packs/pack_models.dart';
@@ -22,6 +23,7 @@ class LibraryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final packsAsync = ref.watch(packsProvider);
+    final l10n = context.l10n;
 
     return CustomScrollView(
       slivers: [
@@ -38,19 +40,19 @@ class LibraryScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Library',
+                          l10n.library,
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Your packs. Always free, forever.',
+                          l10n.librarySubtitle,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    tooltip: 'New pack',
+                    tooltip: l10n.newPack,
                     onPressed: () {
                       hapticService.buttonTap();
                       showCreatePackSheet(context);
@@ -65,7 +67,7 @@ class LibraryScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   IconButton(
                     key: const Key('open-settings'),
-                    tooltip: 'Settings',
+                    tooltip: l10n.settings,
                     onPressed: () {
                       hapticService.buttonTap();
                       Navigator.of(context).push(
@@ -96,7 +98,7 @@ class LibraryScreen extends ConsumerWidget {
           error: (error, _) => [
             SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(child: Text('$error')),
+              child: Center(child: Text(context.l10n.couldNotLoadPacks)),
             ),
           ],
           data: (packs) {
@@ -114,9 +116,9 @@ class LibraryScreen extends ConsumerWidget {
                       ),
                       child: EmptyState(
                         icon: Icons.auto_awesome_mosaic_rounded,
-                        title: 'No packs yet',
-                        message: 'Create stickers from photos or TikToks and group them into packs for WhatsApp.',
-                        actionLabel: 'Create a sticker',
+                        title: l10n.noPacksYet,
+                        message: l10n.noPacksMessage,
+                        actionLabel: l10n.createSticker,
                         onAction: () {
                           ref
                               .read(navigationProvider.notifier)
@@ -165,6 +167,7 @@ class _PackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final l10n = context.l10n;
 
     return Material(
       color: colors.surface,
@@ -176,8 +179,8 @@ class _PackCard extends StatelessWidget {
       child: AccessibleTap(
         label: pack.name,
         hint: pack.canExportToWhatsApp
-            ? 'Opens this pack. Ready for WhatsApp, ${pack.countLabel}.'
-            : 'Opens this pack. ${pack.exportBlockReason}',
+            ? l10n.opensReadyPack(pack.countLabel)
+            : l10n.opensBlockedPack(pack.exportBlockReason),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         onTap: () {
           Navigator.of(context).push(
@@ -231,7 +234,7 @@ class _PackCard extends StatelessWidget {
                 ),
                 child: Text(
                   pack.canExportToWhatsApp
-                      ? 'Ready · ${pack.countLabel}'
+                      ? l10n.readyCount(pack.countLabel)
                       : pack.countLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

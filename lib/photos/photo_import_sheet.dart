@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../editor/editor_screen.dart';
+import '../l10n/l10n.dart';
 import '../permissions/media_permission_dialog.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -113,10 +114,10 @@ class _PhotoImportSheetState extends ConsumerState<PhotoImportSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text('From a photo', style: textTheme.headlineSmall),
+              Text(context.l10n.fromPhoto, style: textTheme.headlineSmall),
               const SizedBox(height: 6),
               Text(
-                'Pick a picture. We’ll cut out the subject on this device, then you can add text and emojis.',
+                context.l10n.photoImportDescription,
                 style: textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -129,9 +130,12 @@ class _PhotoImportSheetState extends ConsumerState<PhotoImportSheet> {
                     : ref
                           .read(photoImportProvider.notifier)
                           .setRemoveBackground,
-                title: Text('Remove Background', style: textTheme.titleMedium),
+                title: Text(
+                  context.l10n.removeBackground,
+                  style: textTheme.titleMedium,
+                ),
                 subtitle: Text(
-                  'Private, on-device ML with no API limits.',
+                  context.l10n.onDeviceMlDescription,
                   style: textTheme.bodySmall,
                 ),
               ),
@@ -144,7 +148,7 @@ class _PhotoImportSheetState extends ConsumerState<PhotoImportSheet> {
                   key: const Key('photo-gallery-button'),
                   onPressed: importState.isBusy ? null : _pickGallery,
                   icon: const Icon(Icons.photo_library_rounded),
-                  label: const Text('Choose from gallery'),
+                  label: Text(context.l10n.chooseFromGallery),
                 ),
               ),
               const SizedBox(height: 10),
@@ -154,7 +158,7 @@ class _PhotoImportSheetState extends ConsumerState<PhotoImportSheet> {
                   key: const Key('photo-camera-button'),
                   onPressed: importState.isBusy ? null : _pickCamera,
                   icon: const Icon(Icons.photo_camera_rounded),
-                  label: const Text('Take a photo'),
+                  label: Text(context.l10n.takePhoto),
                 ),
               ),
             ],
@@ -185,10 +189,10 @@ class _PhotoProgress extends StatelessWidget {
               children: [
                 Text(
                   state.phase == PhotoImportPhase.picking
-                      ? 'Opening photos...'
+                      ? context.l10n.openingPhotos
                       : state.removeBackground
-                      ? 'Cutting out the subject...'
-                      : 'Preparing your photo...',
+                      ? context.l10n.cuttingOutSubject
+                      : context.l10n.preparingPhoto,
                   style: textTheme.titleSmall,
                 ),
                 const SizedBox(height: 10),
@@ -300,7 +304,7 @@ class _BackgroundScanIndicatorState extends State<_BackgroundScanIndicator>
                           vertical: 4,
                         ),
                         child: Text(
-                          'Scanning locally',
+                          context.l10n.scanningLocally,
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                       ),

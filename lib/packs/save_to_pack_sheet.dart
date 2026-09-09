@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../haptics/haptic_service.dart';
+import '../l10n/l10n.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'pack_form_sheet.dart';
@@ -45,14 +46,14 @@ class SaveToPackSheet extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Save to a pack',
+            context.l10n.saveToPack,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 6),
           Text(
             animated
-                ? 'WhatsApp packs need 3–30 stickers of the same type. Pick a pack with room, or make a new one.'
-                : 'Photo stickers are static. WhatsApp packs can’t mix them with animated clips.',
+                ? context.l10n.saveAnimatedStickerDescription
+                : context.l10n.saveStaticStickerDescription,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
@@ -60,7 +61,7 @@ class SaveToPackSheet extends ConsumerWidget {
             constraints: const BoxConstraints(maxHeight: 280),
             child: packs.isEmpty
                 ? Text(
-                    'You don’t have any packs yet.',
+                    context.l10n.noPacksAvailable,
                     style: Theme.of(context).textTheme.bodyMedium,
                   )
                 : ListView.separated(
@@ -81,12 +82,17 @@ class SaveToPackSheet extends ConsumerWidget {
                           title: Text(pack.name),
                           subtitle: Text(
                             pack.isFull
-                                ? 'Full (${WhatsAppPackRules.maxStickers} stickers)'
+                                ? context.l10n.fullStickerPack(
+                                    WhatsAppPackRules.maxStickers,
+                                  )
                                 : typeMismatch
                                 ? (animated
-                                      ? 'This pack is for photo stickers'
-                                      : 'This pack is for animated stickers')
-                                : '${pack.author} · ${pack.countLabel}',
+                                      ? context.l10n.packForPhotoStickers
+                                      : context.l10n.packForAnimatedStickers)
+                                : context.l10n.packAuthorCount(
+                                    pack.author,
+                                    pack.countLabel,
+                                  ),
                           ),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: enabled
@@ -109,7 +115,7 @@ class SaveToPackSheet extends ConsumerWidget {
                 if (created == null || !context.mounted) return;
                 await _add(context, ref, created);
               },
-              child: const Text('New pack'),
+              child: Text(context.l10n.newPack),
             ),
           ),
         ],
@@ -136,8 +142,11 @@ class SaveToPackSheet extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       hapticService.error();
+      final message = error is PackException
+          ? error.message
+          : context.l10n.couldNotAddStickerToPack;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$error')));
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }

@@ -10,6 +10,7 @@ import '../editor/ffmpeg_sticker_service.dart';
 import '../haptics/haptic_service.dart';
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
+import '../l10n/l10n.dart';
 import '../packs/batch_export_use_case.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
@@ -90,7 +91,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load trending stickers. Please retry.';
+        _error = context.l10n.couldNotLoadTrending;
         _loadingPage = false;
       });
     }
@@ -99,7 +100,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   void _addToTray(CommunitySticker sticker) {
     if (_tray.any((item) => item.stableId == sticker.stableId)) return;
     if (_tray.length >= WhatsAppPackRules.maxStickers) {
-      _showMessage('My Pack can hold up to 30 stickers.');
+      _showMessage(context.l10n.myPackCapacity);
       return;
     }
     setState(() => _tray.add(sticker));
@@ -145,7 +146,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                   ),
                 ),
             ],
-            packName: 'My Pack',
+            packName: context.l10n.myPack,
             author: commentPackAuthor,
           );
       await for (final progress in stream) {
@@ -158,7 +159,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         result = progress.result ?? result;
       }
       if (result == null) {
-        throw const PackException('The batch export did not complete.');
+        throw PackException(context.l10n.batchExportIncomplete);
       }
       if (!mounted) return;
       setState(_tray.clear);
@@ -172,7 +173,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       if (mounted) _showExportError(error.message);
     } catch (_) {
       if (mounted) {
-        _showExportError('Couldn’t export My Pack. Please try again.');
+        _showExportError(context.l10n.couldNotExportMyPack);
       }
     } finally {
       if (mounted) {
@@ -211,12 +212,12 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Community',
+                  context.l10n.community,
                   style: Theme.of(context).textTheme.displaySmall,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Collect trending stickers and build your next pack.',
+                  context.l10n.communitySubtitle,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -304,7 +305,7 @@ class _CommunityFeedError extends StatelessWidget {
             FilledButton(
               key: const Key('community-retry'),
               onPressed: onRetry,
-              child: const Text('Retry'),
+              child: Text(context.l10n.retry),
             ),
           ],
         ),
@@ -366,7 +367,9 @@ class _CommunityStickerTile extends StatelessWidget {
               bottom: 8,
               child: IconButton.filled(
                 key: Key('community-add-${sticker.stableId}'),
-                tooltip: added ? 'Added to My Pack' : 'Add to My Pack',
+                tooltip: added
+                    ? context.l10n.addedToMyPack
+                    : context.l10n.addToMyPack,
                 onPressed: added ? null : onAdd,
                 icon: Icon(
                   added ? Icons.check_rounded : Icons.add_rounded,
@@ -393,9 +396,9 @@ class _AnimatedBadge extends StatelessWidget {
         color: colors.surface.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-        child: Text('GIF'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        child: Text(context.l10n.animatedBadge),
       ),
     );
   }
@@ -448,7 +451,7 @@ class _StagingTray extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'My Pack  ${stickers.length}/30',
+                  context.l10n.myPackCount(stickers.length, 30),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -463,8 +466,11 @@ class _StagingTray extends StatelessWidget {
                     : const Icon(Icons.ios_share_rounded, size: 18),
                 label: Text(
                   exporting && exportTotal > 0
-                      ? 'Export $exportCompleted/$exportTotal'
-                      : 'Export to WhatsApp',
+                      ? context.l10n.exportProgress(
+                          exportCompleted,
+                          exportTotal,
+                        )
+                      : context.l10n.exportToWhatsApp,
                   key: const Key('community-export-progress'),
                 ),
               ),
@@ -477,7 +483,7 @@ class _StagingTray extends StatelessWidget {
                 ? Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Tap + on at least 3 stickers to start a pack.',
+                      context.l10n.communityTrayHint,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   )

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../editor/editor_screen.dart';
@@ -57,9 +58,8 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
     final text = data?.text?.trim() ?? '';
     if (text.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Your clipboard is empty.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.clipboardEmpty)));
       return;
     }
     _linkController.text = text;
@@ -132,10 +132,10 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text('From TikTok', style: textTheme.headlineSmall),
+              Text(context.l10n.fromTikTok, style: textTheme.headlineSmall),
               const SizedBox(height: 6),
               Text(
-                'Paste a video link and we\'ll fetch a clean MP4 for your animated sticker.',
+                context.l10n.tiktokImportDescription,
                 style: textTheme.bodyMedium,
               ),
               const SizedBox(height: 20),
@@ -150,13 +150,13 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => _submit(),
                 decoration: InputDecoration(
-                  hintText: 'https://www.tiktok.com/@user/video/...',
+                  hintText: context.l10n.tiktokUrlHint,
                   prefixIcon: Icon(
                     Icons.link_rounded,
                     color: colors.textSecondary,
                   ),
                   suffixIcon: IconButton(
-                    tooltip: 'Paste',
+                    tooltip: context.l10n.paste,
                     onPressed: importState.isBusy ? null : _pasteFromClipboard,
                     icon: Icon(
                       Icons.content_paste_rounded,
@@ -178,10 +178,10 @@ class _TiktokImportSheetState extends ConsumerState<TiktokImportSheet> {
                       : _submit,
                   child: Text(
                     importState.phase == TiktokImportPhase.resolving
-                        ? 'Finding video...'
+                        ? context.l10n.findingVideo
                         : importState.phase == TiktokImportPhase.downloading
-                        ? 'Downloading...'
-                        : 'Import video',
+                        ? context.l10n.downloading
+                        : context.l10n.importVideo,
                   ),
                 ),
               ),
@@ -218,8 +218,8 @@ class _ImportProgress extends StatelessWidget {
                     Expanded(
                       child: Text(
                         state.phase == TiktokImportPhase.resolving
-                            ? 'Looking up that TikTok...'
-                            : 'Downloading video...',
+                            ? context.l10n.lookingUpTikTok
+                            : context.l10n.downloadingVideo,
                         style: textTheme.titleSmall,
                       ),
                     ),

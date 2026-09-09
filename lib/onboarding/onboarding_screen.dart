@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
+import '../l10n/l10n.dart';
 import '../permissions/media_permission_dialog.dart';
 import '../theme/app_colors.dart';
 import 'onboarding_controller.dart';
@@ -19,23 +20,7 @@ class OnboardingPageData {
   final String body;
 }
 
-const kOnboardingPages = [
-  OnboardingPageData(
-    icon: Icons.link_rounded,
-    title: 'Paste TikTok links',
-    body: 'Drop in any video URL. We fetch a clean clip so you can turn a moment into a sticker.',
-  ),
-  OnboardingPageData(
-    icon: Icons.auto_fix_high_rounded,
-    title: 'Edit & remove backgrounds',
-    body: 'Trim, add text, and cut out the subject on this device. No account. No uploads.',
-  ),
-  OnboardingPageData(
-    icon: Icons.chat_rounded,
-    title: 'Export to WhatsApp',
-    body: 'Pack your stickers and add them to WhatsApp in a tap. Always free, forever.',
-  ),
-];
+const kOnboardingPageCount = 3;
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -54,7 +39,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  bool get _isLast => _index >= kOnboardingPages.length - 1;
+  bool get _isLast => _index >= kOnboardingPageCount - 1;
 
   Future<void> _next() async {
     if (_isLast) {
@@ -78,6 +63,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final brightness = Theme.of(context).brightness;
+    final l10n = context.l10n;
+    final pages = [
+      OnboardingPageData(
+        icon: Icons.link_rounded,
+        title: l10n.onboardingTikTokTitle,
+        body: l10n.onboardingTikTokBody,
+      ),
+      OnboardingPageData(
+        icon: Icons.auto_fix_high_rounded,
+        title: l10n.onboardingEditTitle,
+        body: l10n.onboardingEditBody,
+      ),
+      OnboardingPageData(
+        icon: Icons.chat_rounded,
+        title: l10n.onboardingWhatsAppTitle,
+        body: l10n.onboardingWhatsAppBody,
+      ),
+    ];
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: brightness == Brightness.dark
@@ -100,7 +103,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     key: const Key('onboarding-skip'),
                     onPressed: _finish,
                     child: Text(
-                      'Skip',
+                      l10n.skip,
                       style: Theme.of(context).textTheme.titleSmall
                           ?.copyWith(color: colors.textSecondary),
                     ),
@@ -110,16 +113,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   child: PageView.builder(
                     key: const Key('onboarding-pager'),
                     controller: _controller,
-                    itemCount: kOnboardingPages.length,
+                    itemCount: pages.length,
                     onPageChanged: (index) => setState(() => _index = index),
                     itemBuilder: (context, index) {
-                      return _OnboardingSlide(page: kOnboardingPages[index]);
+                      return _OnboardingSlide(page: pages[index]);
                     },
                   ),
                 ),
                 SmoothPageIndicator(
                   controller: _controller,
-                  count: kOnboardingPages.length,
+                  count: pages.length,
                   effect: ExpandingDotsEffect(
                     activeDotColor: colors.accent,
                     dotColor: colors.border,
@@ -140,7 +143,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: Text(_isLast ? 'Get started' : 'Next'),
+                    child: Text(_isLast ? l10n.getStarted : l10n.next),
                   ),
                 ),
               ],

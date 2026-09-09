@@ -7,6 +7,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../community/giphy_service.dart';
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
+import '../l10n/l10n.dart';
 import '../packs/save_to_pack_sheet.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -67,7 +68,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         _nextOffset = page.nextOffset;
         _searching = false;
         if (page.stickers.isEmpty) {
-          _error = 'No stickers found. Try another search.';
+          _error = context.l10n.noStickersFound;
         }
       });
     } on GiphyException catch (error) {
@@ -79,7 +80,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       _showMessage(error.message);
     } catch (_) {
       if (!mounted || generation != _searchGeneration) return;
-      const message = 'Couldn’t search for stickers. Please try again.';
+      final message = context.l10n.couldNotSearchStickers;
       setState(() {
         _searching = false;
         _error = message;
@@ -128,7 +129,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     } catch (_) {
       if (!mounted || generation != _searchGeneration) return;
       setState(() => _loadingPage = false);
-      _showMessage('Couldn’t load more stickers. Please try again.');
+      _showMessage(context.l10n.couldNotLoadMoreStickers);
     }
   }
 
@@ -147,12 +148,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         animated: sticker.animated,
       );
       if (!mounted || pack == null) return;
-      _showMessage('Added to ${pack.name} (${pack.countLabel}).');
+      _showMessage(context.l10n.addedToPack(pack.name, pack.countLabel));
     } on GiphyException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
       if (mounted) {
-        _showMessage('Couldn’t save that sticker. Please try again.');
+        _showMessage(context.l10n.couldNotSaveSticker);
       }
     } finally {
       if (downloaded != null) {
@@ -179,6 +180,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   @override
   Widget build(BuildContext context) {
     final giphy = ref.watch(giphyServiceProvider);
+    final l10n = context.l10n;
 
     return SafeArea(
       bottom: false,
@@ -191,12 +193,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Discover',
+                  l10n.discover,
                   style: Theme.of(context).textTheme.displaySmall,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Find stickers powered by Giphy.',
+                  l10n.discoverSubtitle,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 18),
@@ -206,11 +208,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   textInputAction: TextInputAction.search,
                   onSubmitted: (_) => _search(),
                   decoration: InputDecoration(
-                    hintText: 'Search reactions, cats, anime…',
+                    hintText: l10n.discoverSearchHint,
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: IconButton(
                       key: const Key('discover-search-button'),
-                      tooltip: 'Search',
+                      tooltip: l10n.search,
                       onPressed: _searching ? null : _search,
                       icon: const Icon(Icons.arrow_forward_rounded),
                     ),
@@ -349,8 +351,8 @@ class _DiscoverEmptyState extends StatelessWidget {
     final message =
         error ??
         (missingApiKey
-            ? 'Add a Giphy API key at build time to enable Discover.'
-            : 'Search for a mood, reaction, or character.');
+            ? context.l10n.missingGiphyApiKey
+            : context.l10n.discoverEmptyMessage);
     return Center(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(32, 16, 32, 100),
@@ -374,7 +376,9 @@ class _DiscoverEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              error == null ? 'Ready to discover' : 'No stickers yet',
+              error == null
+                  ? context.l10n.readyToDiscover
+                  : context.l10n.noStickersYet,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),

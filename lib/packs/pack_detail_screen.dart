@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../haptics/haptic_service.dart';
+import '../l10n/l10n.dart';
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
 import '../logging/app_logger.dart';
@@ -62,8 +63,8 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
     final pack = ref.watch(packByIdProvider(widget.packId));
     if (pack == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Pack')),
-        body: const Center(child: Text('This pack was deleted.')),
+        appBar: AppBar(title: Text(context.l10n.pack)),
+        body: Center(child: Text(context.l10n.packDeleted)),
       );
     }
 
@@ -76,7 +77,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
         actions: [
           IconButton(
             key: const Key('share-pack'),
-            tooltip: 'Share pack',
+            tooltip: context.l10n.sharePack,
             onPressed: _sharing
                 ? null
                 : () {
@@ -86,7 +87,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
             icon: const Icon(Icons.share_outlined),
           ),
           IconButton(
-            tooltip: 'Edit pack',
+            tooltip: context.l10n.editPack,
             onPressed: () {
               hapticService.buttonTap();
               showCreatePackSheet(context, existing: pack);
@@ -94,7 +95,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
             icon: const Icon(Icons.edit_outlined),
           ),
           IconButton(
-            tooltip: 'Delete pack',
+            tooltip: context.l10n.deletePack,
             onPressed: () => _confirmDelete(context, ref, pack),
             icon: const Icon(Icons.delete_outline_rounded),
           ),
@@ -118,7 +119,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${pack.countLabel} stickers · 96×96 tray',
+                        context.l10n.packDetailSummary(pack.countLabel),
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                     ],
@@ -132,7 +133,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
             child: pack.stickers.isEmpty
                 ? Center(
                     child: Text(
-                      'No stickers in this pack yet.',
+                      context.l10n.noStickersInPack,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   )
@@ -159,8 +160,8 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                         clipBehavior: Clip.antiAlias,
                         child: Semantics(
                           button: true,
-                          label: 'Sticker in ${pack.name}',
-                          hint: 'Double tap and hold to remove this sticker',
+                          label: context.l10n.stickerInPack(pack.name),
+                          hint: context.l10n.removeStickerHint,
                           child: InkWell(
                             onLongPress: () {
                               hapticService.buttonTap();
@@ -213,7 +214,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                               Navigator.pop(context);
                               showTiktokImportSheet(context);
                             },
-                      child: const Text('Add stickers'),
+                      child: Text(context.l10n.addStickers),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -249,7 +250,11 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                                 ),
                               )
                             : const Icon(Icons.chat_rounded),
-                        label: Text(_exporting ? 'Adding…' : 'Add to WhatsApp'),
+                        label: Text(
+                          _exporting
+                              ? context.l10n.adding
+                              : context.l10n.addToWhatsApp,
+                        ),
                       ),
                     ),
                   ),
@@ -268,7 +273,9 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
       hapticService.error();
       _shakeController.forward(from: 0);
       _showFeedback(
-        'WhatsApp requires at least 3 stickers in a pack. Add ${WhatsAppPackRules.minStickers - pack.stickers.length} more to continue.',
+        context.l10n.whatsAppMinimumStickers(
+          WhatsAppPackRules.minStickers - pack.stickers.length,
+        ),
       );
       return;
     }
@@ -293,7 +300,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
     } catch (error) {
       if (!mounted) return;
       hapticService.error();
-      _showFeedback('Could not share this pack.');
+      _showFeedback(context.l10n.couldNotSharePack);
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
@@ -367,13 +374,13 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'WhatsApp isn’t installed',
+                  context.l10n.whatsAppNotInstalled,
                   key: const Key('whatsapp-not-installed-title'),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Install WhatsApp or WhatsApp Business, then come back to add your sticker pack.',
+                  context.l10n.installWhatsAppDescription,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
@@ -386,7 +393,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                       'https://play.google.com/store/apps/details?id=com.whatsapp',
                     ),
                     icon: const Icon(Icons.download_rounded),
-                    label: const Text('Install WhatsApp'),
+                    label: Text(context.l10n.installWhatsApp),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -398,7 +405,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                       'https://play.google.com/store/apps/details?id=com.whatsapp.w4b',
                     ),
                     icon: const Icon(Icons.business_center_rounded),
-                    label: const Text('Install WhatsApp Business'),
+                    label: Text(context.l10n.installWhatsAppBusiness),
                   ),
                 ),
               ],
@@ -415,7 +422,7 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
       mode: LaunchMode.externalApplication,
     );
     if (!opened && mounted) {
-      _showFeedback('Couldn’t open the app store. Please try again.');
+      _showFeedback(context.l10n.couldNotOpenAppStore);
     }
   }
 
@@ -435,18 +442,16 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete pack?'),
-        content: Text(
-          '“${pack.name}” and its stickers will be removed from this device.',
-        ),
+        title: Text(context.l10n.deletePackQuestion),
+        content: Text(context.l10n.deletePackDescription(pack.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(context.l10n.delete),
           ),
         ],
       ),
@@ -466,16 +471,16 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove sticker?'),
-        content: const Text('It will be deleted from this pack.'),
+        title: Text(context.l10n.removeStickerQuestion),
+        content: Text(context.l10n.removeStickerDescription),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove'),
+            child: Text(context.l10n.remove),
           ),
         ],
       ),

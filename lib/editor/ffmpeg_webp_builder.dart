@@ -6,6 +6,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
 
 import '../crashlytics/crash_reporter.dart';
+import '../l10n/l10n.dart';
 import '../logging/app_logger.dart';
 import '../storage/storage_utility.dart';
 import 'editor_models.dart';
@@ -18,7 +19,7 @@ class StickerExportException implements Exception {
 }
 
 class StickerExportCancelled extends StickerExportException {
-  const StickerExportCancelled() : super('Export cancelled.');
+  StickerExportCancelled() : super(serviceLocalizations.exportCancelled);
 }
 
 class StickerExportResult {
@@ -160,16 +161,14 @@ class FFmpegWebpBuilder {
     void Function(double progress)? onProgress,
   }) async {
     if (kIsWeb) {
-      throw const StickerExportException(
-        'Saving stickers needs the mobile or desktop app.',
+      throw StickerExportException(
+        serviceLocalizations.savingStickersUnsupported,
       );
     }
 
     final input = File(sourceMp4);
     if (!input.existsSync()) {
-      throw const StickerExportException(
-        'The source video is no longer available.',
-      );
+      throw StickerExportException(serviceLocalizations.sourceVideoUnavailable);
     }
 
     _cancelled = false;
@@ -224,17 +223,17 @@ class FFmpegWebpBuilder {
           );
           _throwIfCancelled();
           if (_isCancelCode(code)) {
-            throw const StickerExportCancelled();
+            throw StickerExportCancelled();
           }
           if (code != ReturnCode.success) {
             lastError = StickerExportException(
-              'FFmpeg failed while creating the sticker (code $code).',
+              serviceLocalizations.ffmpegStickerFailed(code),
             );
             continue;
           }
           if (!output.existsSync() || output.lengthSync() == 0) {
-            lastError = const StickerExportException(
-              'FFmpeg did not write a sticker file.',
+            lastError = StickerExportException(
+              serviceLocalizations.ffmpegNoStickerFile,
             );
             continue;
           }
@@ -251,7 +250,7 @@ class FFmpegWebpBuilder {
             );
           }
           lastError = StickerExportException(
-            'Sticker was ${(bytes / 1024).round()}KB. Trying a smaller encode...',
+            serviceLocalizations.stickerEncodeRetry((bytes / 1024).round()),
           );
         } on StickerExportCancelled {
           rethrow;
@@ -267,8 +266,7 @@ class FFmpegWebpBuilder {
       }
 
       throw StickerExportException(
-        lastError?.toString() ??
-            'Could not keep the sticker under 500KB. Try a shorter clip.',
+        lastError?.toString() ?? serviceLocalizations.animatedStickerTooLarge,
       );
     } finally {
       if (kept == null) {
@@ -287,7 +285,7 @@ class FFmpegWebpBuilder {
 
   void _throwIfCancelled() {
     if (_cancelled) {
-      throw const StickerExportCancelled();
+      throw StickerExportCancelled();
     }
   }
 

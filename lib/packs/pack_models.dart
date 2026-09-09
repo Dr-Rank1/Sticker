@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../l10n/l10n.dart';
+
 class WhatsAppPackRules {
   static const int minStickers = 3;
   static const int maxStickers = 30;
@@ -93,26 +95,35 @@ class StickerPack {
   }
 
   String get exportBlockReason {
-    if (name.trim().isEmpty) return 'Give this pack a name.';
-    if (author.trim().isEmpty) return 'Add an author name.';
+    if (name.trim().isEmpty) return serviceLocalizations.packNameRequired;
+    if (author.trim().isEmpty) return serviceLocalizations.packAuthorRequired;
     if (trayIconPath.trim().isEmpty && trayIconBytes.isEmpty) {
-      return 'Add a ${WhatsAppPackRules.traySize}x${WhatsAppPackRules.traySize} tray icon.';
+      return serviceLocalizations.trayIconRequired(WhatsAppPackRules.traySize);
     }
     final count = stickers.length;
     if (count < WhatsAppPackRules.minStickers) {
       final need = WhatsAppPackRules.minStickers - count;
-      return 'Add $need more sticker${need == 1 ? '' : 's'} to export (minimum ${WhatsAppPackRules.minStickers}).';
+      return serviceLocalizations.addStickersToExport(
+        need,
+        WhatsAppPackRules.minStickers,
+      );
     }
     if (count > WhatsAppPackRules.maxStickers) {
       final extra = count - WhatsAppPackRules.maxStickers;
-      return 'Remove $extra sticker${extra == 1 ? '' : 's'} to export (maximum ${WhatsAppPackRules.maxStickers}).';
+      return serviceLocalizations.removeStickersToExport(
+        extra,
+        WhatsAppPackRules.maxStickers,
+      );
     }
     return '';
   }
 
   String get countLabel {
     final n = stickers.length;
-    return '$n / ${WhatsAppPackRules.maxStickers}';
+    return serviceLocalizations.stickerCountOfMaximum(
+      n,
+      WhatsAppPackRules.maxStickers,
+    );
   }
 
   /// WhatsApp pack identifiers must be alphanumeric with `.`, `_`, or `-`.

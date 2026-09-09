@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:stickr/main.dart';
 import 'package:stickr/onboarding/onboarding_screen.dart';
+import 'package:stickr/l10n/l10n.dart';
 import 'package:stickr/permissions/media_permission_service.dart';
 import 'package:stickr/state/settings_store.dart';
 import 'package:stickr/tiktok/tiktok_app_links.dart';
@@ -125,9 +126,12 @@ void main() {
   });
 
   test('onboarding copy covers the three product pillars', () {
-    expect(kOnboardingPages, hasLength(3));
-    expect(kOnboardingPages[0].title, contains('TikTok'));
-    expect(kOnboardingPages[1].title.toLowerCase(), contains('background'));
-    expect(kOnboardingPages[2].title, contains('WhatsApp'));
+    expect(kOnboardingPageCount, 3);
+    expect(fallbackLocalizations.onboardingTikTokTitle, contains('TikTok'));
+    expect(
+      fallbackLocalizations.onboardingEditTitle.toLowerCase(),
+      contains('background'),
+    );
+    expect(fallbackLocalizations.onboardingWhatsAppTitle, contains('WhatsApp'));
   });
 }

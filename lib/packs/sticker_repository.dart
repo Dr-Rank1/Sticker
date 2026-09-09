@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../database/sticker_pack.dart' as isar_db;
 import '../database/sticker_pack_schema_migration.dart';
+import '../l10n/l10n.dart';
 import 'pack_models.dart';
 import 'pack_repository.dart';
 import 'tray_icon_service.dart';
@@ -88,7 +89,7 @@ class StickerRepository implements PackRepository {
     final publisher = _requirePublisher(author);
     final packIdentifier = identifier ?? _uuidV4();
     if (await isar.stickerPacks.getByIdentifier(packIdentifier) != null) {
-      throw const PackException('A pack with that identifier already exists.');
+      throw PackException(serviceLocalizations.packIdentifierExists);
     }
     final packDir = _packDir(packIdentifier);
     final trayBytes = await _trayIcons.createDefaultBytes(name: trimmedName);
@@ -141,21 +142,21 @@ class StickerRepository implements PackRepository {
     final row = await _requireRow(packId);
     final current = _toDomain(row);
     if (current.isFull) {
-      throw const PackException(
-        'WhatsApp packs can hold at most ${WhatsAppPackRules.maxStickers} stickers.',
+      throw PackException(
+        serviceLocalizations.packMaximumStickers(WhatsAppPackRules.maxStickers),
       );
     }
     if (!current.acceptsSticker(animated: animated)) {
       throw PackException(
         animated
-            ? 'This pack is for static stickers. Create a new pack for animated ones.'
-            : 'This pack is for animated stickers. Create a new pack for photo stickers.',
+            ? serviceLocalizations.packStaticOnly
+            : serviceLocalizations.packAnimatedOnly,
       );
     }
 
     final source = File(sourcePath);
     if (!source.existsSync()) {
-      throw const PackException('The sticker file is missing.');
+      throw PackException(serviceLocalizations.stickerFileMissing);
     }
 
     final packDir = _packDir(packId);
@@ -232,8 +233,11 @@ class StickerRepository implements PackRepository {
     final count = pack.stickers.length;
     if (count < WhatsAppPackRules.minStickers ||
         count > WhatsAppPackRules.maxStickers) {
-      throw const ValidationException(
-        'WhatsApp packs must contain between ${WhatsAppPackRules.minStickers} and ${WhatsAppPackRules.maxStickers} stickers.',
+      throw ValidationException(
+        serviceLocalizations.packStickerCountRange(
+          WhatsAppPackRules.minStickers,
+          WhatsAppPackRules.maxStickers,
+        ),
       );
     }
     _requireName(pack.name);
@@ -282,7 +286,7 @@ class StickerRepository implements PackRepository {
   Future<isar_db.StickerPack> _requireRow(String identifier) async {
     final row = await isar.stickerPacks.getByIdentifier(identifier);
     if (row == null) {
-      throw const PackException('That pack no longer exists.');
+      throw PackException(serviceLocalizations.packNoLongerExists);
     }
     return row;
   }
@@ -348,10 +352,12 @@ class StickerRepository implements PackRepository {
   String _requireName(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) {
-      throw const PackException('Give this pack a name.');
+      throw PackException(serviceLocalizations.packNameRequired);
     }
     if (trimmed.length > WhatsAppPackRules.maxNameLength) {
-      throw const PackException('Pack names can be at most 128 characters.');
+      throw PackException(
+        serviceLocalizations.packNameTooLong(WhatsAppPackRules.maxNameLength),
+      );
     }
     return trimmed;
   }
@@ -359,10 +365,14 @@ class StickerRepository implements PackRepository {
   String _requirePublisher(String publisher) {
     final trimmed = publisher.trim();
     if (trimmed.isEmpty) {
-      throw const PackException('Add an author name.');
+      throw PackException(serviceLocalizations.packAuthorRequired);
     }
     if (trimmed.length > WhatsAppPackRules.maxAuthorLength) {
-      throw const PackException('Author names can be at most 128 characters.');
+      throw PackException(
+        serviceLocalizations.packAuthorTooLong(
+          WhatsAppPackRules.maxAuthorLength,
+        ),
+      );
     }
     return trimmed;
   }

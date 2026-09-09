@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/app_colors.dart';
 
 /// Generic recovery UI used instead of Flutter's red error screen.
@@ -8,10 +9,6 @@ class AppErrorFallback extends StatelessWidget {
 
   final FlutterErrorDetails? details;
   final VoidCallback? onRetry;
-
-  static const title = 'Something went wrong';
-  static const message =
-      'Stickr hit an unexpected problem. You can keep using the rest of the app.';
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +35,7 @@ class AppErrorFallback extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    title,
+                    context.l10n.unexpectedErrorTitle,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: colors.textPrimary,
@@ -48,7 +45,7 @@ class AppErrorFallback extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    message,
+                    context.l10n.unexpectedErrorMessage,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: colors.textSecondary, fontSize: 15),
                   ),
@@ -56,7 +53,7 @@ class AppErrorFallback extends StatelessWidget {
                     const SizedBox(height: 20),
                     FilledButton(
                       onPressed: onRetry,
-                      child: const Text('Try again'),
+                      child: Text(context.l10n.tryAgain),
                     ),
                   ],
                 ],

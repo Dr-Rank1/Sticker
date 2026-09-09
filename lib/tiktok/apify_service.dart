@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_environment.dart';
 import '../crashlytics/crash_reporter.dart';
+import '../l10n/l10n.dart';
 import 'tiktok_comment_service.dart';
 
 class ApifyException implements Exception {
@@ -18,15 +19,13 @@ class ApifyException implements Exception {
 }
 
 class ApifyNetworkException extends ApifyException {
-  const ApifyNetworkException([
-    super.message = 'No internet connection. Check your network and try again.',
-  ]);
+  ApifyNetworkException([String? message])
+    : super(message ?? serviceLocalizations.apifyNetworkError);
 }
 
 class ApifyLimitException extends ApifyException {
-  const ApifyLimitException([
-    super.message = 'Apify request limit was reached. Please try again later.',
-  ]);
+  ApifyLimitException([String? message])
+    : super(message ?? serviceLocalizations.apifyLimitReached);
 }
 
 typedef ApifyPost = Future<Response<dynamic>> Function(
@@ -112,14 +111,12 @@ class ApifyService {
     } on DioException catch (error) {
       throw _fromDio(error);
     } on SocketException {
-      throw const ApifyNetworkException();
+      throw ApifyNetworkException();
     } on FormatException {
-      throw const ApifyException(
-        'Apify returned an unreadable dataset response.',
-      );
+      throw ApifyException(serviceLocalizations.apifyUnreadableResponse);
     } catch (error) {
       throw ApifyException(
-        'Could not run the synchronous Apify scraper: $error',
+        serviceLocalizations.apifyRunFailed(error.toString()),
       );
     }
   }
@@ -150,7 +147,7 @@ class ApifyService {
     if (uri == null ||
         uri.scheme != 'https' ||
         (host != 'tiktok.com' && !host.endsWith('.tiktok.com'))) {
-      throw const ApifyException('Provide a valid HTTPS TikTok post URL.');
+      throw ApifyException(serviceLocalizations.invalidHttpsTikTokUrl);
     }
 
     return <String, dynamic>{
@@ -161,9 +158,7 @@ class ApifyService {
 
   void _ensureConfigured() {
     if (_token.isEmpty) {
-      throw const ApifyException(
-        'Apify is not configured. Add APIFY_API_TOKEN to the app build.',
-      );
+      throw ApifyException(serviceLocalizations.apifyNotConfigured);
     }
   }
 
@@ -226,27 +221,25 @@ class ApifyService {
   ApifyException _fromDio(DioException error) {
     final status = error.response?.statusCode;
     if (status == 401 || status == 403) {
-      return const ApifyException('Apify rejected the API token.');
+      return ApifyException(serviceLocalizations.apifyRejectedToken);
     }
     if (status == 402 || status == 429) {
-      return const ApifyLimitException();
+      return ApifyLimitException();
     }
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return const ApifyNetworkException(
-          'The Apify request timed out. Please try again.',
-        );
+        return ApifyNetworkException(serviceLocalizations.apifyTimedOut);
       case DioExceptionType.connectionError:
-        return const ApifyNetworkException('Could not connect to Apify.');
+        return ApifyNetworkException(
+          serviceLocalizations.apifyConnectionFailed,
+        );
       default:
         if (error.error is SocketException) {
-          return const ApifyNetworkException();
+          return ApifyNetworkException();
         }
-        return const ApifyException(
-          'Apify could not complete the scraper request.',
-        );
+        return ApifyException(serviceLocalizations.apifyRequestFailed);
     }
   }
 }

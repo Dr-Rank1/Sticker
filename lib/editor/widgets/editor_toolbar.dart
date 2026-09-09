@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../accessibility/accessible_tap.dart';
 import '../../haptics/haptic_service.dart';
+import '../../l10n/l10n.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../editor_models.dart';
@@ -68,21 +69,21 @@ class EditorToolbar extends StatelessWidget {
           children: [
             _ToolButton(
               icon: Icons.title_rounded,
-              label: 'Text',
-              hint: 'Adds a text sticker to the canvas',
+              label: context.l10n.textTool,
+              hint: context.l10n.addTextHint,
               onTap: onText,
             ),
             _ToolButton(
               icon: Icons.emoji_emotions_outlined,
-              label: 'Emojis',
-              hint: 'Adds an emoji sticker to the canvas',
+              label: context.l10n.emojiTool,
+              hint: context.l10n.addEmojiHint,
               onTap: onEmojis,
             ),
             if (showSpeed)
               _ToolButton(
                 icon: Icons.speed_rounded,
-                label: 'Speed',
-                hint: 'Opens playback speed options',
+                label: context.l10n.speed,
+                hint: context.l10n.speedOptionsHint,
                 selected: showSpeeds,
                 onTap: onToggleSpeed,
               ),

@@ -416,13 +416,14 @@ This structure is appropriate for the current application size and has enabled b
 - The Isar schema now stores sticker IDs, creation times, animation flags, accessibility labels, and pack timestamps, but still lacks source provenance.
 - Several expensive file operations are synchronous.
 - The Isar upgrade now has a migration path, but the `.stickr` archive format still has no formal versioned migration strategy.
-- Product strings are embedded throughout widgets and services instead of using localization resources.
+- English is the only translated locale currently shipped; additional ARB
+  files and text-expansion reviews are still required for broader rollout.
 
 ## 5. Verification and quality status
 
 ### 5.1 Automated test inventory
 
-The repository contains 47 Dart test files covering:
+The repository contains 48 Dart test files covering:
 
 - Pack rules and repositories.
 - Isar persistence.
@@ -449,7 +450,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 201 tests passed.
+- 203 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -702,15 +703,21 @@ Specific issues:
 
 ### 6.11 Introduce localization
 
-The app does not currently use Flutter localization resources. User-facing strings are embedded in widgets and services.
+Implemented:
 
-Recommended work:
+- Added Flutter's localization SDK and configured generated localization output
+  through `l10n.yaml`.
+- Extracted button labels, errors, onboarding content, progress messages, pack
+  validation copy, and accessibility hints into `app_en.arb`.
+- Widgets resolve localized resources from `BuildContext`; service-originated
+  errors use the active resolved localization with English as the strict
+  fallback.
+- Added locale fallback and resource-coverage tests.
 
-- Add `flutter_localizations` and ARB files.
-- Move button labels, errors, onboarding content, and accessibility strings into localization resources.
-- Add locale-aware tests.
-- Define a fallback locale.
-- Review text expansion in German, French, Spanish, and other target languages.
+Remaining:
+
+- Add translated ARB files for selected launch markets.
+- Review text expansion and bidirectional layouts before enabling each locale.
 
 ### 6.12 Complete the generic video source
 
@@ -1077,7 +1084,6 @@ Exit criteria:
 Target: close the largest product gaps.
 
 - Decide and document iOS support.
-- Add localization.
 - Improve mask editing and pack customization.
 - Add integration and golden tests.
 
@@ -1103,7 +1109,7 @@ Target: close the largest product gaps.
 ### Medium priority
 
 - Persist Community draft trays.
-- Add localization.
+- Add translated ARB files and locale-specific layout tests.
 - Add Community search and categories.
 - Add cancellation and retry controls to batch export progress.
 - Add accessibility announcements and large-text tests.

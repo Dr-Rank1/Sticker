@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import 'layer_transform.dart';
 import 'sticker_fonts.dart';
 
@@ -155,16 +156,18 @@ class StickerLayer {
 
   String get semanticsLabel => switch (widget) {
     TextLayerWidget(:final text) =>
-      text.trim().isEmpty ? 'Text sticker' : 'Text sticker, $text',
-    EmojiLayerWidget() => 'Emoji sticker',
-    ImageLayerWidget() => 'Image sticker',
+      text.trim().isEmpty
+          ? serviceLocalizations.textSticker
+          : serviceLocalizations.textStickerWithText(text),
+    EmojiLayerWidget() => serviceLocalizations.emojiSticker,
+    ImageLayerWidget() => serviceLocalizations.imageSticker,
   };
 
   String get semanticsHint => selectedHint;
 
-  static const selectedHint =
-      'Drag to move, pinch to scale, and rotate with two fingers';
-  static const unselectedHint = 'Double tap to select this sticker';
+  static String get selectedHint => serviceLocalizations.selectedStickerHint;
+  static String get unselectedHint =>
+      serviceLocalizations.unselectedStickerHint;
 
   StickerLayer copyWith({
     StickerLayerWidget? widget,

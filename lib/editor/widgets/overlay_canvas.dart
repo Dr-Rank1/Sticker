@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../../haptics/haptic_service.dart';
 import '../editor_models.dart';
 import '../layer_transform.dart';
@@ -150,8 +151,8 @@ class _OverlayCanvasState extends State<OverlayCanvas> {
           container: true,
           explicitChildNodes: true,
           button: true,
-          label: 'Sticker canvas',
-          hint: 'Drag a sticker to move it. Pinch to resize. Rotate with two fingers.',
+          label: context.l10n.stickerCanvas,
+          hint: context.l10n.stickerCanvasHint,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onScaleStart: (details) => _onScaleStart(details, viewSize),
@@ -238,8 +239,8 @@ class _LayerView extends StatelessWidget {
                   top: -10,
                   child: Semantics(
                     button: true,
-                    label: 'Delete sticker',
-                    hint: 'Removes this sticker from the canvas',
+                    label: context.l10n.deleteSticker,
+                    hint: context.l10n.deleteStickerHint,
                     onTap: onDelete,
                     child: IgnorePointer(
                       child: LayerDeleteHandle(

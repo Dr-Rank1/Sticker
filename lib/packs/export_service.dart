@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 import 'pack_models.dart';
 import 'pack_repository.dart';
@@ -32,12 +33,12 @@ class ExportService {
   Future<File> exportPack(String packId) async {
     final pack = await repository.getById(packId);
     if (pack == null) {
-      throw const PackException('That pack no longer exists.');
+      throw PackException(serviceLocalizations.packNoLongerExists);
     }
 
     final trayBytes = await _trayBytes(pack);
     if (trayBytes.isEmpty) {
-      throw const PackException('This pack is missing a tray icon.');
+      throw PackException(serviceLocalizations.packMissingTrayIcon);
     }
 
     final stickerFiles = <({String name, List<int> bytes})>[];
@@ -45,7 +46,7 @@ class ExportService {
       final sticker = pack.stickers[i];
       final file = File(sticker.filePath);
       if (!file.existsSync()) {
-        throw const PackException('A sticker file is missing from this pack.');
+        throw PackException(serviceLocalizations.packStickerFileMissing);
       }
       stickerFiles.add((
         name: '$stickersDirectory/$i.webp',
@@ -101,19 +102,19 @@ class ExportService {
   Future<StickerPack> importPack(String archivePath) async {
     final source = File(archivePath);
     if (!source.existsSync()) {
-      throw const PackException('The .stickr file could not be found.');
+      throw PackException(serviceLocalizations.stickrFileNotFound);
     }
 
     late final Archive archive;
     try {
       archive = ZipDecoder().decodeBytes(source.readAsBytesSync());
     } catch (_) {
-      throw const PackException('This is not a valid .stickr pack.');
+      throw PackException(serviceLocalizations.invalidStickrPack);
     }
 
     final manifestEntry = archive.findFile(manifestFileName);
     if (manifestEntry == null) {
-      throw const PackException('This is not a valid .stickr pack.');
+      throw PackException(serviceLocalizations.invalidStickrPack);
     }
     final manifest = _readManifest(manifestEntry.content);
     final trayEntry = archive.findFile(trayFileName);
@@ -189,18 +190,18 @@ class ExportService {
     try {
       final decoded = jsonDecode(utf8.decode(bytes));
       if (decoded is! Map) {
-        throw const PackException('This is not a valid .stickr pack.');
+        throw PackException(serviceLocalizations.invalidStickrPack);
       }
       final name = (decoded['name'] as String?)?.trim() ?? '';
       final publisher = (decoded['publisher'] as String?)?.trim() ?? '';
       if (name.isEmpty || publisher.isEmpty) {
-        throw const PackException('This pack is missing a name or publisher.');
+        throw PackException(serviceLocalizations.packMissingNameOrPublisher);
       }
       return _StickrManifest(name: name, publisher: publisher);
     } on PackException {
       rethrow;
     } catch (_) {
-      throw const PackException('This is not a valid .stickr pack.');
+      throw PackException(serviceLocalizations.invalidStickrPack);
     }
   }
 

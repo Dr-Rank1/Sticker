@@ -5,6 +5,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 
 typedef LocalVideoPicker = Future<XFile?> Function();
@@ -78,14 +79,12 @@ class LocalVideoImportService {
     try {
       final selectedBytes = await picked.length();
       if (selectedBytes <= 0) {
-        throw const LocalVideoImportException(
-          'The selected video is empty or unavailable.',
+        throw LocalVideoImportException(
+          serviceLocalizations.videoEmptyOrUnavailable,
         );
       }
       if (selectedBytes > maxFileBytes) {
-        throw const LocalVideoImportException(
-          'Choose a video smaller than 250 MB.',
-        );
+        throw LocalVideoImportException(serviceLocalizations.videoTooLarge);
       }
 
       final directory = await _temporaryDirectory();
@@ -106,47 +105,47 @@ class LocalVideoImportService {
       rethrow;
     } catch (_) {
       await deleteTemporary(copied);
-      throw const LocalVideoImportException(
-        'Couldn’t inspect that video. Choose a different file.',
+      throw LocalVideoImportException(
+        serviceLocalizations.videoInspectionFailed,
       );
     }
   }
 
   void validate(LocalVideoMetadata metadata, {required int fileBytes}) {
     if (fileBytes <= 0) {
-      throw const LocalVideoImportException(
-        'The selected video is empty or unavailable.',
+      throw LocalVideoImportException(
+        serviceLocalizations.videoEmptyOrUnavailable,
       );
     }
     if (fileBytes > maxFileBytes) {
-      throw const LocalVideoImportException(
-        'Choose a video smaller than 250 MB.',
-      );
+      throw LocalVideoImportException(serviceLocalizations.videoTooLarge);
     }
     if (metadata.duration <= Duration.zero) {
-      throw const LocalVideoImportException(
-        'The selected video has no readable duration.',
+      throw LocalVideoImportException(
+        serviceLocalizations.videoDurationUnreadable,
       );
     }
     if (metadata.duration > maxDuration) {
-      throw const LocalVideoImportException(
-        'Choose a video that is 10 minutes or shorter.',
-      );
+      throw LocalVideoImportException(serviceLocalizations.videoTooLong);
     }
     final codec = metadata.codec.trim().toLowerCase();
     if (!supportedCodecs.contains(codec)) {
       throw LocalVideoImportException(
-        'The ${codec.isEmpty ? 'unknown' : codec.toUpperCase()} video codec is not supported.',
+        serviceLocalizations.videoCodecUnsupported(
+          codec.isEmpty
+              ? serviceLocalizations.unknownCodec
+              : codec.toUpperCase(),
+        ),
       );
     }
     if (metadata.width < minDimension || metadata.height < minDimension) {
-      throw const LocalVideoImportException(
-        'The selected video has invalid dimensions.',
+      throw LocalVideoImportException(
+        serviceLocalizations.videoInvalidDimensions,
       );
     }
     if (metadata.width > maxDimension || metadata.height > maxDimension) {
-      throw const LocalVideoImportException(
-        'Choose a video no larger than 4096 by 4096 pixels.',
+      throw LocalVideoImportException(
+        serviceLocalizations.videoDimensionsTooLarge,
       );
     }
   }
@@ -167,9 +166,7 @@ class LocalVideoImportService {
       await for (final chunk in source.openRead()) {
         copiedBytes += chunk.length;
         if (copiedBytes > maxFileBytes) {
-          throw const LocalVideoImportException(
-            'Choose a video smaller than 250 MB.',
-          );
+          throw LocalVideoImportException(serviceLocalizations.videoTooLarge);
         }
         sink.add(chunk);
       }
@@ -178,8 +175,8 @@ class LocalVideoImportService {
       await sink.close();
     }
     if (copiedBytes == 0) {
-      throw const LocalVideoImportException(
-        'The selected video is empty or unavailable.',
+      throw LocalVideoImportException(
+        serviceLocalizations.videoEmptyOrUnavailable,
       );
     }
   }
@@ -199,9 +196,7 @@ Future<LocalVideoMetadata> readLocalVideoMetadata(String path) async {
   final returnCode = await session.getReturnCode();
   final information = session.getMediaInformation();
   if (!ReturnCode.isSuccess(returnCode) || information == null) {
-    throw const LocalVideoImportException(
-      'The selected file is not a readable video.',
-    );
+    throw LocalVideoImportException(serviceLocalizations.fileNotReadableVideo);
   }
 
   final videoStreams = information
@@ -209,17 +204,15 @@ Future<LocalVideoMetadata> readLocalVideoMetadata(String path) async {
       .where((stream) => stream.getType() == 'video')
       .toList();
   if (videoStreams.isEmpty) {
-    throw const LocalVideoImportException(
-      'The selected file does not contain a video track.',
-    );
+    throw LocalVideoImportException(serviceLocalizations.fileMissingVideoTrack);
   }
   final video = videoStreams.first;
   final durationSeconds =
       double.tryParse(information.getDuration() ?? '') ??
       double.tryParse(video.getStringProperty('duration') ?? '');
   if (durationSeconds == null || !durationSeconds.isFinite) {
-    throw const LocalVideoImportException(
-      'The selected video has no readable duration.',
+    throw LocalVideoImportException(
+      serviceLocalizations.videoDurationUnreadable,
     );
   }
 

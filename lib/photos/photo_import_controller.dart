@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../editor/ffmpeg_sticker_service.dart';
 import '../editor/image_sticker_service.dart';
+import '../l10n/l10n.dart';
 
 enum PhotoImportPhase { idle, picking, processing, completed, error }
 
@@ -124,7 +125,7 @@ class PhotoImportController extends Notifier<PhotoImportState> {
       if (!ref.mounted) return;
       final message = error is StickerExportException
           ? error.message
-          : 'Couldn’t prepare that photo. Please try another one.';
+          : serviceLocalizations.photoPrepareFailed;
       state = state.copyWith(
         phase: PhotoImportPhase.error,
         errorMessage: message,

@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../haptics/haptic_service.dart';
+import '../l10n/l10n.dart';
 import '../packs/save_to_pack_sheet.dart';
 import '../state/navigation_controller.dart';
 import '../storage/storage_utility.dart';
@@ -182,7 +183,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
-              content: Text('Added to ${pack.name} (${pack.countLabel}).'),
+              content: Text(
+                context.l10n.addedToPack(pack.name, pack.countLabel),
+              ),
             ),
           );
       } else {
@@ -193,7 +196,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           ..showSnackBar(
             SnackBar(
               content: Text(
-                'Sticker saved (${(result.bytes / 1024).round()}KB). Add it to a pack from Library.',
+                context.l10n.stickerSaved((result.bytes / 1024).round()),
               ),
             ),
           );
@@ -205,7 +208,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           ? error.message
           : error is StickerExportException
           ? error.message
-          : 'Could not save that sticker. Please try again.';
+          : context.l10n.couldNotSaveSticker;
       _editor.setSaving(saving: false, error: cancelled ? null : message);
       if (!cancelled) hapticService.error();
       messenger
@@ -223,22 +226,22 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Add text'),
+          title: Text(context.l10n.addText),
           content: TextField(
             controller: _textController,
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'Say something'),
+            decoration: InputDecoration(hintText: context.l10n.textHint),
             onSubmitted: Navigator.of(context).pop,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, _textController.text),
-              child: const Text('Add'),
+              child: Text(context.l10n.add),
             ),
           ],
         );
@@ -258,7 +261,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Emojis', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  context.l10n.emojiTool,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 12),
                 GridView.count(
                   shrinkWrap: true,
@@ -452,7 +458,7 @@ class _EditorSavingOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Making your sticker…',
+              context.l10n.makingSticker,
               style: Theme.of(context).textTheme.titleSmall
                   ?.copyWith(color: Colors.white),
             ),
@@ -460,7 +466,7 @@ class _EditorSavingOverlay extends StatelessWidget {
             TextButton(
               key: const Key('editor-cancel-export'),
               onPressed: onCancel,
-              child: const Text('Cancel'),
+              child: Text(context.l10n.cancel),
             ),
           ],
         ),
@@ -496,7 +502,7 @@ class _EditorAppBar extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Close editor',
+            tooltip: context.l10n.closeEditor,
             onPressed: () {
               hapticService.buttonTap();
               onClose();
@@ -504,7 +510,7 @@ class _EditorAppBar extends StatelessWidget {
             icon: const Icon(Icons.close_rounded, color: Colors.white),
           ),
           IconButton(
-            tooltip: 'Undo',
+            tooltip: context.l10n.undo,
             onPressed: canUndo
                 ? () {
                     hapticService.buttonTap();
@@ -517,7 +523,7 @@ class _EditorAppBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Redo',
+            tooltip: context.l10n.redo,
             onPressed: canRedo
                 ? () {
                     hapticService.buttonTap();
@@ -547,7 +553,7 @@ class _EditorAppBar extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    'Save',
+                    context.l10n.save,
                     style: TextStyle(
                       color: onSave == null
                           ? colors.textTertiary

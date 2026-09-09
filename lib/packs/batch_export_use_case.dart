@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 import '../tiktok/comment_sticker_formatter.dart';
 import 'pack_models.dart';
@@ -131,8 +132,11 @@ class BatchExportUseCase {
     try {
       if (count < WhatsAppPackRules.minStickers ||
           count > WhatsAppPackRules.maxStickers) {
-        throw const ValidationException(
-          'WhatsApp packs must contain between ${WhatsAppPackRules.minStickers} and ${WhatsAppPackRules.maxStickers} stickers.',
+        throw ValidationException(
+          serviceLocalizations.packStickerCountRange(
+            WhatsAppPackRules.minStickers,
+            WhatsAppPackRules.maxStickers,
+          ),
         );
       }
 

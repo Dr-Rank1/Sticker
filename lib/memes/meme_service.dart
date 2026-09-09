@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 
 @immutable
@@ -92,13 +93,11 @@ class MemeService {
     } on DioException catch (error) {
       throw MemeServiceException(_messageForDio(error));
     } on FormatException {
-      throw const MemeServiceException(
-        'Imgflip returned an unreadable response. Please try again.',
+      throw MemeServiceException(
+        serviceLocalizations.imgflipUnreadableResponse,
       );
     } on SocketException {
-      throw const MemeServiceException(
-        'No internet connection. Check your network and try again.',
-      );
+      throw MemeServiceException(serviceLocalizations.noInternetConnection);
     }
   }
 
@@ -107,7 +106,7 @@ class MemeService {
       final message = body['error_message']?.toString().trim();
       throw MemeServiceException(
         message == null || message.isEmpty
-            ? 'Imgflip couldn’t load meme templates right now.'
+            ? serviceLocalizations.imgflipTemplatesFailed
             : message,
       );
     }
@@ -129,7 +128,9 @@ class MemeService {
       templates.add(
         MemeTemplate(
           id: item['id']?.toString() ?? 'meme_${templates.length}',
-          name: item['name']?.toString().trim() ?? 'Meme template',
+          name:
+              item['name']?.toString().trim() ??
+              serviceLocalizations.memeTemplate,
           imageUrl: url,
           width: _asInt(item['width']),
           height: _asInt(item['height']),
@@ -145,9 +146,7 @@ class MemeService {
   }) async {
     final uri = Uri.tryParse(template.imageUrl);
     if (uri == null || !(uri.scheme == 'https' || uri.scheme == 'http')) {
-      throw const MemeServiceException(
-        'That meme template has an invalid image link.',
-      );
+      throw MemeServiceException(serviceLocalizations.invalidMemeImageLink);
     }
 
     final temporary = await _temporaryDirectory();
@@ -182,16 +181,12 @@ class MemeService {
     } catch (error) {
       await _deleteIfPresent(file);
       if (error is MemeServiceException) rethrow;
-      throw const MemeServiceException(
-        'Couldn’t download that meme template. Please try again.',
-      );
+      throw MemeServiceException(serviceLocalizations.memeDownloadFailed);
     }
 
     if (!await file.exists() || await file.length() == 0) {
       await _deleteIfPresent(file);
-      throw const MemeServiceException(
-        'Imgflip downloaded an empty meme template.',
-      );
+      throw MemeServiceException(serviceLocalizations.imgflipEmptyTemplate);
     }
     return file;
   }
@@ -215,24 +210,24 @@ class MemeService {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'Imgflip took too long to respond. Please try again.';
+        return serviceLocalizations.imgflipTimedOut;
       case DioExceptionType.connectionError:
-        return 'No internet connection. Check your network and try again.';
+        return serviceLocalizations.noInternetConnection;
       case DioExceptionType.badResponse:
         if (error.response?.statusCode == 429) {
-          return 'Imgflip is busy right now. Wait a moment and try again.';
+          return serviceLocalizations.imgflipBusy;
         }
         return downloading
-            ? 'Imgflip couldn’t download that template.'
-            : 'Imgflip templates are unavailable right now.';
+            ? serviceLocalizations.imgflipTemplateDownloadFailed
+            : serviceLocalizations.imgflipTemplatesUnavailable;
       case DioExceptionType.cancel:
         return downloading
-            ? 'The template download was cancelled.'
-            : 'Loading meme templates was cancelled.';
+            ? serviceLocalizations.templateDownloadCancelled
+            : serviceLocalizations.templateLoadingCancelled;
       default:
         return downloading
-            ? 'Couldn’t download that meme template. Please try again.'
-            : 'Couldn’t load meme templates. Please try again.';
+            ? serviceLocalizations.memeDownloadFailed
+            : serviceLocalizations.memeTemplatesLoadFailed;
     }
   }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../l10n/l10n.dart';
 import 'pack_models.dart';
 
 abstract class PackRepository {
@@ -70,16 +71,16 @@ class InMemoryPackRepository implements PackRepository {
     String? identifier,
   }) async {
     if (name.trim().isEmpty) {
-      throw const PackException('Give this pack a name.');
+      throw PackException(serviceLocalizations.packNameRequired);
     }
     if (author.trim().isEmpty) {
-      throw const PackException('Add an author name.');
+      throw PackException(serviceLocalizations.packAuthorRequired);
     }
     _seq += 1;
     final now = DateTime.now();
     final id = identifier ?? 'mem_$_seq';
     if (_packs.containsKey(id)) {
-      throw const PackException('A pack with that identifier already exists.');
+      throw PackException(serviceLocalizations.packIdentifierExists);
     }
     final pack = StickerPack(
       id: id,
@@ -99,7 +100,7 @@ class InMemoryPackRepository implements PackRepository {
   Future<StickerPack> updatePack(StickerPack pack) async {
     final current = _packs[pack.id];
     if (current == null) {
-      throw const PackException('That pack no longer exists.');
+      throw PackException(serviceLocalizations.packNoLongerExists);
     }
     _packs[pack.id] = pack.copyWith(updatedAt: _nextRevision(current));
     _notify();
@@ -115,18 +116,18 @@ class InMemoryPackRepository implements PackRepository {
   }) async {
     final pack = _packs[packId];
     if (pack == null) {
-      throw const PackException('That pack no longer exists.');
+      throw PackException(serviceLocalizations.packNoLongerExists);
     }
     if (pack.isFull) {
-      throw const PackException(
-        'WhatsApp packs can hold at most ${WhatsAppPackRules.maxStickers} stickers.',
+      throw PackException(
+        serviceLocalizations.packMaximumStickers(WhatsAppPackRules.maxStickers),
       );
     }
     if (!pack.acceptsSticker(animated: animated)) {
       throw PackException(
         animated
-            ? 'This pack is for static stickers. Create a new pack for animated ones.'
-            : 'This pack is for animated stickers. Create a new pack for photo stickers.',
+            ? serviceLocalizations.packStaticOnly
+            : serviceLocalizations.packAnimatedOnly,
       );
     }
     _seq += 1;
@@ -155,7 +156,7 @@ class InMemoryPackRepository implements PackRepository {
   }) async {
     final pack = _packs[packId];
     if (pack == null) {
-      throw const PackException('That pack no longer exists.');
+      throw PackException(serviceLocalizations.packNoLongerExists);
     }
     final stickers = [
       for (final sticker in pack.stickers)
@@ -182,15 +183,18 @@ class InMemoryPackRepository implements PackRepository {
     final count = pack.stickers.length;
     if (count < WhatsAppPackRules.minStickers ||
         count > WhatsAppPackRules.maxStickers) {
-      throw const ValidationException(
-        'WhatsApp packs must contain between ${WhatsAppPackRules.minStickers} and ${WhatsAppPackRules.maxStickers} stickers.',
+      throw ValidationException(
+        serviceLocalizations.packStickerCountRange(
+          WhatsAppPackRules.minStickers,
+          WhatsAppPackRules.maxStickers,
+        ),
       );
     }
     if (pack.name.trim().isEmpty) {
-      throw const PackException('Give this pack a name.');
+      throw PackException(serviceLocalizations.packNameRequired);
     }
     if (pack.author.trim().isEmpty) {
-      throw const PackException('Add an author name.');
+      throw PackException(serviceLocalizations.packAuthorRequired);
     }
     final current = _packs[pack.id];
     final next = pack.copyWith(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../state/theme_controller.dart';
 import '../storage/storage_utility.dart';
 import '../theme/app_colors.dart';
@@ -21,18 +22,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final colors = context.colors;
     final usage = ref.watch(storageUsageProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settings)),
       body: RefreshIndicator(
         onRefresh: _refreshUsage,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
-            Text('Storage', style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              l10n.storage,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 6),
             Text(
-              'See what Stickr uses on this device and remove disposable working files.',
+              l10n.storageDescription,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -54,15 +59,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       _UsageRow(
                         icon: Icons.folder_rounded,
-                        title: 'App documents',
-                        subtitle: 'Saved packs and stickers',
+                        title: l10n.appDocuments,
+                        subtitle: l10n.savedPacksAndStickers,
                         value: formatStorageBytes(value.documentsBytes),
                       ),
                       const SizedBox(height: 18),
                       _UsageRow(
                         icon: Icons.cached_rounded,
-                        title: 'Temporary cache',
-                        subtitle: 'Raw videos and working files',
+                        title: l10n.temporaryCache,
+                        subtitle: l10n.rawVideosAndWorkingFiles,
                         value: formatStorageBytes(value.cacheBytes),
                       ),
                       const SizedBox(height: 18),
@@ -72,7 +77,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Total app storage',
+                              l10n.totalAppStorage,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ),
@@ -98,12 +103,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   ),
                                 )
                               : const Icon(Icons.cleaning_services_rounded),
-                          label: Text(_clearing ? 'Clearing…' : 'Clear Cache'),
+                          label: Text(
+                            _clearing ? l10n.clearing : l10n.clearCache,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Your saved sticker packs will not be deleted.',
+                        l10n.savedPacksNotDeleted,
                         style: Theme.of(context).textTheme.bodySmall,
                         textAlign: TextAlign.center,
                       ),
@@ -114,7 +121,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 28),
             Text(
-              'Appearance',
+              l10n.appearance,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 12),
@@ -128,21 +135,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   _ThemeOption(
                     icon: Icons.brightness_auto_rounded,
-                    label: 'System',
+                    label: l10n.systemTheme,
                     selected: themeMode == ThemeMode.system,
                     onTap: () => _setTheme(ThemeMode.system),
                   ),
                   Divider(height: 1, indent: 56, color: colors.border),
                   _ThemeOption(
                     icon: Icons.light_mode_rounded,
-                    label: 'Light',
+                    label: l10n.lightTheme,
                     selected: themeMode == ThemeMode.light,
                     onTap: () => _setTheme(ThemeMode.light),
                   ),
                   Divider(height: 1, indent: 56, color: colors.border),
                   _ThemeOption(
                     icon: Icons.dark_mode_rounded,
-                    label: 'Dark',
+                    label: l10n.darkTheme,
                     selected: themeMode == ThemeMode.dark,
                     onTap: () => _setTheme(ThemeMode.dark),
                   ),
@@ -177,16 +184,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SnackBar(
             content: Text(
               result.bytesFreed == 0
-                  ? 'Cache is already clear.'
-                  : 'Freed ${formatStorageBytes(result.bytesFreed)}.',
+                  ? context.l10n.cacheAlreadyClear
+                  : context.l10n.freedStorage(
+                      formatStorageBytes(result.bytesFreed),
+                    ),
             ),
           ),
         );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not clear the cache. Try again.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.couldNotClearCache)));
     } finally {
       if (mounted) setState(() => _clearing = false);
     }
@@ -280,7 +289,7 @@ class _StorageError extends StatelessWidget {
         child: TextButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Could not read storage. Try again'),
+          label: Text(context.l10n.couldNotReadStorage),
         ),
       ),
     );

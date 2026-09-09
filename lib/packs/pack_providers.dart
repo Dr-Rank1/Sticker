@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import 'export_service.dart';
 import 'pack_models.dart';
 import 'pack_repository.dart';
@@ -63,7 +64,7 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
   }) async {
     final current = await _repo.getById(packId);
     if (current == null) {
-      throw const PackException('That pack no longer exists.');
+      throw PackException(serviceLocalizations.packNoLongerExists);
     }
     final updated = await _repo.updatePack(
       current.copyWith(name: name, author: author),
@@ -123,7 +124,7 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
     final packs = await _repo.getAll();
     StickerPack? target;
     for (final pack in packs) {
-      if (pack.name == commentPackName &&
+      if (pack.name == serviceLocalizations.commentStickers &&
           pack.acceptsSticker(animated: false) &&
           !pack.isFull) {
         target = pack;
@@ -131,8 +132,8 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
       }
     }
     target ??= await _repo.createPack(
-      name: commentPackName,
-      author: commentPackAuthor,
+      name: serviceLocalizations.commentStickers,
+      author: serviceLocalizations.appTitle,
     );
     final updated = await _repo.addSticker(
       packId: target.id,
@@ -146,17 +147,23 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
   /// Creates a new static pack from a batch of already-formatted WebP files.
   Future<StickerPack> createStaticStickerPack(
     List<String> sourcePaths, {
-    String name = commentPackName,
-    String author = commentPackAuthor,
+    String? name,
+    String? author,
   }) async {
     if (sourcePaths.length < WhatsAppPackRules.minStickers ||
         sourcePaths.length > WhatsAppPackRules.maxStickers) {
-      throw const ValidationException(
-        'WhatsApp packs must contain between ${WhatsAppPackRules.minStickers} and ${WhatsAppPackRules.maxStickers} stickers.',
+      throw ValidationException(
+        serviceLocalizations.packStickerCountRange(
+          WhatsAppPackRules.minStickers,
+          WhatsAppPackRules.maxStickers,
+        ),
       );
     }
 
-    final pack = await _repo.createPack(name: name, author: author);
+    final pack = await _repo.createPack(
+      name: name ?? serviceLocalizations.commentStickers,
+      author: author ?? serviceLocalizations.appTitle,
+    );
     try {
       var updated = pack;
       for (final sourcePath in sourcePaths) {
@@ -196,5 +203,5 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
   }
 }
 
-const commentPackName = 'Comment stickers';
-const commentPackAuthor = 'Stickr';
+String get commentPackName => serviceLocalizations.commentStickers;
+String get commentPackAuthor => serviceLocalizations.appTitle;
