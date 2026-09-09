@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import '../database/sticker_pack.dart' as isar_db;
 import '../database/sticker_pack_schema_migration.dart';
 import '../l10n/l10n.dart';
+import '../storage/storage_utility.dart';
+import 'sticker_file_store.dart';
 import 'pack_models.dart';
 import 'pack_repository.dart';
 import 'tray_icon_service.dart';
@@ -19,24 +21,33 @@ class StickerRepository implements PackRepository {
   StickerRepository(
     this.isar, {
     required this.documentsPath,
+    required this.temporaryPath,
     TrayIconService? trayIcons,
+    StickerFileStore? fileStore,
     DateTime Function()? clock,
   }) : _trayIcons = trayIcons ?? TrayIconService(),
+       _fileStore = fileStore ?? StickerFileStore(temporaryPath: temporaryPath),
        _clock = clock ?? DateTime.now;
 
   final Isar isar;
   final String documentsPath;
+  final String temporaryPath;
   final TrayIconService _trayIcons;
+  final StickerFileStore _fileStore;
   final DateTime Function() _clock;
 
   static Future<StickerRepository> open({
     String? directory,
     String name = 'stickr_packs',
     Future<Directory> Function()? documents,
+    Future<Directory> Function()? temporary,
     TrayIconService? trayIcons,
     DateTime Function()? clock,
   }) async {
     final docs = await (documents ?? getApplicationDocumentsDirectory)();
+    final temp = await getStickrTemporaryDirectory(
+      baseTemporaryDirectory: temporary,
+    );
     final path = directory ?? docs.path;
     final isar = await Isar.open(
       [isar_db.StickerPackSchema],
@@ -52,6 +63,7 @@ class StickerRepository implements PackRepository {
     return StickerRepository(
       isar,
       documentsPath: docs.path,
+      temporaryPath: temp.path,
       trayIcons: trayIcons,
       clock: clock,
     );
@@ -163,8 +175,6 @@ class StickerRepository implements PackRepository {
     final stickerId = _uuidV4();
     final fileName = 'sticker_$stickerId.webp';
     final dest = File('${packDir.path}${Platform.pathSeparator}$fileName');
-    await source.copy(dest.path);
-
     final createdAtMillis = _clock().millisecondsSinceEpoch;
     row
       ..stickers = [
@@ -178,9 +188,16 @@ class StickerRepository implements PackRepository {
       ]
       ..stickerPaths = []
       ..updatedAtMillis = _nextRevision(row.updatedAtMillis);
-    await isar.writeTxn(() async {
-      await isar.stickerPacks.put(row);
-    });
+    StickerFilePlacement? placement;
+    try {
+      await isar.writeTxn(() async {
+        placement = await _fileStore.place(source: source, destination: dest);
+        await isar.stickerPacks.put(row);
+      });
+    } catch (_) {
+      await placement?.rollback();
+      rethrow;
+    }
     return _toDomain(row);
   }
 

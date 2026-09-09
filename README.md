@@ -99,6 +99,8 @@ The editor supports:
 - Add, remove, and inspect stickers.
 - Persist pack and embedded sticker metadata locally with Isar.
 - Retain completed stickers in app-owned document storage.
+- Hold editor output in `stickr_temp` until a pack is selected, then transfer
+  ownership directly into that pack without an intermediate permanent copy.
 - Measure app storage and clear disposable cache files without deleting packs.
 
 ### Export to WhatsApp

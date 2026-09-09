@@ -105,11 +105,14 @@ void main() {
   });
 
   test(
-    'post-save cleanup cannot delete files outside the temporary directory',
+    'post-save cleanup deletes staged WebP but nothing outside app temp',
     () async {
       final raw = File(
         '${ownedTemporary.path}${Platform.pathSeparator}stickr_raw.mp4',
       )..writeAsBytesSync(List.filled(100, 1));
+      final staged = File(
+        '${ownedTemporary.path}${Platform.pathSeparator}generated.webp',
+      )..writeAsBytesSync(List.filled(40, 1));
       final unrelated = File(
         '${temporary.path}${Platform.pathSeparator}stickr_raw.mp4',
       )..writeAsBytesSync(List.filled(50, 1));
@@ -117,9 +120,14 @@ void main() {
         '${documents.path}${Platform.pathSeparator}stickr_saved.webp',
       )..writeAsBytesSync(List.filled(80, 1));
 
-      await utility.cleanupAfterStickerSaved([raw.path, saved.path]);
+      await utility.cleanupAfterStickerSaved([
+        raw.path,
+        staged.path,
+        saved.path,
+      ]);
 
       expect(raw.existsSync(), isFalse);
+      expect(staged.existsSync(), isFalse);
       expect(unrelated.existsSync(), isTrue);
       expect(saved.existsSync(), isTrue);
     },

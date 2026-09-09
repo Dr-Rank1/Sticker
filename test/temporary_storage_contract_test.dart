@@ -23,4 +23,15 @@ void main() {
     expect(worker, contains('StorageUtility().cleanupTemporaryMedia()'));
     expect(worker, isNot(contains('getTemporaryDirectory')));
   });
+
+  test('editor defers permanent ownership until pack selection', () {
+    final editor = File('lib/editor/editor_screen.dart').readAsStringSync();
+    final repository = File('lib/packs/sticker_repository.dart')
+        .readAsStringSync();
+
+    expect(editor, isNot(contains('getApplicationDocumentsDirectory')));
+    expect(editor, contains('stickerPath: generatedSticker.path'));
+    expect(editor, contains('if (!repositoryAcceptedSticker)'));
+    expect(repository, contains('placement = await _fileStore.place('));
+  });
 }

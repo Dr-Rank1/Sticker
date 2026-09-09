@@ -191,6 +191,7 @@ void main() {
           directory: dir.path,
           name: 'stickr_packs_${dir.path.hashCode}',
           documents: () async => dir,
+          temporary: () async => dir,
         );
         return repo;
       } catch (error) {
@@ -250,5 +251,34 @@ void main() {
         expect(events.last.single.stickers, hasLength(3));
       },
     );
+
+    test('addSticker transfers ownership of an app temporary file', () async {
+      final opened = await openRepo();
+      if (opened == null) {
+        return;
+      }
+
+      final temporary = Directory(opened.temporaryPath)
+        ..createSync(recursive: true);
+      final source = File(
+        '${temporary.path}${Platform.pathSeparator}generated.webp',
+      )..writeAsBytesSync(const [1, 2, 3, 4]);
+      final created = await opened.createPack(
+        name: 'Temporary output',
+        author: 'Ian',
+      );
+
+      final updated = await opened.addSticker(
+        packId: created.id,
+        sourcePath: source.path,
+        animated: false,
+      );
+
+      final stored = File(updated.stickers.single.filePath);
+      expect(source.existsSync(), isFalse);
+      expect(stored.existsSync(), isTrue);
+      expect(stored.path, startsWith(opened.documentsPath));
+      expect(stored.readAsBytesSync(), const [1, 2, 3, 4]);
+    });
   });
 }

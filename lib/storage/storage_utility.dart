@@ -136,8 +136,8 @@ class StorageUtility {
     return CacheClearResult(bytesFreed: bytesFreed, filesDeleted: filesDeleted);
   }
 
-  /// Removes known raw and intermediate files after the final WebP is copied
-  /// to permanent app storage. Paths outside Stickr's temp directory are ignored.
+  /// Removes known raw and intermediate files after the final WebP is accepted
+  /// by a pack repository. Paths outside Stickr's temp directory are ignored.
   Future<CacheClearResult> cleanupAfterStickerSaved(
     Iterable<String?> paths,
   ) async {

@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../haptics/haptic_service.dart';
 import '../l10n/l10n.dart';
+import '../packs/pack_models.dart';
 import '../packs/save_to_pack_sheet.dart';
 import '../state/navigation_controller.dart';
 import '../storage/storage_utility.dart';
@@ -27,16 +27,28 @@ final ffmpegStickerServiceProvider = Provider<FfmpegStickerService>((ref) {
   return FfmpegStickerService();
 });
 
+typedef SaveEditorStickerToPack = Future<StickerPack?> Function(
+  BuildContext context, {
+  required String stickerPath,
+  required bool animated,
+});
+
 class EditorScreen extends ConsumerStatefulWidget {
-  const EditorScreen({super.key, this.videoPath, this.imagePath, this.caption})
-    : assert(
-        (videoPath == null) != (imagePath == null),
-        'Provide either a videoPath or an imagePath',
-      );
+  const EditorScreen({
+    super.key,
+    this.videoPath,
+    this.imagePath,
+    this.caption,
+    this.saveToPack = showSaveToPackSheet,
+  }) : assert(
+         (videoPath == null) != (imagePath == null),
+         'Provide either a videoPath or an imagePath',
+       );
 
   final String? videoPath;
   final String? imagePath;
   final String? caption;
+  final SaveEditorStickerToPack saveToPack;
 
   bool get isStatic => imagePath != null;
 
@@ -100,6 +112,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   Future<void> _save() async {
     final messenger = ScaffoldMessenger.of(context);
+    final storage = ref.read(storageUtilityProvider);
+    File? overlay;
+    File? generatedSticker;
+    var repositoryAcceptedSticker = false;
     if (!widget.isStatic) {
       final player = _player;
       if (player == null || !player.value.isInitialized) return;
@@ -110,7 +126,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
     try {
       final document = ref.read(editorProvider).document;
-      File? overlay;
       if (document.overlays.isNotEmpty) {
         final temp = await getStickrTemporaryDirectory();
         await WidgetsBinding.instance.endOfFrame;
@@ -151,56 +166,41 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             );
       }
 
-      final docs = await getApplicationDocumentsDirectory();
-      final folder = Directory('${docs.path}${Platform.pathSeparator}stickers');
-      if (!folder.existsSync()) {
-        folder.createSync(recursive: true);
-      }
-      final saved = await result.file.copy(
-        '${folder.path}${Platform.pathSeparator}stickr_${DateTime.now().millisecondsSinceEpoch}.webp',
-      );
-      await ref.read(storageUtilityProvider).cleanupAfterStickerSaved([
-        widget.videoPath,
-        widget.imagePath,
-        overlay?.path,
-        result.file.path,
-      ]);
+      generatedSticker = result.file;
 
       if (!mounted) return;
       _editor.setSaving(saving: false, progress: 1);
-      final pack = await showSaveToPackSheet(
+      final pack = await widget.saveToPack(
         context,
-        stickerPath: saved.path,
+        stickerPath: generatedSticker.path,
         animated: !widget.isStatic,
       );
+      repositoryAcceptedSticker = pack != null;
+      if (pack == null) {
+        if (!widget.isStatic) {
+          await _player?.play();
+        }
+        return;
+      }
+
+      await storage.cleanupAfterStickerSaved([
+        widget.videoPath,
+        widget.imagePath,
+        overlay?.path,
+        generatedSticker.path,
+      ]);
       if (!mounted) return;
 
-      if (pack != null) {
-        hapticService.success();
-        ref.read(navigationProvider.notifier).select(AppTab.library);
-        Navigator.of(context).pop(saved.path);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(
-                context.l10n.addedToPack(pack.name, pack.countLabel),
-              ),
-            ),
-          );
-      } else {
-        hapticService.success();
-        Navigator.of(context).pop(saved.path);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(
-                context.l10n.stickerSaved((result.bytes / 1024).round()),
-              ),
-            ),
-          );
-      }
+      hapticService.success();
+      ref.read(navigationProvider.notifier).select(AppTab.library);
+      Navigator.of(context).pop(pack.stickers.last.filePath);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.addedToPack(pack.name, pack.countLabel)),
+          ),
+        );
     } catch (error) {
       if (!mounted) return;
       final cancelled = error is StickerExportCancelled;
@@ -216,6 +216,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         ..showSnackBar(SnackBar(content: Text(message)));
       if (!widget.isStatic) {
         await _player?.play();
+      }
+    } finally {
+      if (!repositoryAcceptedSticker) {
+        await storage.cleanupAfterStickerSaved([
+          overlay?.path,
+          generatedSticker?.path,
+        ]);
       }
     }
   }

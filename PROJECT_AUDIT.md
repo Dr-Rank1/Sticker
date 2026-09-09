@@ -456,8 +456,8 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 220 tests passed.
-- 1 platform-dependent Isar test was skipped.
+- 224 tests passed.
+- 2 platform-dependent Isar tests were skipped.
 - No tests failed.
 
 The previously failing `background share stream bypasses home and starts scanning` test now routes state before asynchronous clipboard cleanup and uses `pumpAndSettle()` to let the `AnimatedSwitcher` remove the old `MainScaffold` before asserting its absence.
@@ -873,16 +873,26 @@ useful future hardening.
 
 ### 6.19 Eliminate duplicate and unreachable editor output
 
-The editor copies each finished WebP into `documents/stickers` before opening the pack chooser. The repository then copies it again into the selected pack.
+Implemented:
 
-If the chooser is dismissed, the UI says the sticker can be added later from Library, but Library has no loose-sticker browser or import action.
+- Animated and static editor exports remain in `stickr_temp` while the pack
+  chooser is open.
+- The editor passes that temporary path directly to the chooser without
+  creating an intermediate `documents/stickers` copy.
+- `StickerRepository` moves app-owned temporary outputs into the selected
+  pack's permanent directory inside the Isar write transaction.
+- Cross-filesystem moves fall back to copy-and-delete while preserving the
+  same ownership semantics.
+- A failed database write restores the temporary source and removes the
+  uncommitted destination.
+- Dismissing the chooser deletes the generated WebP immediately and leaves the
+  editor open for another save attempt.
+- File-store, storage-cleanup, repository, and source-contract tests cover
+  ownership transfer, rollback, and orphan cleanup.
 
-Recommended options:
+Remaining:
 
-- Keep generated output temporary until a pack is selected, then let the repository take ownership.
-- Or implement a visible drafts/loose-stickers area in Library.
-
-Whichever option is selected, add orphan cleanup and avoid storing two permanent copies.
+- Add physical-device coverage for cross-filesystem rename fallback behavior.
 
 ### 6.20 Make native staging crash-safe
 
