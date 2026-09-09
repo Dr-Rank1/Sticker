@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:stickr/settings/about_licenses_screen.dart';
 import 'package:stickr/settings/settings_screen.dart';
 import 'package:stickr/storage/storage_utility.dart';
 import 'package:stickr/theme/app_theme.dart';
@@ -39,6 +40,39 @@ void main() {
     expect(utility.cacheCleared, isTrue);
     expect(find.text('0 B'), findsOneWidget);
     expect(find.textContaining('Freed 1.0 KB'), findsOneWidget);
+  });
+
+  testWidgets('opens the About and licenses GPL notice from Settings', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          storageUtilityProvider.overrideWithValue(_FakeStorageUtility()),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const SettingsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('about-licenses')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.tap(find.byKey(const Key('about-licenses')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AboutLicensesScreen), findsOneWidget);
+    expect(find.text('FFmpeg GPL notice'), findsOneWidget);
+    expect(find.textContaining('GNU General Public License'), findsOneWidget);
+    expect(find.byKey(const Key('view-project-source')), findsOneWidget);
+    expect(find.byKey(const Key('view-ffmpeg-source')), findsOneWidget);
+    expect(
+      AboutLicensesScreen.projectSourceUri.toString(),
+      'https://github.com/Dr-Rank1/Sticker',
+    );
   });
 }
 

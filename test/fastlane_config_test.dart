@@ -11,7 +11,7 @@ void main() {
     expect(appfile, contains('package_name("com.stickr.stickr")'));
     expect(
       appfile,
-      contains('json_key_file("fastlane/play-store-credentials.json")'),
+      contains('File.expand_path("play-store-credentials.json", __dir__)'),
     );
   });
 
@@ -25,6 +25,7 @@ void main() {
     expect(fastfile, contains('"--release"'));
     expect(fastfile, contains('"--obfuscate"'));
     expect(fastfile, contains('--split-debug-info='));
+    expect(fastfile, contains('--dart-define-from-file='));
     expect(fastfile, contains('upload_to_play_store'));
     expect(fastfile, contains('track: "internal"'));
     expect(fastfile, contains('app-release.aab'));
@@ -63,6 +64,31 @@ void main() {
     expect(gitignore, contains('key.properties'));
     expect(gitignore, contains('**/*.jks'));
     expect(gitignore, contains('fastlane/play-store-credentials.json'));
+    expect(gitignore, contains('/release-defines.json'));
+  });
+
+  test('Gradle wrapper executables and jar are tracked by policy', () {
+    final gitignore = File('$repoRoot/android/.gitignore').readAsStringSync();
+
+    expect(gitignore, isNot(contains('/gradlew')));
+    expect(gitignore, isNot(contains('/gradlew.bat')));
+    expect(gitignore, isNot(contains('gradle-wrapper.jar')));
+    expect(File('$repoRoot/android/gradlew').existsSync(), isTrue);
+    expect(File('$repoRoot/android/gradlew.bat').existsSync(), isTrue);
+    expect(
+      File('$repoRoot/android/gradle/wrapper/gradle-wrapper.jar').existsSync(),
+      isTrue,
+    );
+  });
+
+  test('Fastlane Gemfile pins the release dependency', () {
+    final gemfile = File('$repoRoot/android/fastlane/Gemfile')
+        .readAsStringSync();
+    final readme = File('$repoRoot/README.md').readAsStringSync();
+
+    expect(gemfile, contains('gem "fastlane", "= 2.228.0"'));
+    expect(readme, contains('bundle lock'));
+    expect(readme, contains('bundle exec fastlane android beta'));
   });
 
   test('pubspec version is in the x.y.z+build form Fastlane increments', () {

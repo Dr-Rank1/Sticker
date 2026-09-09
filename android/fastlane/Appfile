@@ -2,5 +2,4 @@
 package_name("com.stickr.stickr")
 
 # Service account JSON downloaded from Google Play Console.
-# Path is relative to the android/ directory (where Fastlane is invoked).
-json_key_file("fastlane/play-store-credentials.json")
+json_key_file(File.expand_path("play-store-credentials.json", __dir__))

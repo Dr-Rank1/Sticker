@@ -1213,4 +1213,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String invalidStickerDimensions(String fileName, int width, int height) {
     return '$fileName must be exactly $width by $height pixels.';
   }
+
+  @override
+  String get legal => 'Legal';
+
+  @override
+  String get aboutAndLicenses => 'About & licenses';
+
+  @override
+  String get aboutAndLicensesDescription =>
+      'Application information, open-source notices, and third-party licenses';
+
+  @override
+  String get ffmpegLicenseTitle => 'FFmpeg GPL notice';
+
+  @override
+  String get ffmpegLicenseNotice =>
+      'Stickr uses FFmpeg through ffmpeg_kit_flutter_new for media conversion and WebP encoding. This is a GPL-enabled build distributed under the GNU General Public License.';
+
+  @override
+  String get sourceCodeOffer =>
+      'The corresponding application source and build instructions are available from the project repository. FFmpeg source is available from ffmpeg.org. If repository access is unavailable, contact the distributor for a written source offer.';
+
+  @override
+  String get viewProjectSource => 'View project source';
+
+  @override
+  String get viewFfmpegSource => 'View FFmpeg source';
+
+  @override
+  String get thirdPartyLicenses => 'Third-party licenses';
+
+  @override
+  String get thirdPartyLicensesDescription =>
+      'Review licenses for Flutter, packages, and other software included with Stickr.';
+
+  @override
+  String get couldNotOpenSourceLink => 'Could not open the source-code link.';
 }

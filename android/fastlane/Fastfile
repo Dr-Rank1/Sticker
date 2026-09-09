@@ -9,6 +9,7 @@ AAB_PATH = File.join(
   "build/app/outputs/bundle/release/app-release.aab",
 )
 DEBUG_INFO_DIR = "build/debug-info"
+RELEASE_DEFINES_PATH = File.join(PROJECT_ROOT, "android/release-defines.json")
 
 platform :android do
   desc "Clean, bump versionCode, build an obfuscated App Bundle, and upload to Internal testing"
@@ -22,6 +23,11 @@ platform :android do
     UI.success("Android versionCode is now #{version_code}")
 
     UI.message("Building the release Android App Bundle")
+    unless File.exist?(RELEASE_DEFINES_PATH)
+      UI.user_error!(
+        "Create android/release-defines.json from the committed example before release",
+      )
+    end
     Dir.chdir(PROJECT_ROOT) do
       sh(
         "flutter",
@@ -30,6 +36,7 @@ platform :android do
         "--release",
         "--obfuscate",
         "--split-debug-info=#{DEBUG_INFO_DIR}",
+        "--dart-define-from-file=#{RELEASE_DEFINES_PATH}",
       )
     end
 

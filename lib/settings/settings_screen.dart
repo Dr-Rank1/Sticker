@@ -6,6 +6,7 @@ import '../state/theme_controller.dart';
 import '../storage/storage_utility.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import 'about_licenses_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -154,6 +155,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onTap: () => _setTheme(ThemeMode.dark),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            Text(l10n.legal, style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 12),
+            Material(
+              color: colors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                side: BorderSide(color: colors.border),
+              ),
+              child: ListTile(
+                key: const Key('about-licenses'),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AboutLicensesScreen(),
+                    ),
+                  );
+                },
+                leading: const Icon(Icons.info_outline_rounded),
+                title: Text(l10n.aboutAndLicenses),
+                subtitle: Text(l10n.aboutAndLicensesDescription),
+                trailing: const Icon(Icons.chevron_right_rounded),
               ),
             ),
           ],

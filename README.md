@@ -1,280 +1,143 @@
-<p align="center">
-  <img src="assets/branding/app_icon.png" width="128" alt="Stickr app icon">
-</p>
+# Stickr
 
-<h1 align="center">Stickr</h1>
+Stickr is an Android-first Flutter application for creating, organizing,
+sharing, and exporting WhatsApp sticker packs. It produces static and animated
+512 by 512 WebP stickers from photos, local videos, TikTok clips, meme
+templates, Giphy results, and TikTok comment images.
 
-<p align="center">
-  A polished Flutter app for creating, organizing, and exporting custom
-  WhatsApp sticker packs.
-</p>
+## Product capabilities
 
-Stickr turns photos, TikTok clips, popular meme templates, and transparent
-stickers into WhatsApp-ready WebP files. It includes an editor for trimming
-video, adding text and emoji overlays, selecting downloadable fonts, and
-removing photo backgrounds on-device.
+- Create static stickers from gallery photos or the camera.
+- Remove photo backgrounds on-device with ML Kit selfie segmentation.
+- Import local gallery videos after validating size, duration, codec, and
+  dimensions.
+- Resolve TikTok videos through TikWM and edit the downloaded clip.
+- Trim video, change playback speed, and add text or emoji overlays.
+- Search Giphy stickers with offset pagination in Discover.
+- Browse live Giphy trending stickers in Community and collect 3 to 30 items
+  in the staging tray.
+- Scan TikTok comments through Apify and batch-export selected image comments.
+- Create and edit local packs, then add them to WhatsApp through the Android
+  content-provider integration.
+- Share and import hardened `.stickr` pack archives.
 
-The app stores packs locally, enforces WhatsApp's sticker requirements, and
-exports complete packs to WhatsApp on Android.
+Native WhatsApp export is currently Android-only. The configured minimum is
+Android 7.0, API level 24.
 
-## What can Stickr do?
+## Architecture and storage
 
-### Create from a photo
+### Persistence
 
-- Pick an image from the gallery or capture one with the camera.
-- Remove the background locally with ML Kit selfie segmentation.
-- Automatically crop the subject and place it on a transparent canvas.
-- Add text or emoji overlays.
-- Export a static 512×512 WebP sticker.
+Sticker packs use Isar, not Hive. Each persisted pack includes:
 
-Photo segmentation happens on the device. The selected photo is not sent to a
-background-removal service.
+- Stable pack and sticker identifiers.
+- Explicit creation and monotonic update timestamps.
+- Embedded sticker metadata, including animation type and accessibility text.
+- A generated 96 by 96 tray icon.
+- Permanent sticker files under app-owned document storage.
 
-### Create from TikTok
+Hive is used only for lightweight application settings. It is not the pack
+database.
 
-- Paste a full or shortened TikTok URL.
-- Resolve the video through the TikWM REST API.
-- Download the watermark-free MP4 returned by TikWM.
-- Preview and trim the clip.
-- Change playback speed and add overlays.
-- Convert the result into an animated WhatsApp WebP sticker with FFmpeg.
+Editor output remains in the app-owned `stickr_temp` cache until the user
+selects a pack. `StickerRepository` then transfers ownership directly into the
+selected pack, avoiding duplicate permanent files. Dismissing the chooser
+deletes the temporary WebP.
 
-### Create from a local video
+### Network services
 
-- Pick an Android gallery video through the system media picker.
-- Copy the selected content into app-owned temporary storage.
-- Validate file size, duration, dimensions, and video codec with FFprobe.
-- Open the same trimming, speed, overlay, and FFmpeg editor used by TikTok imports.
-- Delete the temporary source as soon as the editor closes.
+- Giphy powers trending Community content and paginated Discover search.
+- Apify uses
+  `api-ninja~tiktok-comments-scraper/run-sync-get-dataset-items` with a
+  50-comment input limit.
+- TikWM resolves downloadable TikTok video media.
+- Imgflip supplies meme templates.
+- Google Fonts supplies optional editor fonts.
 
-### Detect TikTok links from the clipboard
+Giphy, Apify, and TikWM use the shared Dio client with explicit timeouts,
+bounded safe-GET retries, `Retry-After` support, cancellation, and normalized
+errors.
 
-When the app enters the foreground, it checks the clipboard for supported
-TikTok links, including `tiktok.com`, `vm.tiktok.com`, and related mobile share
-hosts. A consumed link is cleared to prevent the same scan from opening
-repeatedly.
+### Media processing
 
-If comment scanning is configured, Stickr can request comments, keep only
-comments that expose actual image attachments, and present the images in a
-selectable grid. Selected images are padded on a transparent 512×512 canvas,
-encoded as static WebP, and can be saved to a local pack.
+The editor uses `ffmpeg_kit_flutter_new`, a GPL-enabled FFmpeg Kit package with
+`libwebp`, for static and animated WebP encoding. Photo segmentation runs
+locally. Temporary media is restricted to `stickr_temp`.
 
-The comment-sticker grid runs Apify Actor `X6ACJnuJVBUsBocfe`, polls until the
-run succeeds, and keeps only dataset items that include a sticker or image URL.
+See [FFMPEG_GPL_NOTICE.md](LICENSES/FFMPEG_GPL_NOTICE.md) and the in-app
+Settings > About & licenses screen for source and license information.
 
-### Start from a meme
+### `.stickr` archives
 
-- Load current meme templates from Imgflip.
-- Search and browse templates in a grid.
-- Download a selected template.
-- Prepare it at 512×512 and continue editing it in Stickr.
-- Add custom text before saving it as a static sticker.
+A `.stickr` file is a ZIP archive containing:
 
-### Discover transparent stickers
+- `manifest.json`
+- `tray.png`
+- `stickers/*.webp`
 
-- Search Giphy stickers from the Discover tab.
-- Browse results in a masonry grid.
-- Load additional results automatically while scrolling.
-- Download a sticker directly into one of your packs.
+Imports enforce a 5 MB compressed limit, a 20 MB expanded limit, bounded
+per-entry decompression, CRC checks, safe relative paths, duplicate-name and
+symbolic-link rejection, WebP decoding, and exact 512 by 512 dimensions.
+Failures roll back the pack row and all extracted files.
 
-Stickr uses Giphy's sticker search endpoint and its offset pagination.
+## Repository layout
 
-### Edit stickers
+- `lib/editor/`: editor state, overlays, static export, FFmpeg, and background
+  removal.
+- `lib/packs/`: Isar persistence, pack validation, `.stickr` archives, and
+  WhatsApp export.
+- `lib/community/`: Giphy models, service, and trending feed.
+- `lib/discover/`: paginated Giphy search UI.
+- `lib/tiktok/`: TikWM import, Apify comment scraping, and comment formatting.
+- `lib/photos/`: camera and gallery photo workflow.
+- `lib/memes/`: Imgflip templates.
+- `lib/network/`: shared Dio behavior and normalized failures.
+- `lib/analytics/` and `lib/crashlytics/`: categorized, privacy-restricted
+  health telemetry.
+- `android/`: Android application, Gradle wrapper, content provider, and
+  Fastlane release tooling.
 
-The editor supports:
+## Prerequisites
 
-- Video trim controls and looping preview.
-- Playback-speed changes.
-- Text and emoji overlays.
-- Dragging, rotating, and scaling overlays.
-- Dynamic Google Fonts such as Anton, Bangers, Pacifico, Permanent Marker,
-  and Roboto.
-- Font preloading before rasterization so exported text matches the preview.
-- Progress feedback during FFmpeg and static-image encoding.
+Install:
 
-### Manage local packs
+- Flutter 3.47.2 or a compatible SDK using Dart `^3.13.2`.
+- Java 17.
+- Android Studio or Android command-line tools.
+- An Android SDK supporting the configured compile SDK.
+- Ruby and Bundler only when using Fastlane.
 
-- Create packs with a name, author, and generated tray icon.
-- Keep static and animated stickers in separate packs.
-- Add, remove, and inspect stickers.
-- Persist pack and embedded sticker metadata locally with Isar.
-- Retain completed stickers in app-owned document storage.
-- Hold editor output in `stickr_temp` until a pack is selected, then transfer
-  ownership directly into that pack without an intermediate permanent copy.
-- Measure app storage and clear disposable cache files without deleting packs.
-
-### Export to WhatsApp
-
-On Android, Stickr checks whether consumer WhatsApp or WhatsApp Business can
-handle the export before launching the native pack flow. If WhatsApp is
-missing, the app displays a friendly installation guide.
-
-Community and comment-sticker batches use bounded download and conversion
-concurrency with item-level progress. The local Isar pack is created only after
-WhatsApp confirms the add-pack intent. Native files and metadata are flushed to
-temporary locations and atomically moved into place with interrupted-staging
-recovery.
-
-Pack validation follows the important WhatsApp rules:
-
-- A pack must contain between 3 and 30 stickers.
-- A pack cannot mix static and animated stickers.
-- Stickers are encoded at exactly 512×512 pixels.
-- Static stickers are exported as WebP.
-- A 96×96 tray icon is generated for each pack.
-
-Trying to export an undersized pack produces visual feedback and explains the
-three-sticker minimum.
-
-### Browse the Community demo
-
-The Community tab demonstrates a browsable pack feed backed by
-`assets/community/packs.json`. It is intentionally an offline sample catalog,
-not a live marketplace or account-based service.
-
-## Typical workflow
-
-1. Open **Create** and choose a photo, local video, TikTok clip, or meme template.
-2. Trim or prepare the source image.
-3. Add text and emoji overlays in the editor.
-4. Save the generated WebP to a new or existing pack.
-5. Add at least three stickers of the same type.
-6. Open the pack from **Library** and export it to WhatsApp.
-
-Alternatively, search **Discover** and save an existing transparent sticker
-directly to a pack.
-
-## Platform support
-
-Stickr is developed primarily for Android.
-
-- Android 7.0 / API 24 or newer is the configured minimum.
-- Native WhatsApp pack export is implemented for Android.
-- The Flutter UI can be developed on other Flutter targets, but WhatsApp export
-  reports that an Android device is required.
-- Splash and launcher icon configuration is present for Android and iOS.
-
-Camera, internet, and photo-library storage permissions are declared in the
-Android project. The camera is optional hardware. WhatsApp reads packs through
-an exported ContentProvider documented in `AndroidManifest.xml`.
-
-## Technology
-
-The project uses:
-
-- Flutter and Dart for the application.
-- Flutter localization generation with ARB resources and an English fallback.
-- Riverpod for application state and dependency injection.
-- Isar for pack persistence and Hive for settings persistence.
-- Dio with a shared timeout, safe-GET retry, `Retry-After`, cancellation, and
-  error-normalization layer for Giphy, Apify, and TikWM.
-- FFmpeg Kit Full-GPL (`ffmpeg_kit_flutter_new`, including `libwebp`) for animated and static WebP encoding.
-- ML Kit selfie segmentation for on-device background removal.
-- `image` for pixel processing, transparent canvases, resize, crop, and padding.
-- Google Fonts for dynamically downloaded editor fonts.
-- `video_player` for clip preview.
-- `cached_network_image` for remote sticker previews.
-- Android method channels and a content provider for WhatsApp pack export.
-
-## Project structure
-
-Important directories under `lib/`:
-
-- `editor/` — editor state, overlay rendering, fonts, FFmpeg, static export, and
-  background removal.
-- `packs/` — pack models, persistence, tray icons, validation, and WhatsApp
-  export.
-- `tiktok/` — TikWM import, clipboard comment scanning, ScrapeBadger parsing,
-  Apify Actor polling, and comment-sticker formatting.
-- `photos/` — camera/gallery import flow.
-- `memes/` — Imgflip template API and picker.
-- `discover/` — Giphy sticker search, pagination, and downloads.
-- `community/` — offline example catalog and pack-detail UI.
-- `network/` — shared Dio configuration, bounded retries, cancellation, and
-  structured network failures.
-- `onboarding/`, `permissions/`, and `settings/` — first-run experience,
-  permission guidance, appearance, and storage management.
-- `theme/` and `widgets/` — visual system and shared navigation.
-
-Tests live in `test/` and cover API parsing, editor behavior, file formatting,
-pack persistence, export validation, clipboard recognition, permissions,
-storage cleanup, and key user flows.
-
-## Requirements
-
-Before running the project, install:
-
-- A Flutter SDK compatible with Dart `^3.13.2`.
-- Android Studio or the Android command-line SDK.
-- Java 17 for the Android build.
-- An Android emulator or physical device using API 24 or newer.
-
-Confirm the toolchain:
+Verify the local toolchain:
 
 ```sh
 flutter doctor
+java -version
 ```
 
-## Quick start
-
-Clone and enter the project:
+## Initial setup
 
 ```sh
-git clone https://github.com/stewiriffin/Sticker.git
+git clone https://github.com/Dr-Rank1/Sticker.git
 cd Sticker
-```
-
-Install dependencies:
-
-```sh
 flutter pub get
+flutter gen-l10n
 ```
 
-Create local credentials from the committed template:
-
-```sh
-cp .env.example .env
-```
+The repository tracks `android/gradlew`, `android/gradlew.bat`, and
+`android/gradle/wrapper/gradle-wrapper.jar`. CI and local Android builds should
+use this checked-in wrapper.
 
 ## API configuration
 
-Secrets are intentionally not committed. Build-time values are read with
-`String.fromEnvironment`, so `.env` is a local reference file and is not loaded
-into the application. Pass each required value through `--dart-define`.
+The application reads required API values from compile-time Dart defines.
+Never commit live values.
 
-Stickr fails startup with a configuration error unless `GIPHY_API_KEY` and
-`APIFY_API_TOKEN` are present.
+Required:
 
-### Giphy
+- `GIPHY_API_KEY`
+- `APIFY_API_TOKEN`
 
-Giphy powers the Community trending feed and Discover search.
-
-```sh
-flutter run --dart-define=GIPHY_API_KEY=your_giphy_key
-```
-
-### Apify
-
-Clipboard comment scanning uses the synchronous Apify actor dataset endpoint
-and keeps only rows that contain a valid sticker or image URL.
-
-Configure it with:
-
-```sh
-flutter run --dart-define=APIFY_API_TOKEN=your_apify_token
-```
-
-### ScrapeBadger
-
-ScrapeBadger remains available as an alternate comment client. It reads at most
-two 50-comment pages, discards text-only comments, and inspects replies.
-
-```sh
-flutter run \
-  --dart-define=SCRAPEBADGER_API_KEY=your_scrapebadger_key
-```
-
-### Run with required API configuration
+Run the app:
 
 ```sh
 flutter run \
@@ -282,15 +145,16 @@ flutter run \
   --dart-define=APIFY_API_TOKEN=your_apify_token
 ```
 
-TikWM and Imgflip do not require keys. ScrapeBadger is an optional alternate
-comment client and can still be supplied with `SCRAPEBADGER_API_KEY`.
+TikWM and Imgflip do not require keys.
 
-### Configure Firebase for production
+## Firebase configuration
 
-The committed Firebase options and debug Android service file contain mock
-project identifiers only. Authenticate the Firebase CLI and replace them with:
+Committed Firebase values are mock debug placeholders. Authenticate and
+replace them before a production build:
 
 ```sh
+dart pub global activate flutterfire_cli
+firebase login
 flutterfire configure \
   --project=your-production-project \
   --platforms=android,ios \
@@ -298,36 +162,24 @@ flutterfire configure \
   --ios-bundle-id=com.stickr.stickr
 ```
 
-Production `google-services.json` and `GoogleService-Info.plist` files remain
-ignored and should be provisioned locally or through protected CI secrets.
-Crashlytics collection is enabled only in release builds. Structured analytics
-uses fixed source categories and buckets and does not accept file paths, URLs,
-overlay text, or media bytes.
+Production `android/app/google-services.json` and
+`ios/Runner/GoogleService-Info.plist` are ignored. Provision them locally or
+through protected CI secrets.
 
-## Security and privacy notes
+Crashlytics collection is enabled only in release builds. Release Gradle tasks
+upload R8 mapping information and enable native symbol processing. Analytics
+records fixed categories and buckets; it does not accept full file paths,
+TikTok URLs, overlay text, or media bytes.
 
-- Local photos and generated packs remain in app-owned device storage.
-- ML Kit background segmentation runs locally.
-- Temporary source and conversion files live only under the app-owned
-  `stickr_temp` cache directory, are cleaned up after successful saves, and can
-  also be cleared from Settings.
-- `.stickr` imports enforce compressed and expanded size budgets, reject unsafe
-  ZIP entries, fully validate 512 by 512 WebP stickers before persistence, and
-  roll back all files and pack data if any import step fails.
-- TikTok import sends the pasted public video URL to TikWM.
-- Meme browsing contacts Imgflip.
-- Discover and Community contact Giphy.
-- Comment scanning contacts Apify Actor `X6ACJnuJVBUsBocfe`.
-- Google Fonts may download selected font files over the network.
+## Development checks
 
-An API token embedded in a distributed mobile application can be extracted,
-even when supplied through `--dart-define` or sent in an authorization header.
-For a public production release, route paid or privileged APIs through a
-backend that applies authentication, quotas, and abuse protection. The current
-direct clients are suitable for personal builds, prototypes, and controlled
-distribution.
+Run the same checks used by pull-request CI:
 
-## Build and release
+```sh
+dart format --set-exit-if-changed .
+flutter analyze
+flutter test
+```
 
 Build a debug APK:
 
@@ -335,97 +187,106 @@ Build a debug APK:
 flutter build apk --debug
 ```
 
-Build a release APK with required API configuration:
+The output is `build/app/outputs/flutter-apk/app-debug.apk`.
+
+## Android release build
+
+### 1. Configure signing
+
+Copy the example:
 
 ```sh
-flutter build apk --release \
-  --dart-define=GIPHY_API_KEY=your_giphy_key \
-  --dart-define=APIFY_API_TOKEN=your_apify_token
+cp android/key.properties.example android/key.properties
 ```
 
-The Android project currently uses debug signing for release builds. Configure
-a private release keystore before publishing to an app store.
+Populate `android/key.properties`:
 
-## Branding assets
+```properties
+storeFile=/absolute/path/to/upload-keystore.jks
+storePassword=replace_with_store_password
+keyAlias=replace_with_key_alias
+keyPassword=replace_with_key_password
+```
 
-Source branding files live in `assets/branding/`.
+Alternatively provide `ANDROID_STORE_FILE`, `ANDROID_STORE_PASSWORD`,
+`ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. Release builds fail rather
+than falling back to debug signing when these values are missing.
 
-Regenerate launcher icons:
+### 2. Configure release Dart defines
 
 ```sh
-dart run flutter_launcher_icons
+cp android/release-defines.example.json android/release-defines.json
 ```
 
-Regenerate light and dark splash screens:
+Replace both placeholder values. The destination file is ignored.
+
+### 3. Configure production Firebase
+
+Place the real Android service file at:
+
+```text
+android/app/google-services.json
+```
+
+### 4. Build
 
 ```sh
-dart run flutter_native_splash:create
+flutter build appbundle --release \
+  --obfuscate \
+  --split-debug-info=build/debug-info \
+  --dart-define-from-file=android/release-defines.json
 ```
 
-The corresponding settings are in `flutter_launcher_icons.yaml` and
-`flutter_native_splash.yaml`.
+The output is `build/app/outputs/bundle/release/app-release.aab`. Retain
+`build/debug-info` for Dart crash deobfuscation.
 
-## Localization
+## Fastlane dependency locking and release
 
-English source strings live in `lib/l10n/app_en.arb`. Localization generation
-is configured in `l10n.yaml` and runs automatically during Flutter builds.
-Regenerate the Dart localization classes after changing an ARB file:
+Fastlane dependencies are declared in `android/fastlane/Gemfile` with an exact
+Fastlane version. Generate and commit its lock file on a Ruby-enabled release
+machine:
 
 ```sh
-flutter gen-l10n
+cd android/fastlane
+gem install bundler --no-document
+bundle lock
+bundle config set --local path vendor/bundle
+bundle install
+git add Gemfile Gemfile.lock
 ```
 
-Add another locale by creating a matching `app_<locale>.arb` file. Unsupported
-device locales resolve to English.
-
-## Quality checks
-
-Format the code:
+Before running the lane, complete the signing, release-define, Firebase, and
+Google Play service-account setup described above. Then run:
 
 ```sh
-dart format .
+cd android/fastlane
+bundle exec fastlane android beta
 ```
 
-Run static analysis:
+The beta lane cleans the project, increments the Flutter build number, creates
+an obfuscated release AAB with split debug information, and uploads it to the
+Google Play internal track.
 
-```sh
-flutter analyze
-```
+## Privacy and legal notes
 
-Run the complete test suite:
-
-```sh
-flutter test
-```
-
-Run an individual test:
-
-```sh
-flutter test test/apify_service_test.dart
-```
+- Photos and generated packs remain in app-owned storage.
+- Photo segmentation runs on-device.
+- TikTok URLs are sent to TikWM for video resolution.
+- TikTok comment URLs are sent to the configured Apify actor.
+- Giphy, Imgflip, Firebase, and Google Fonts receive requests when their
+  corresponding features are used.
+- Crash reports strip exception messages, private paths, and URLs.
+- The application uses a GPL-enabled FFmpeg distribution. Release owners must
+  preserve upstream notices, provide corresponding source or a valid written
+  offer, and verify the exact binary license set before distribution.
 
 ## Current limitations
 
-- Native WhatsApp export is Android-only.
-- The Community tab uses bundled demonstration data.
-- Network-backed features depend on third-party availability, quotas, terms,
-  and response formats.
-- TikTok web comment APIs often expose only a `[Sticker]` text placeholder.
-  Stickr can import a comment sticker only when the selected provider returns a
-  real image URL.
-- Dynamic fonts require network access the first time a font is requested.
-- A production signing configuration has not yet been added.
-
-## Contributing
-
-Contributions are welcome:
-
-1. Create a branch for the change.
-2. Keep platform-specific behavior covered by tests where practical.
-3. Run formatting, analysis, and the full test suite.
-4. Open a pull request describing the user-visible behavior and any new
-   service configuration.
-
-When adding an external API, do not commit credentials. Document its privacy,
-quota, and failure behavior, and expose configuration through build-time or
-runtime settings.
+- WhatsApp pack export is Android-only.
+- Firebase production identifiers and service files must be supplied by the
+  release owner.
+- The Community tab is a live Giphy feed, not an account-based marketplace.
+- TikTok comment APIs can return text placeholders without image media; only
+  comments containing actual image URLs can become stickers.
+- Production Isar tests require compatible native libraries and may be skipped
+  when those libraries are unavailable.

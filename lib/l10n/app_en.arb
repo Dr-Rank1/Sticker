@@ -562,5 +562,16 @@
         "type": "int"
       }
     }
-  }
+  },
+  "legal": "Legal",
+  "aboutAndLicenses": "About & licenses",
+  "aboutAndLicensesDescription": "Application information, open-source notices, and third-party licenses",
+  "ffmpegLicenseTitle": "FFmpeg GPL notice",
+  "ffmpegLicenseNotice": "Stickr uses FFmpeg through ffmpeg_kit_flutter_new for media conversion and WebP encoding. This is a GPL-enabled build distributed under the GNU General Public License.",
+  "sourceCodeOffer": "The corresponding application source and build instructions are available from the project repository. FFmpeg source is available from ffmpeg.org. If repository access is unavailable, contact the distributor for a written source offer.",
+  "viewProjectSource": "View project source",
+  "viewFfmpegSource": "View FFmpeg source",
+  "thirdPartyLicenses": "Third-party licenses",
+  "thirdPartyLicensesDescription": "Review licenses for Flutter, packages, and other software included with Stickr.",
+  "couldNotOpenSourceLink": "Could not open the source-code link."
 }

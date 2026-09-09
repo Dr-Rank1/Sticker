@@ -2085,6 +2085,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{fileName} must be exactly {width} by {height} pixels.'**
   String invalidStickerDimensions(String fileName, int width, int height);
+
+  /// No description provided for @legal.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get legal;
+
+  /// No description provided for @aboutAndLicenses.
+  ///
+  /// In en, this message translates to:
+  /// **'About & licenses'**
+  String get aboutAndLicenses;
+
+  /// No description provided for @aboutAndLicensesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Application information, open-source notices, and third-party licenses'**
+  String get aboutAndLicensesDescription;
+
+  /// No description provided for @ffmpegLicenseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FFmpeg GPL notice'**
+  String get ffmpegLicenseTitle;
+
+  /// No description provided for @ffmpegLicenseNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Stickr uses FFmpeg through ffmpeg_kit_flutter_new for media conversion and WebP encoding. This is a GPL-enabled build distributed under the GNU General Public License.'**
+  String get ffmpegLicenseNotice;
+
+  /// No description provided for @sourceCodeOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'The corresponding application source and build instructions are available from the project repository. FFmpeg source is available from ffmpeg.org. If repository access is unavailable, contact the distributor for a written source offer.'**
+  String get sourceCodeOffer;
+
+  /// No description provided for @viewProjectSource.
+  ///
+  /// In en, this message translates to:
+  /// **'View project source'**
+  String get viewProjectSource;
+
+  /// No description provided for @viewFfmpegSource.
+  ///
+  /// In en, this message translates to:
+  /// **'View FFmpeg source'**
+  String get viewFfmpegSource;
+
+  /// No description provided for @thirdPartyLicenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Third-party licenses'**
+  String get thirdPartyLicenses;
+
+  /// No description provided for @thirdPartyLicensesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Review licenses for Flutter, packages, and other software included with Stickr.'**
+  String get thirdPartyLicensesDescription;
+
+  /// No description provided for @couldNotOpenSourceLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the source-code link.'**
+  String get couldNotOpenSourceLink;
 }
 
 class _AppLocalizationsDelegate

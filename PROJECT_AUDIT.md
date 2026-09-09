@@ -36,8 +36,9 @@ The project is not yet production-ready. The most important blockers are:
 
 1. The previously committed Giphy API key must still be rotated because it remains exposed in Git history.
 2. Firebase configuration is still placeholder-only, so Crashlytics is not production-configured.
-3. The README describes an older architecture and several removed behaviors.
-4. Native WhatsApp export is Android-only and has not been validated by an automated device-level contract test.
+3. Native WhatsApp export is Android-only and has not been validated by an automated device-level contract test.
+4. GPL notices and source links are present, but the exact release binary and
+   corresponding-source process still require legal review.
 
 The recommended strategy is to stabilize and secure the existing Android product before adding more creation sources or marketplace features.
 
@@ -456,7 +457,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 231 tests passed.
+- 236 tests passed.
 - 2 platform-dependent Isar tests were skipped.
 - No tests failed.
 
@@ -775,24 +776,24 @@ If iOS remains supported:
 
 ### 6.14 Update documentation
 
-The README is materially stale.
+Implemented:
 
-Examples:
+- Rewrote the README around the current Isar pack database and Hive-only
+  settings role.
+- Documented live Giphy Community and Discover behavior without Tenor or the
+  removed offline catalog.
+- Documented the synchronous Apify dataset endpoint, TikWM, Imgflip, and the
+  shared network client.
+- Added the hardened `.stickr` archive layout and validation limits.
+- Added exact local run, debug build, signed release AAB, Firebase, Gradle
+  wrapper, and Fastlane commands.
+- Corrected the repository URL, strict signing behavior, source categories,
+  Android scope, and current limitations.
 
-- It says packs are persisted with Hive; production packs now use Isar.
-- It describes the removed offline Community catalog.
-- It describes the old asynchronous Apify polling actor.
-- It does not document the live Giphy Community architecture accurately.
-- It must continue to explain that build-time configuration prevents accidental commits but does not make mobile client values secret.
-- It says meme templates are searchable, but the current picker has no search input.
-
-The README should be updated after the configuration and provider decisions are finalized.
-
-Additional documents needed:
+Remaining documents:
 
 - Privacy policy.
 - Third-party services and data-flow disclosure.
-- Release runbook.
 - API key and incident-response runbook.
 - Isar migration policy.
 - `.stickr` format specification and versioning policy.
@@ -941,22 +942,26 @@ Recommended action:
 
 ### 6.22 Repair release tooling and compliance
 
-Additional release blockers were found:
+Implemented:
 
-- `android/.gitignore` excludes `gradlew`, `gradlew.bat`, and `gradle-wrapper.jar`, preventing reproducible Android builds from a clean checkout.
-- Fastlane dependencies are not locked with `Gemfile.lock`.
-- Obfuscation symbols are generated but there is no verified retention or upload process.
-- The project uses a Full-GPL FFmpeg package but has no repository license, notices, dependency license inventory, or documented corresponding-source process.
+- Removed Gradle wrapper exclusions and generated the Gradle 9.3.1 scripts,
+  properties, and wrapper JAR for source control.
+- Added an exact Fastlane dependency in `android/fastlane/Gemfile` and lock-file
+  generation instructions.
+- Added strict release define-file handling to the Fastlane beta lane.
+- Added an in-app About & licenses screen with an explicit FFmpeg GPL notice,
+  application and FFmpeg source links, a written-offer statement, and Flutter's
+  third-party `LicensePage`.
+- Added `LICENSES/FFMPEG_GPL_NOTICE.md` with upstream source and license links.
+- Documented retention of Dart split-debug information and Crashlytics mapping
+  configuration.
+
+Remaining:
+
+- Generate and commit `Gemfile.lock` from the approved release Ruby version.
+- Obtain legal review of the exact FFmpeg binary and all enabled library terms.
 - There is no `integration_test/` suite.
 - iOS native tests remain template-level, and no iOS privacy manifest is present.
-
-Required action:
-
-- Track and verify the Gradle wrapper.
-- Pin Ruby tooling.
-- Retain mapping and symbol artifacts.
-- Obtain legal review for FFmpeg distribution obligations and add required licensing material.
-- Add Android instrumentation and Flutter integration tests.
 
 ### 6.23 Make persistence tests mandatory
 
@@ -1070,9 +1075,9 @@ Target: a trustworthy development baseline.
 
 - Keep the corrected share-intent transition test stable.
 - Maintain the new zero-issue analyzer baseline.
-- Update README claims that are already incorrect.
+- Keep README architecture and release instructions synchronized.
 - Keep pull-request CI green.
-- Extend CI with a debug APK build after tracking the Gradle wrapper.
+- Extend CI with a debug APK build using the tracked Gradle wrapper.
 
 Exit criteria:
 
@@ -1138,7 +1143,8 @@ Target: close the largest product gaps.
 
 - Rotate the previously committed Giphy key.
 - Preserve the corrected FFmpeg timing, speed, and preview framing contract.
-- Track the Android Gradle wrapper.
+- Generate and commit the Fastlane `Gemfile.lock`.
+- Complete legal review for the GPL-enabled FFmpeg release binary.
 - Extend CI with an Android debug build.
 - Configure Firebase or remove claims that Crashlytics is active.
 - Update README.
