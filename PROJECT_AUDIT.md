@@ -37,8 +37,7 @@ The project is not yet production-ready. The most important blockers are:
 1. The previously committed Giphy API key must still be rotated because it remains exposed in Git history.
 2. Firebase configuration is still placeholder-only, so Crashlytics is not production-configured.
 3. The README describes an older architecture and several removed behaviors.
-4. Pack persistence does not store enough metadata and derives update timestamps incorrectly.
-5. Native WhatsApp export is Android-only and has not been validated by an automated device-level contract test.
+4. Native WhatsApp export is Android-only and has not been validated by an automated device-level contract test.
 
 The recommended strategy is to stabilize and secure the existing Android product before adding more creation sources or marketplace features.
 
@@ -194,6 +193,9 @@ Implemented:
 - Prevention of static and animated sticker mixing.
 - App-owned file storage for completed stickers.
 - Isar-backed production repository.
+- Explicit pack creation and monotonic update timestamps.
+- Embedded sticker metadata with stable IDs and accessibility text.
+- Automatic migration from the legacy path-only schema.
 - In-memory repository for unit and widget tests.
 - Library pack grid and pack detail screen.
 
@@ -207,6 +209,7 @@ Primary files:
 - `lib/screens/library_screen.dart`
 - `lib/packs/pack_detail_screen.dart`
 - `lib/database/sticker_pack.dart`
+- `lib/database/sticker_pack_schema_migration.dart`
 
 ### 3.8 WhatsApp export on Android
 
@@ -225,9 +228,9 @@ Implemented:
 Primary files:
 
 - `lib/packs/whatsapp_export_service.dart`
-- `android/app/src/main/kotlin/com/stikk/stikk/MainActivity.kt`
-- `android/app/src/main/kotlin/com/stikk/stikk/StickerContentProvider.kt`
-- `android/app/src/main/kotlin/com/stikk/stikk/StickerPackStore.kt`
+- `android/app/src/main/kotlin/com/stickr/stickr/MainActivity.kt`
+- `android/app/src/main/kotlin/com/stickr/stickr/StickerContentProvider.kt`
+- `android/app/src/main/kotlin/com/stickr/stickr/StickerPackStore.kt`
 - `android/app/src/main/AndroidManifest.xml`
 
 ### 3.9 Pack sharing and import
@@ -409,16 +412,16 @@ This structure is appropriate for the current application size and has enabled b
 - Giphy and Apify use consistent build-time environment configuration, but client-side values remain extractable from distributed binaries.
 - Several screens directly coordinate networking, file conversion, persistence, and navigation. Community export and editor save are examples of workflows that would benefit from dedicated use-case classes.
 - Pack metadata exists in multiple forms: Flutter domain models, Isar rows, Android staging JSON, and `.stickr` manifests. These representations are not versioned together.
-- The Isar schema stores sticker paths but not sticker IDs, creation times, animation flags, accessibility labels, source provenance, or update timestamps.
+- The Isar schema now stores sticker IDs, creation times, animation flags, accessibility labels, and pack timestamps, but still lacks source provenance.
 - Several expensive file operations are synchronous.
-- There is no formal migration strategy for the Isar schema or `.stickr` archive format.
+- The Isar upgrade now has a migration path, but the `.stickr` archive format still has no formal versioned migration strategy.
 - Product strings are embedded throughout widgets and services instead of using localization resources.
 
 ## 5. Verification and quality status
 
 ### 5.1 Automated test inventory
 
-The repository contains 46 Dart test files covering:
+The repository contains 47 Dart test files covering:
 
 - Pack rules and repositories.
 - Isar persistence.
@@ -445,7 +448,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 185 tests passed.
+- 188 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -619,40 +622,22 @@ Remaining consolidation opportunity:
 
 ### 6.7 Correct and expand pack persistence
 
-The current Isar row stores:
+The Isar row now persists:
 
-- Identifier.
-- Name.
-- Publisher.
-- Tray bytes.
-- Sticker paths.
+- Explicit `createdAtMillis` and monotonic `updatedAtMillis` values.
+- Embedded sticker records with stable IDs, file paths, creation times, animation flags, and accessibility text.
+- Existing pack identity, name, publisher, and tray bytes.
 
-Missing data:
+Pack updates, sticker additions, sticker removals, and validated saves strictly advance the persisted update revision even when multiple operations occur within one millisecond. WhatsApp's `imageDataVersion` is mapped directly from this revision so content and metadata edits invalidate its pack cache.
 
-- Pack creation and update timestamps.
-- Per-sticker ID.
-- Per-sticker creation time.
-- Static or animated flag.
-- Sticker accessibility text.
-- Source/provider attribution.
-- Source URL or import provenance.
-- Pack schema version.
+The startup migration converts legacy path-only rows into embedded records, preserves every file path, infers timestamps from existing files where possible, detects animation once, assigns deterministic IDs, and clears the legacy path list after conversion. Pure migration tests cover legacy conversion, metadata preservation, and idempotence.
 
-Current implementation concerns:
+Remaining persistence work:
 
-- `StickerRepository._toDomain` derives both `createdAt` and `updatedAt` from the Isar row ID.
-- Updating a pack does not create a meaningful new `updatedAt`.
-- WhatsApp's `imageDataVersion` is derived from this domain timestamp, so an edited pack can retain a stale cache version.
-- Animation is inferred by synchronously reading WebP bytes whenever rows are mapped.
-
-Recommended schema migration:
-
-- Add persisted `createdAtMillis` and `updatedAtMillis`.
-- Store sticker records as embedded Isar objects.
-- Persist `animated`, stable sticker ID, creation time, and accessibility text.
-- Increment `updatedAtMillis` for every content or metadata change.
-- Use a monotonic content revision for WhatsApp `imageDataVersion`.
-- Add migration tests using a copy of the previous schema.
+- Retire the legacy `stickerPaths` compatibility field after the migration has shipped broadly.
+- Add source/provider attribution and import provenance.
+- Add an explicit pack schema version.
+- Run production Isar migration tests in CI with the native library available.
 
 Pack readiness also needs file-level validation. `canExportToWhatsApp` currently validates metadata and sticker count, but does not verify that every file exists, decodes as WebP, is 512 by 512, meets its byte limit, or matches the pack's animation type. Discover currently copies downloaded Giphy results directly into packs, making this validation gap especially important.
 
@@ -1074,9 +1059,7 @@ Exit criteria:
 
 Target: durable, versioned, diagnosable packs.
 
-- Migrate Isar to explicit pack and sticker metadata.
-- Correct creation and update timestamps.
-- Add a reliable content revision.
+- Preserve the explicit Isar metadata and monotonic content revision.
 - Add `.stickr` schema versioning and import limits.
 - Move batch export into a dedicated service with progress and cancellation.
 - Add Android device-level WhatsApp validation.
@@ -1111,8 +1094,6 @@ Target: close the largest product gaps.
 
 ### High priority
 
-- Add explicit Isar timestamps and embedded sticker metadata.
-- Correct WhatsApp `imageDataVersion`.
 - Make Android export staging atomic.
 - Add Giphy timeouts, cancellation, and retry policy.
 - Extract batch export from widget state.

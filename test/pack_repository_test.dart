@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
+import 'package:stickr/database/sticker_pack.dart' as isar_db;
 import 'package:stickr/packs/pack_models.dart';
 import 'package:stickr/packs/pack_repository.dart';
 import 'package:stickr/packs/sticker_repository.dart';
@@ -113,6 +114,7 @@ void main() {
         expect(saved.stickers, hasLength(3));
         final maxed = await repo.save(_pack(stickers: 30));
         expect(maxed.stickers, hasLength(30));
+        expect(maxed.updatedAt.isAfter(saved.updatedAt), isTrue);
       },
     );
 
@@ -133,6 +135,33 @@ void main() {
       expect(events.last, hasLength(1));
       expect(events.last.single.stickers, hasLength(1));
     });
+
+    test(
+      'every pack mutation strictly increases the update revision',
+      () async {
+        final repo = InMemoryPackRepository();
+        final created = await repo.createPack(name: 'Pets', author: 'Ian');
+        final renamed = await repo.updatePack(
+          created.copyWith(name: 'Favorite pets'),
+        );
+        final added = await repo.addSticker(
+          packId: created.id,
+          sourcePath: 'sticker.webp',
+        );
+        final removed = await repo.removeSticker(
+          packId: created.id,
+          stickerId: added.stickers.single.id,
+        );
+
+        expect(renamed.updatedAt.isAfter(created.updatedAt), isTrue);
+        expect(added.updatedAt.isAfter(renamed.updatedAt), isTrue);
+        expect(removed.updatedAt.isAfter(added.updatedAt), isTrue);
+        expect(
+          int.parse(removed.imageDataVersion),
+          removed.updatedAt.millisecondsSinceEpoch,
+        );
+      },
+    );
   });
 
   group('StickerRepository', () {
@@ -196,6 +225,25 @@ void main() {
         expect(saved.stickers, hasLength(3));
         expect(saved.trayIconBytes, isNotEmpty);
         expect(File(saved.trayIconPath).existsSync(), isTrue);
+        final firstRow = await opened.isar.stickerPacks.getByIdentifier('p1');
+        expect(firstRow, isNotNull);
+        expect(firstRow!.createdAtMillis, greaterThan(0));
+        expect(firstRow.updatedAtMillis, greaterThan(firstRow.createdAtMillis));
+        expect(firstRow.stickerPaths, isEmpty);
+        expect(firstRow.stickers, hasLength(3));
+        expect(firstRow.stickers.first.id, 's0');
+        expect(firstRow.stickers.first.animated, isTrue);
+        expect(firstRow.stickers.first.accessibilityText, isEmpty);
+
+        final firstRevision = firstRow.updatedAtMillis;
+        final savedAgain = await opened.save(saved);
+        final secondRow = await opened.isar.stickerPacks.getByIdentifier('p1');
+        expect(secondRow!.createdAtMillis, firstRow.createdAtMillis);
+        expect(secondRow.updatedAtMillis, greaterThan(firstRevision));
+        expect(
+          savedAgain.updatedAt.millisecondsSinceEpoch,
+          secondRow.updatedAtMillis,
+        );
 
         await pumpEventQueue();
         expect(events.where((packs) => packs.isNotEmpty), isNotEmpty);

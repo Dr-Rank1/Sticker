@@ -90,7 +90,11 @@ class InMemoryPackRepository implements PackRepository {
 
   @override
   Future<StickerPack> updatePack(StickerPack pack) async {
-    _packs[pack.id] = pack.copyWith(updatedAt: DateTime.now());
+    final current = _packs[pack.id];
+    if (current == null) {
+      throw const PackException('That pack no longer exists.');
+    }
+    _packs[pack.id] = pack.copyWith(updatedAt: _nextRevision(current));
     _notify();
     return _packs[pack.id]!;
   }
@@ -128,7 +132,7 @@ class InMemoryPackRepository implements PackRepository {
           animated: animated,
         ),
       ],
-      updatedAt: DateTime.now(),
+      updatedAt: _nextRevision(pack),
     );
     _packs[packId] = next;
     _notify();
@@ -144,12 +148,14 @@ class InMemoryPackRepository implements PackRepository {
     if (pack == null) {
       throw const PackException('That pack no longer exists.');
     }
+    final stickers = [
+      for (final sticker in pack.stickers)
+        if (sticker.id != stickerId) sticker,
+    ];
+    if (stickers.length == pack.stickers.length) return pack;
     final next = pack.copyWith(
-      stickers: [
-        for (final sticker in pack.stickers)
-          if (sticker.id != stickerId) sticker,
-      ],
-      updatedAt: DateTime.now(),
+      stickers: stickers,
+      updatedAt: _nextRevision(pack),
     );
     _packs[packId] = next;
     _notify();
@@ -177,9 +183,19 @@ class InMemoryPackRepository implements PackRepository {
     if (pack.author.trim().isEmpty) {
       throw const PackException('Add an author name.');
     }
-    final next = pack.copyWith(updatedAt: DateTime.now());
+    final current = _packs[pack.id];
+    final next = pack.copyWith(
+      updatedAt: current == null ? _nextRevision(pack) : _nextRevision(current),
+    );
     _packs[pack.id] = next;
     _notify();
     return next;
+  }
+
+  DateTime _nextRevision(StickerPack pack) {
+    final now = DateTime.now();
+    return now.isAfter(pack.updatedAt)
+        ? now
+        : pack.updatedAt.add(const Duration(milliseconds: 1));
   }
 }

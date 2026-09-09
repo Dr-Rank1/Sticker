@@ -4,8 +4,8 @@ part 'sticker_pack.g.dart';
 
 /// Isar collection for locally owned sticker packs.
 ///
-/// Stickers are stored as WebP file paths. The 96x96 tray icon is stored as a
-/// byte array so the Library grid can render without a disk round-trip.
+/// The 96x96 tray icon is stored as a byte array so the Library grid can render
+/// without a disk round-trip.
 @collection
 class StickerPack {
   Id id = Isar.autoIncrement;
@@ -17,7 +17,27 @@ class StickerPack {
 
   late String publisher;
 
-  late List<byte> trayIconBytes;
+  List<byte> trayIconBytes = [];
 
-  late List<String> stickerPaths;
+  int createdAtMillis = 0;
+
+  int updatedAtMillis = 0;
+
+  List<StickerRecord> stickers = [];
+
+  /// Retained for one schema migration so existing path-only rows can be read.
+  List<String> stickerPaths = [];
+}
+
+@embedded
+class StickerRecord {
+  String id = '';
+
+  String filePath = '';
+
+  int createdAtMillis = 0;
+
+  bool animated = true;
+
+  String accessibilityText = '';
 }

@@ -115,6 +115,10 @@ void main() {
             's2.webp',
           ]);
           expect(call.arguments['trayIconPath'], 'tray.png');
+          expect(
+            call.arguments['imageDataVersion'],
+            DateTime(2026, 1, 1).millisecondsSinceEpoch.toString(),
+          );
           expect(call.arguments['animated'], isTrue);
           return true;
         });

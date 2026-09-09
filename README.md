@@ -89,7 +89,7 @@ The editor supports:
 - Create packs with a name, author, and generated tray icon.
 - Keep static and animated stickers in separate packs.
 - Add, remove, and inspect stickers.
-- Persist pack metadata locally with Hive.
+- Persist pack and embedded sticker metadata locally with Isar.
 - Retain completed stickers in app-owned document storage.
 - Measure app storage and clear disposable cache files without deleting packs.
 
@@ -148,7 +148,7 @@ The project uses:
 
 - Flutter and Dart for the application.
 - Riverpod for application state and dependency injection.
-- Hive for local pack and settings persistence.
+- Isar for pack persistence and Hive for settings persistence.
 - Dio for TikWM, Giphy, Imgflip, ScrapeBadger, Apify, and file downloads.
 - FFmpeg Kit Full-GPL (`ffmpeg_kit_flutter_new`, including `libwebp`) for animated and static WebP encoding.
 - ML Kit selfie segmentation for on-device background removal.

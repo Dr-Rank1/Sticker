@@ -71,7 +71,7 @@ class WhatsAppExportService {
         'publisher': pack.author.trim(),
         'trayIconPath': pack.trayIconPath,
         'stickerPaths': [for (final sticker in pack.stickers) sticker.filePath],
-        'imageDataVersion': pack.updatedAt.millisecondsSinceEpoch.toString(),
+        'imageDataVersion': pack.imageDataVersion,
         'animated': pack.stickers.any((sticker) => sticker.animated),
       });
       return WhatsAppExportResult(pack: pack, message: 'Added to WhatsApp.');

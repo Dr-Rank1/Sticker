@@ -5,6 +5,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../database/sticker_pack.dart' as isar_db;
+import '../database/sticker_pack_schema_migration.dart';
 import 'pack_models.dart';
 import 'pack_repository.dart';
 import 'tray_icon_service.dart';
@@ -18,17 +19,21 @@ class StickerRepository implements PackRepository {
     this.isar, {
     required this.documentsPath,
     TrayIconService? trayIcons,
-  }) : _trayIcons = trayIcons ?? TrayIconService();
+    DateTime Function()? clock,
+  }) : _trayIcons = trayIcons ?? TrayIconService(),
+       _clock = clock ?? DateTime.now;
 
   final Isar isar;
   final String documentsPath;
   final TrayIconService _trayIcons;
+  final DateTime Function() _clock;
 
   static Future<StickerRepository> open({
     String? directory,
     String name = 'stickr_packs',
     Future<Directory> Function()? documents,
     TrayIconService? trayIcons,
+    DateTime Function()? clock,
   }) async {
     final docs = await (documents ?? getApplicationDocumentsDirectory)();
     final path = directory ?? docs.path;
@@ -38,10 +43,16 @@ class StickerRepository implements PackRepository {
       name: name,
       inspector: false,
     );
+    await StickerPackSchemaMigration.migrate(
+      isar,
+      documentsPath: docs.path,
+      clock: clock ?? DateTime.now,
+    );
     return StickerRepository(
       isar,
       documentsPath: docs.path,
       trayIcons: trayIcons,
+      clock: clock,
     );
   }
 
@@ -79,12 +90,16 @@ class StickerRepository implements PackRepository {
     final trayBytes = await _trayIcons.createDefaultBytes(name: trimmedName);
     final trayFile = File('${packDir.path}${Platform.pathSeparator}tray.png');
     await trayFile.writeAsBytes(trayBytes);
+    final nowMillis = _clock().millisecondsSinceEpoch;
 
     final row = isar_db.StickerPack()
       ..identifier = identifier
       ..name = trimmedName
       ..publisher = publisher
       ..trayIconBytes = List<int>.from(trayBytes)
+      ..createdAtMillis = nowMillis
+      ..updatedAtMillis = nowMillis
+      ..stickers = []
       ..stickerPaths = const [];
 
     await isar.writeTxn(() async {
@@ -100,7 +115,8 @@ class StickerRepository implements PackRepository {
     final row = await _requireRow(pack.id);
     row
       ..name = pack.name.trim()
-      ..publisher = pack.author.trim();
+      ..publisher = pack.author.trim()
+      ..updatedAtMillis = _nextRevision(row.updatedAtMillis);
     if (pack.trayIconBytes.isNotEmpty) {
       row.trayIconBytes = List<int>.from(pack.trayIconBytes);
       await _writeTrayFile(pack.id, row.trayIconBytes);
@@ -138,11 +154,24 @@ class StickerRepository implements PackRepository {
     }
 
     final packDir = _packDir(packId);
-    final fileName = 'sticker_${DateTime.now().microsecondsSinceEpoch}.webp';
+    final stickerId = _uuidV4();
+    final fileName = 'sticker_$stickerId.webp';
     final dest = File('${packDir.path}${Platform.pathSeparator}$fileName');
     await source.copy(dest.path);
 
-    row.stickerPaths = [...row.stickerPaths, dest.path];
+    final createdAtMillis = _clock().millisecondsSinceEpoch;
+    row
+      ..stickers = [
+        ...row.stickers,
+        isar_db.StickerRecord()
+          ..id = stickerId
+          ..filePath = dest.path
+          ..createdAtMillis = createdAtMillis
+          ..animated = animated
+          ..accessibilityText = '',
+      ]
+      ..stickerPaths = []
+      ..updatedAtMillis = _nextRevision(row.updatedAtMillis);
     await isar.writeTxn(() async {
       await isar.stickerPacks.put(row);
     });
@@ -155,23 +184,27 @@ class StickerRepository implements PackRepository {
     required String stickerId,
   }) async {
     final row = await _requireRow(packId);
-    final remaining = <String>[];
+    final remaining = <isar_db.StickerRecord>[];
     String? removedPath;
-    for (final path in row.stickerPaths) {
+    for (final sticker in row.stickers) {
       if (removedPath == null &&
-          (path == stickerId || _pathId(path) == stickerId)) {
-        removedPath = path;
+          (sticker.filePath == stickerId ||
+              sticker.id == stickerId ||
+              _pathId(sticker.filePath) == stickerId)) {
+        removedPath = sticker.filePath;
       } else {
-        remaining.add(path);
+        remaining.add(sticker);
       }
     }
-    if (removedPath != null) {
-      final file = File(removedPath);
-      if (file.existsSync()) {
-        file.deleteSync();
-      }
+    if (removedPath == null) return _toDomain(row);
+    final file = File(removedPath);
+    if (file.existsSync()) {
+      file.deleteSync();
     }
-    row.stickerPaths = remaining;
+    row
+      ..stickers = remaining
+      ..stickerPaths = []
+      ..updatedAtMillis = _nextRevision(row.updatedAtMillis);
     await isar.writeTxn(() async {
       await isar.stickerPacks.put(row);
     });
@@ -201,13 +234,31 @@ class StickerRepository implements PackRepository {
     _requireName(pack.name);
     _requirePublisher(pack.author);
 
-    var row = await isar.stickerPacks.getByIdentifier(pack.id);
-    row ??= isar_db.StickerPack()..identifier = pack.id;
+    final existing = await isar.stickerPacks.getByIdentifier(pack.id);
+    final row = existing ?? (isar_db.StickerPack()..identifier = pack.id);
+    final nowMillis = _clock().millisecondsSinceEpoch;
+    if (existing == null) {
+      final suppliedCreatedAt = pack.createdAt.millisecondsSinceEpoch;
+      row.createdAtMillis = suppliedCreatedAt > 0
+          ? suppliedCreatedAt
+          : nowMillis;
+      row.updatedAtMillis = row.createdAtMillis;
+    }
     row
       ..name = pack.name.trim()
       ..publisher = pack.author.trim()
       ..trayIconBytes = List<int>.from(pack.trayIconBytes)
-      ..stickerPaths = [for (final sticker in pack.stickers) sticker.filePath];
+      ..stickers = [
+        for (final sticker in pack.stickers)
+          isar_db.StickerRecord()
+            ..id = sticker.id
+            ..filePath = sticker.filePath
+            ..createdAtMillis = sticker.createdAt.millisecondsSinceEpoch
+            ..animated = sticker.animated
+            ..accessibilityText = sticker.accessibilityText,
+      ]
+      ..stickerPaths = []
+      ..updatedAtMillis = _nextRevision(row.updatedAtMillis);
     if (row.trayIconBytes.isEmpty && pack.trayIconPath.isNotEmpty) {
       final tray = File(pack.trayIconPath);
       if (tray.existsSync()) {
@@ -218,7 +269,7 @@ class StickerRepository implements PackRepository {
       await _writeTrayFile(pack.id, row.trayIconBytes);
     }
     await isar.writeTxn(() async {
-      await isar.stickerPacks.put(row!);
+      await isar.stickerPacks.put(row);
     });
     return _toDomain(row);
   }
@@ -232,12 +283,15 @@ class StickerRepository implements PackRepository {
   }
 
   List<StickerPack> _mapRows(List<isar_db.StickerPack> rows) {
-    final sorted = [...rows]..sort((a, b) => b.id.compareTo(a.id));
+    final sorted = [...rows]
+      ..sort((a, b) {
+        final revision = b.updatedAtMillis.compareTo(a.updatedAtMillis);
+        return revision != 0 ? revision : b.id.compareTo(a.id);
+      });
     return [for (final row in sorted) _toDomain(row)];
   }
 
   StickerPack _toDomain(isar_db.StickerPack row) {
-    final paths = row.stickerPaths;
     return StickerPack(
       id: row.identifier,
       name: row.name,
@@ -245,16 +299,19 @@ class StickerRepository implements PackRepository {
       trayIconPath: _trayFilePath(row.identifier),
       trayIconBytes: List<int>.from(row.trayIconBytes),
       stickers: [
-        for (final path in paths)
+        for (final sticker in row.stickers)
           StickerItem(
-            id: _pathId(path),
-            filePath: path,
-            createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-            animated: _webpLooksAnimated(path),
+            id: sticker.id,
+            filePath: sticker.filePath,
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              sticker.createdAtMillis,
+            ),
+            animated: sticker.animated,
+            accessibilityText: sticker.accessibilityText,
           ),
       ],
-      createdAt: DateTime.fromMillisecondsSinceEpoch(row.id),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(row.id),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAtMillis),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(row.updatedAtMillis),
     );
   }
 
@@ -310,6 +367,11 @@ class StickerRepository implements PackRepository {
     return name.replaceAll('.webp', '');
   }
 
+  int _nextRevision(int current) {
+    final now = _clock().millisecondsSinceEpoch;
+    return now > current ? now : current + 1;
+  }
+
   static String _uuidV4() {
     final random = Random.secure();
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
@@ -321,17 +383,5 @@ class StickerRepository implements PackRepository {
         '${hex(6)}${hex(7)}-'
         '${hex(8)}${hex(9)}-'
         '${hex(10)}${hex(11)}${hex(12)}${hex(13)}${hex(14)}${hex(15)}';
-  }
-
-  static bool _webpLooksAnimated(String path) {
-    try {
-      final bytes = File(path).readAsBytesSync();
-      if (bytes.length < 21) return false;
-      final fourcc = String.fromCharCodes(bytes.sublist(12, 16));
-      if (fourcc != 'VP8X') return false;
-      return (bytes[20] & 0x02) != 0;
-    } catch (_) {
-      return false;
-    }
   }
 }

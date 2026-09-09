@@ -15,18 +15,21 @@ class StickerItem {
     required this.filePath,
     required this.createdAt,
     this.animated = true,
+    this.accessibilityText = '',
   });
 
   final String id;
   final String filePath;
   final DateTime createdAt;
   final bool animated;
+  final String accessibilityText;
 
   Map<String, dynamic> toMap() => {
     'id': id,
     'filePath': filePath,
     'createdAt': createdAt.toIso8601String(),
     'animated': animated,
+    'accessibilityText': accessibilityText,
   };
 
   factory StickerItem.fromMap(Map<dynamic, dynamic> map) {
@@ -35,6 +38,7 @@ class StickerItem {
       filePath: map['filePath'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
       animated: map['animated'] as bool? ?? true,
+      accessibilityText: map['accessibilityText'] as String? ?? '',
     );
   }
 }
@@ -62,6 +66,8 @@ class StickerPack {
   final DateTime updatedAt;
 
   String get publisher => author;
+
+  String get imageDataVersion => updatedAt.millisecondsSinceEpoch.toString();
 
   bool get isFull => stickers.length >= WhatsAppPackRules.maxStickers;
 
