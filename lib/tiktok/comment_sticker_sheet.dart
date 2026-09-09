@@ -11,6 +11,7 @@ import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
+import '../packs/whatsapp_export_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'apify_service.dart';
@@ -84,11 +85,7 @@ Future<void> scanAndShowCommentStickers(
     return;
   }
 
-  await showCommentStickerSheet(
-    context,
-    stickers: stickers,
-    prefetchDownloads: true,
-  );
+  await showCommentStickerSheet(context, stickers: stickers);
 }
 
 Future<void> showCommentStickerSheet(
@@ -131,8 +128,9 @@ class CommentStickerSheet extends ConsumerStatefulWidget {
 }
 
 class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
-  String? _selectedId;
+  final List<String> _selectedUrls = [];
   final List<CommentSticker> _visible = [];
+  var _exporting = false;
   var _downloaded = 0;
   var _total = 0;
   StreamSubscription<CommentStickerProgress>? _subscription;
@@ -177,29 +175,59 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
     super.dispose();
   }
 
-  Future<void> _select(CommentSticker sticker) async {
-    if (_selectedId != null) return;
-    setState(() => _selectedId = sticker.id);
-    File? downloaded;
-    File? ready;
+  void _toggleSelection(String imageUrl) {
+    if (_exporting) return;
+    setState(() {
+      if (_selectedUrls.contains(imageUrl)) {
+        _selectedUrls.remove(imageUrl);
+      } else {
+        _selectedUrls.add(imageUrl);
+      }
+    });
+  }
+
+  Future<void> _exportSelected() async {
+    final count = _selectedUrls.length;
+    if (_exporting ||
+        count < WhatsAppPackRules.minStickers ||
+        count > WhatsAppPackRules.maxStickers) {
+      return;
+    }
+
+    setState(() => _exporting = true);
+    final downloadedFiles = <File>[];
+    final readyFiles = <File>[];
     try {
-      downloaded = sticker.localPath != null
-          ? File(sticker.localPath!)
-          : await ref
-                .read(tikTokCommentServiceProvider)
-                .downloadSticker(sticker);
-      ready = await ref
-          .read(commentStickerFormatterProvider)
-          .makeWhatsAppReady(downloaded);
+      for (final imageUrl in List<String>.of(_selectedUrls)) {
+        final sticker = _visible.firstWhere(
+          (item) => item.imageUrl == imageUrl,
+        );
+        final File downloaded;
+        if (sticker.localPath != null) {
+          downloaded = File(sticker.localPath!);
+        } else {
+          downloaded = await ref
+              .read(tikTokCommentServiceProvider)
+              .downloadSticker(sticker);
+          downloadedFiles.add(downloaded);
+        }
+        final ready = await ref
+            .read(commentStickerFormatterProvider)
+            .makeWhatsAppReady(downloaded);
+        readyFiles.add(ready);
+      }
       if (!mounted) return;
 
-      await ref
+      final pack = await ref
           .read(packsProvider.notifier)
-          .saveStaticStickerToLibrary(ready.path);
+          .createStaticStickerPack([for (final file in readyFiles) file.path]);
+      final result = await ref
+          .read(whatsAppExportServiceProvider)
+          .exportToWhatsApp(pack);
       if (!mounted) return;
 
       hapticService.success();
-      _showMessage('Sticker formatted and saved to Library!');
+      _showMessage(result.message);
     } on TikTokCommentException catch (error) {
       if (mounted) {
         hapticService.error();
@@ -218,12 +246,16 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
     } catch (_) {
       if (mounted) {
         hapticService.error();
-        _showMessage('Couldn’t save that sticker. Please try another one.');
+        _showMessage('Couldn’t export those stickers. Please try again.');
       }
     } finally {
-      _delete(downloaded);
-      _delete(ready);
-      if (mounted) setState(() => _selectedId = null);
+      for (final file in downloadedFiles) {
+        _delete(file);
+      }
+      for (final file in readyFiles) {
+        _delete(file);
+      }
+      if (mounted) setState(() => _exporting = false);
     }
   }
 
@@ -294,7 +326,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                     ),
                     IconButton(
                       tooltip: 'Close',
-                      onPressed: _selectedId == null
+                      onPressed: !_exporting
                           ? () => Navigator.pop(context)
                           : null,
                       icon: const Icon(Icons.close_rounded),
@@ -306,6 +338,29 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           ),
           Divider(height: 1, color: colors.border),
           Expanded(child: _buildContent()),
+          SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: FloatingActionButton.extended(
+              key: const Key('comment-sticker-export'),
+              heroTag: null,
+              onPressed:
+                  !_exporting &&
+                      _selectedUrls.length >= WhatsAppPackRules.minStickers &&
+                      _selectedUrls.length <= WhatsAppPackRules.maxStickers
+                  ? _exportSelected
+                  : null,
+              icon: _exporting
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.ios_share_rounded),
+              label: Text(
+                'Export (${_selectedUrls.length}/${WhatsAppPackRules.maxStickers})',
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -339,7 +394,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           findStickerGridChildIndex(key, _visible.map((sticker) => sticker.id)),
       itemBuilder: (context, index) {
         final sticker = _visible[index];
-        final selected = _selectedId == sticker.id;
+        final selected = _selectedUrls.contains(sticker.imageUrl);
         return Material(
           key: ValueKey(sticker.id),
           color: colors.surfaceMuted,
@@ -347,7 +402,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           child: InkWell(
             key: Key('comment-sticker-${sticker.id}'),
-            onTap: _selectedId == null ? () => _select(sticker) : null,
+            onTap: _exporting ? null : () => _toggleSelection(sticker.imageUrl),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -359,9 +414,16 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                   ),
                 ),
                 if (selected)
-                  ColoredBox(
-                    color: colors.surface.withValues(alpha: 0.72),
-                    child: const Center(child: CircularProgressIndicator()),
+                  ColoredBox(color: Colors.black.withValues(alpha: 0.48)),
+                if (selected)
+                  const Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
                   ),
               ],
             ),

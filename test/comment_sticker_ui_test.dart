@@ -9,8 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:stikk/editor/image_sticker_service.dart';
+import 'package:stikk/packs/pack_models.dart';
 import 'package:stikk/packs/pack_providers.dart';
 import 'package:stikk/packs/pack_repository.dart';
+import 'package:stikk/packs/whatsapp_export_service.dart';
 import 'package:stikk/state/settings_store.dart';
 import 'package:stikk/theme/app_theme.dart';
 import 'package:stikk/tiktok/apify_service.dart';
@@ -82,8 +84,7 @@ void main() {
     );
     expect(thumb.memCacheWidth, 256);
     expect(thumb.memCacheHeight, 256);
-    expect(find.byKey(const Key('comment-sticker-progress')), findsOneWidget);
-    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.byKey(const Key('comment-sticker-progress')), findsNothing);
     expect(find.byType(InkWell), findsWidgets);
     expect(apify.lastUrl, contains('7393468652906925317'));
   });
@@ -140,17 +141,18 @@ void main() {
     expect(find.text('Apify’s request limit was reached.'), findsOneWidget);
   });
 
-  testWidgets('tapping a sticker formats it and saves it to Library', (
+  testWidgets('selects three stickers and exports them as a new pack', (
     tester,
   ) async {
     final repo = InMemoryPackRepository();
+    final whatsApp = _FakeWhatsAppExportService();
+    final comments = _FakeCommentService(File('dl.img'));
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           packRepositoryProvider.overrideWithValue(repo),
-          tikTokCommentServiceProvider.overrideWithValue(
-            _FakeCommentService(File('dl.img')),
-          ),
+          whatsAppExportServiceProvider.overrideWithValue(whatsApp),
+          tikTokCommentServiceProvider.overrideWithValue(comments),
           commentStickerFormatterProvider.overrideWithValue(
             _FakeFormatter(File('ready.webp')),
           ),
@@ -163,8 +165,20 @@ void main() {
                 CommentSticker(
                   id: '1_0',
                   commentId: '1',
-                  imageUrl: 'https://example.com/sticker.webp',
+                  imageUrl: 'https://example.com/one.webp',
                   author: 'Ian',
+                ),
+                CommentSticker(
+                  id: '2_0',
+                  commentId: '2',
+                  imageUrl: 'https://example.com/two.webp',
+                  author: 'Ada',
+                ),
+                CommentSticker(
+                  id: '3_0',
+                  commentId: '3',
+                  imageUrl: 'https://example.com/three.webp',
+                  author: 'Sam',
                 ),
               ],
             ),
@@ -174,21 +188,35 @@ void main() {
     );
     await tester.pump();
 
-    final tile = tester.widget<InkWell>(
-      find.byKey(const Key('comment-sticker-1_0')),
+    var exportButton = tester.widget<FloatingActionButton>(
+      find.byKey(const Key('comment-sticker-export')),
     );
-    tile.onTap!.call();
+    expect(find.text('Export (0/30)'), findsOneWidget);
+    expect(exportButton.onPressed, isNull);
+
+    for (final id in ['1_0', '2_0', '3_0']) {
+      await tester.tap(find.byKey(Key('comment-sticker-$id')));
+      await tester.pump();
+    }
+
+    expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(3));
+    expect(find.text('Export (3/30)'), findsOneWidget);
+    exportButton = tester.widget<FloatingActionButton>(
+      find.byKey(const Key('comment-sticker-export')),
+    );
+    expect(exportButton.onPressed, isNotNull);
+
+    await tester.tap(find.byKey(const Key('comment-sticker-export')));
     await tester.pump();
     await tester.pump();
 
-    expect(
-      find.text('Sticker formatted and saved to Library!'),
-      findsOneWidget,
-    );
+    expect(find.text('Added to WhatsApp.'), findsOneWidget);
     final packs = await repo.getAll();
     expect(packs.single.name, commentPackName);
-    expect(packs.single.stickers, hasLength(1));
-    expect(packs.single.stickers.single.animated, isFalse);
+    expect(packs.single.stickers, hasLength(3));
+    expect(packs.single.stickers.every((item) => !item.animated), isTrue);
+    expect(whatsApp.exportedPack?.id, packs.single.id);
+    expect(comments.downloadedUrls, hasLength(3));
   });
 
   testWidgets('grid populates as download progress arrives over the port', (
@@ -364,9 +392,13 @@ class _FakeCommentService extends TikTokCommentService {
       );
 
   final File file;
+  final List<String> downloadedUrls = [];
 
   @override
-  Future<File> downloadSticker(CommentSticker sticker) async => file;
+  Future<File> downloadSticker(CommentSticker sticker) async {
+    downloadedUrls.add(sticker.imageUrl);
+    return file;
+  }
 }
 
 class _FakeFormatter extends CommentStickerFormatter {
@@ -376,4 +408,14 @@ class _FakeFormatter extends CommentStickerFormatter {
 
   @override
   Future<File> makeWhatsAppReady(File source) async => file;
+}
+
+class _FakeWhatsAppExportService extends WhatsAppExportService {
+  StickerPack? exportedPack;
+
+  @override
+  Future<WhatsAppExportResult> exportToWhatsApp(StickerPack pack) async {
+    exportedPack = pack;
+    return WhatsAppExportResult(pack: pack, message: 'Added to WhatsApp.');
+  }
 }
