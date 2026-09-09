@@ -8,7 +8,7 @@ void main() {
   test('Appfile uses the Play package and service account key path', () {
     final appfile = File('$repoRoot/android/fastlane/Appfile')
         .readAsStringSync();
-    expect(appfile, contains('package_name("com.stikk.stikk")'));
+    expect(appfile, contains('package_name("com.stickr.stickr")'));
     expect(
       appfile,
       contains('json_key_file("fastlane/play-store-credentials.json")'),
@@ -30,17 +30,32 @@ void main() {
     expect(fastfile, contains('app-release.aab'));
   });
 
-  test('release signing reads credentials from key.properties', () {
+  test('release signing requires a keystore file or environment values', () {
     final gradle = File('$repoRoot/android/app/build.gradle.kts')
         .readAsStringSync();
     expect(gradle, contains('rootProject.file("key.properties")'));
-    expect(gradle, contains('keystoreProperties.getProperty("keyAlias")'));
-    expect(gradle, contains('keystoreProperties.getProperty("storeFile")'));
+    expect(gradle, contains('"ANDROID_KEY_ALIAS"'));
+    expect(gradle, contains('"ANDROID_KEY_PASSWORD"'));
+    expect(gradle, contains('"ANDROID_STORE_PASSWORD"'));
+    expect(gradle, contains('"ANDROID_STORE_FILE"'));
+    expect(gradle, contains('throw GradleException('));
     expect(gradle, contains('signingConfigs.getByName("release")'));
+    expect(gradle, isNot(contains('signingConfigs.getByName("debug")')));
     expect(
       File('$repoRoot/android/key.properties.example').existsSync(),
       isTrue,
     );
+  });
+
+  test('Fastlane package matches the Android application ID', () {
+    final appfile = File('$repoRoot/android/fastlane/Appfile')
+        .readAsStringSync();
+    final gradle = File('$repoRoot/android/app/build.gradle.kts')
+        .readAsStringSync();
+
+    expect(appfile, contains('package_name("com.stickr.stickr")'));
+    expect(gradle, contains('applicationId = appId'));
+    expect(gradle, contains('val appId = "com.stickr.stickr"'));
   });
 
   test('Play Store credentials and the keystore are gitignored', () {

@@ -14,8 +14,43 @@ if (keystorePropertiesFile.exists()) {
     }
 }
 
+fun releaseSigningValue(propertyName: String, environmentName: String): String? {
+    return keystoreProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(environmentName)?.takeIf { it.isNotBlank() }
+}
+
+val releaseKeyAlias = releaseSigningValue("keyAlias", "ANDROID_KEY_ALIAS")
+val releaseKeyPassword = releaseSigningValue("keyPassword", "ANDROID_KEY_PASSWORD")
+val releaseStorePassword = releaseSigningValue("storePassword", "ANDROID_STORE_PASSWORD")
+val releaseStorePath = releaseSigningValue("storeFile", "ANDROID_STORE_FILE")
+val releaseBuildRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.substringAfterLast(':').contains("release", ignoreCase = true)
+}
+
+if (releaseBuildRequested) {
+    val missingValues = listOfNotNull(
+        "keyAlias / ANDROID_KEY_ALIAS".takeIf { releaseKeyAlias == null },
+        "keyPassword / ANDROID_KEY_PASSWORD".takeIf { releaseKeyPassword == null },
+        "storePassword / ANDROID_STORE_PASSWORD".takeIf { releaseStorePassword == null },
+        "storeFile / ANDROID_STORE_FILE".takeIf { releaseStorePath == null },
+    )
+    if (missingValues.isNotEmpty()) {
+        throw GradleException(
+            "Release signing is not configured. Provide android/key.properties " +
+                "or all Android signing environment variables. Missing: " +
+                missingValues.joinToString(),
+        )
+    }
+    val releaseStoreFile = file(requireNotNull(releaseStorePath))
+    if (!releaseStoreFile.isFile) {
+        throw GradleException(
+            "Release signing keystore does not exist: ${releaseStoreFile.absolutePath}",
+        )
+    }
+}
+
 android {
-    namespace = "com.stikk.stikk"
+    namespace = "com.stickr.stickr"
     compileSdk = maxOf(flutter.compileSdkVersion, 37)
     ndkVersion = flutter.ndkVersion
 
@@ -30,7 +65,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        val appId = "com.stikk.stikk"
+        val appId = "com.stickr.stickr"
         applicationId = appId
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -53,23 +88,16 @@ android {
 
     signingConfigs {
         create("release") {
-            if (keystorePropertiesFile.exists()) {
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
-                storePassword = keystoreProperties.getProperty("storePassword")
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
-            }
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+            storePassword = releaseStorePassword
+            storeFile = releaseStorePath?.let(::file)
         }
     }
 
     buildTypes {
         release {
-            signingConfig =
-                if (keystorePropertiesFile.exists()) {
-                    signingConfigs.getByName("release")
-                } else {
-                    signingConfigs.getByName("debug")
-                }
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

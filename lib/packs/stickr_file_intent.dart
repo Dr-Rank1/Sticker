@@ -16,7 +16,7 @@ class PluginStickrFileIntent implements StickrFileIntent {
     _channel.setMethodCallHandler(_onNativeCall);
   }
 
-  static const channelName = 'com.stikk.stikk/stickr_files';
+  static const channelName = 'com.stickr.stickr/stickr_files';
   static const getInitialMethod = 'getInitialStickrFile';
   static const onFileMethod = 'onStickrFile';
 

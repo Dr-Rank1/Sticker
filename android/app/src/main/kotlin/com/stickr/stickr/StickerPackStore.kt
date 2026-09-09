@@ -1,4 +1,4 @@
-package com.stikk.stikk
+package com.stickr.stickr
 
 import android.content.Context
 import android.net.Uri

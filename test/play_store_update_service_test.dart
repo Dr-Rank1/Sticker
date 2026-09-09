@@ -73,7 +73,7 @@ AppUpdateInfo _info(UpdateAvailability availability) {
     flexibleAllowedPreconditions: const [],
     availableVersionCode: 2,
     installStatus: InstallStatus.unknown,
-    packageName: 'com.stikk.stikk',
+    packageName: 'com.stickr.stickr',
     clientVersionStalenessDays: 0,
     updatePriority: 5,
   );

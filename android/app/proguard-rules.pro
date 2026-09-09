@@ -13,11 +13,11 @@
 
 # WhatsApp sticker ContentProvider contract. Column names and URI paths must
 # remain readable so WhatsApp can query pack metadata and WebP assets.
--keep class com.stikk.stikk.StickerContentProvider { *; }
--keep class com.stikk.stikk.StickerPackStore { *; }
--keep class com.stikk.stikk.MainActivity { *; }
--keep class com.stikk.stikk.BuildConfig { *; }
--keepclassmembers class com.stikk.stikk.StickerContentProvider {
+-keep class com.stickr.stickr.StickerContentProvider { *; }
+-keep class com.stickr.stickr.StickerPackStore { *; }
+-keep class com.stickr.stickr.MainActivity { *; }
+-keep class com.stickr.stickr.BuildConfig { *; }
+-keepclassmembers class com.stickr.stickr.StickerContentProvider {
     public static final java.lang.String *;
 }
 

@@ -1,5 +1,7 @@
 # Copy this file to key.properties (gitignored).
 # storeFile is resolved relative to android/app/.
+# Release automation may instead provide ANDROID_STORE_PASSWORD,
+# ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_STORE_FILE.
 storePassword=
 keyPassword=
 keyAlias=upload

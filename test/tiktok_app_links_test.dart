@@ -30,7 +30,7 @@ void main() {
       expect(json, isNotEmpty);
       final target = (json.first as Map)['target'] as Map;
       expect(target['namespace'], 'android_app');
-      expect(target['package_name'], 'com.stikk.stikk');
+      expect(target['package_name'], 'com.stickr.stickr');
       expect(target['sha256_cert_fingerprints'], isA<List>());
       expect((target['sha256_cert_fingerprints'] as List), isNotEmpty);
     },

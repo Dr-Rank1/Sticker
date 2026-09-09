@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "REPLACE_WITH_ANDROID_APP_ID",
         "android_client_info": {
-          "package_name": "com.stikk.stikk"
+          "package_name": "com.stickr.stickr"
         }
       },
       "oauth_client": [],

@@ -5,11 +5,11 @@ void main() {
   test('WhatsApp ContentProvider authority is applicationId.stickercontentprovider', () {
     expect(
       WhatsAppExportService.contentProviderAuthority,
-      'com.stikk.stikk.stickercontentprovider',
+      'com.stickr.stickr.stickercontentprovider',
     );
     expect(
       WhatsAppExportService.contentProviderAuthority,
-      startsWith('com.stikk.stikk.'),
+      startsWith('com.stickr.stickr.'),
     );
     expect(
       WhatsAppExportService.enableStickerPackAction,

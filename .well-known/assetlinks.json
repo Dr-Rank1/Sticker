@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.stikk.stikk",
+      "package_name": "com.stickr.stickr",
       "sha256_cert_fingerprints": [
         "REPLACE_WITH_UPLOAD_KEYSTORE_SHA256_FINGERPRINT"
       ]

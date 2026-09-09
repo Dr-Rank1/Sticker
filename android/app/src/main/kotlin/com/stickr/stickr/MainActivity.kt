@@ -1,4 +1,4 @@
-package com.stikk.stikk
+package com.stickr.stickr
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
@@ -222,7 +222,7 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         const val CHANNEL = "com.stickerapp/whatsapp_export"
         const val METHOD_ADD_STICKER_PACK = "addStickerPack"
-        const val STICKR_CHANNEL = "com.stikk.stikk/stickr_files"
+        const val STICKR_CHANNEL = "com.stickr.stickr/stickr_files"
         const val METHOD_GET_INITIAL_STICKR = "getInitialStickrFile"
         const val METHOD_ON_STICKR_FILE = "onStickrFile"
 

@@ -35,13 +35,11 @@ The strongest parts of the project are its breadth of implemented user flows, lo
 The project is not yet production-ready. The most important blockers are:
 
 1. The previously committed Giphy API key must still be rotated because it remains exposed in Git history.
-2. There is no continuous-integration workflow.
-3. Release builds silently fall back to debug signing if no release keystore exists.
-4. Firebase configuration is still placeholder-only, so Crashlytics is not production-configured.
-5. The README describes an older architecture and several removed behaviors.
-6. Discover still depends on Tenor even though the product direction has moved to Giphy.
-7. Pack persistence does not store enough metadata and derives update timestamps incorrectly.
-8. Native WhatsApp export is Android-only and has not been validated by an automated device-level contract test.
+2. Firebase configuration is still placeholder-only, so Crashlytics is not production-configured.
+3. The README describes an older architecture and several removed behaviors.
+4. Discover still depends on Tenor even though the product direction has moved to Giphy.
+5. Pack persistence does not store enough metadata and derives update timestamps incorrectly.
+6. Native WhatsApp export is Android-only and has not been validated by an automated device-level contract test.
 
 The recommended strategy is to stabilize and secure the existing Android product before adding more creation sources or marketplace features.
 
@@ -454,7 +452,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 184 tests passed.
+- 186 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -571,19 +569,15 @@ Acceptance criteria:
 
 ### 6.3 Add continuous integration
 
-No `.github/workflows` files are present.
+`.github/workflows/pr_validation.yml` now validates every pull request with:
 
-Minimum pull-request workflow:
+- A pinned Flutter installation.
+- Dependency installation and caching.
+- Repository-wide Dart formatting enforcement.
+- Static analysis.
+- The complete Flutter test suite.
 
-- Install the pinned Flutter version.
-- Restore Pub and Gradle caches.
-- Run `dart format --output=none --set-exit-if-changed .`.
-- Run `flutter analyze`.
-- Run `flutter test`.
-- Build an Android debug APK.
-- Optionally run Kotlin lint and Android unit tests.
-
-Release workflow:
+Future release workflow:
 
 - Require protected environment secrets.
 - Build an Android App Bundle.
@@ -594,15 +588,13 @@ Release workflow:
 
 ### 6.4 Make release signing fail safely
 
-`android/app/build.gradle.kts` falls back to the debug signing configuration when `key.properties` is absent.
+`android/app/build.gradle.kts` no longer falls back to debug signing. Release tasks require complete credentials from `android/key.properties` or the `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `ANDROID_STORE_PASSWORD`, and `ANDROID_STORE_FILE` environment variables.
 
-This is convenient locally but unsafe for release automation because a release task can appear successful while producing a debug-signed artifact.
+Release configuration now fails with a clear Gradle exception when a value or keystore file is missing. Debug and profile development remain independent of release credentials.
 
-Recommended change:
+Remaining operational work:
 
-- Fail release builds with a clear Gradle error when release signing values are missing.
-- Keep debug signing only for debug/profile variants.
-- Store keystore material in CI secrets.
+- Store keystore material in protected CI secrets.
 - Document key rotation, backup, and Play App Signing ownership.
 
 ### 6.5 Complete Firebase configuration
@@ -1034,12 +1026,14 @@ Include provider attribution, terms links, privacy links, and an explanation of 
 
 The product display name, Dart package, method-channel feature names, archive extension, MIME type, documentation, and Fastlane configuration now use Stickr consistently.
 
-The Android application ID remains `com.stikk.stikk` intentionally. Changing an existing application ID would create a different Play Store application and break upgrades for installed builds.
+The Android application ID, namespace, native Kotlin packages, ContentProvider authority, App Links declaration, Firebase template, ProGuard rules, and Fastlane package now use `com.stickr.stickr`.
 
-Remaining naming work:
+Migration consequence:
 
-- Confirm whether the placeholder Firebase project IDs will retain their current legacy value when Firebase is configured.
-- Document the stable Android ID so it is not mistaken for an unfinished rebrand.
+- Google Play treats `com.stickr.stickr` as a different application from the former `com.stikk.stikk` ID.
+- Builds installed under the former ID cannot receive an in-place upgrade to the new ID.
+- Firebase must be configured with a new Android application registration for `com.stickr.stickr`.
+- The iOS bundle identifier remains unchanged and should be handled as a separate platform migration decision.
 
 ## 8. Recommended delivery roadmap
 
@@ -1050,8 +1044,8 @@ Target: a trustworthy development baseline.
 - Keep the corrected share-intent transition test stable.
 - Maintain the new zero-issue analyzer baseline.
 - Update README claims that are already incorrect.
-- Add CI for formatting, analysis, tests, and debug APK build.
-- Make release signing fail when credentials are missing.
+- Keep pull-request CI green.
+- Extend CI with a debug APK build after tracking the Gradle wrapper.
 
 Exit criteria:
 
@@ -1124,9 +1118,8 @@ Target: close the largest product gaps.
 - Rotate the previously committed Giphy key.
 - Preserve the corrected FFmpeg timing, speed, and preview framing contract.
 - Restrict temporary cleanup to Stickr-owned files.
-- Add CI.
 - Track the Android Gradle wrapper.
-- Fail unsigned release builds.
+- Extend CI with an Android debug build.
 - Configure Firebase or remove claims that Crashlytics is active.
 - Replace or remove Tenor Discover.
 - Update README.
