@@ -61,9 +61,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Community'), findsWidgets);
-    expect(find.byKey(const Key('community-masonry-grid')), findsOneWidget);
     expect(find.byKey(const Key('community-staging-tray')), findsOneWidget);
     expect(find.text('My Pack  0/30'), findsOneWidget);
+    expect(find.byKey(const Key('community-retry')), findsOneWidget);
   });
 
   testWidgets('Create opens the TikTok link sheet', (tester) async {

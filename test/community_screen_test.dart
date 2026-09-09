@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:stikk/community/community_models.dart';
 import 'package:stikk/community/community_sticker_feed.dart';
-import 'package:stikk/discover/tenor_repository.dart';
+import 'package:stikk/community/giphy_service.dart';
 import 'package:stikk/editor/image_sticker_service.dart';
 import 'package:stikk/main.dart';
 import 'package:stikk/packs/pack_models.dart';
@@ -59,7 +59,7 @@ const stickers = [
 ProviderScope communityApp({
   required CommunityStickerFeed feed,
   PackRepository? repository,
-  TenorRepository? tenor,
+  GiphyService? giphy,
   WhatsAppExportService? whatsApp,
 }) {
   return ProviderScope(
@@ -70,7 +70,7 @@ ProviderScope communityApp({
       communityStickerFeedProvider.overrideWithValue(feed),
       if (repository != null)
         packRepositoryProvider.overrideWithValue(repository),
-      if (tenor != null) tenorRepositoryProvider.overrideWithValue(tenor),
+      if (giphy != null) giphyServiceProvider.overrideWithValue(giphy),
       if (whatsApp != null)
         whatsAppExportServiceProvider.overrideWithValue(whatsApp),
       commentStickerFormatterProvider.overrideWithValue(_FakeFormatter()),
@@ -115,13 +115,13 @@ void main() {
     tester,
   ) async {
     final repo = InMemoryPackRepository();
-    final tenor = _FakeTenorRepository();
+    final giphy = _FakeGiphyService();
     final whatsApp = _FakeWhatsAppExportService();
     await tester.pumpWidget(
       communityApp(
         feed: _FakeFeed(),
         repository: repo,
-        tenor: tenor,
+        giphy: giphy,
         whatsApp: whatsApp,
       ),
     );
@@ -158,7 +158,7 @@ void main() {
     expect(packs.single.name, 'My Pack');
     expect(packs.single.stickers, hasLength(3));
     expect(packs.single.stickers.every((item) => !item.animated), isTrue);
-    expect(tenor.downloadedIds, ['one', 'two', 'three']);
+    expect(giphy.downloadedIds, ['one', 'two', 'three']);
     expect(whatsApp.exportedPack?.id, packs.single.id);
     expect(find.text('My Pack  0/30'), findsOneWidget);
     export = tester.widget<FilledButton>(
@@ -167,29 +167,18 @@ void main() {
     expect(export.onPressed, isNull);
   });
 
-  test(
-    'mock feed supplies distinct endless pages of transparent WebPs',
-    () async {
-      final feed = CommunityStickerFeed(TenorRepository());
-      final first = await feed.loadPage();
-      final second = await feed.loadPage(cursor: first.nextCursor);
+  testWidgets('failed Giphy request shows a Retry button', (tester) async {
+    await tester.pumpWidget(communityApp(feed: _FailingFeed()));
+    await tester.pump();
+    await openCommunity(tester);
 
-      expect(first.stickers, hasLength(24));
-      expect(second.stickers, hasLength(24));
-      expect(first.nextCursor, isNotNull);
-      expect(second.nextCursor, isNot(first.nextCursor));
-      expect(
-        first.stickers.every((item) => item.imageUrl.contains('.webp')),
-        isTrue,
-      );
-      expect(first.stickers.any((item) => item.animated), isTrue);
-      expect(first.stickers.any((item) => !item.animated), isTrue);
-    },
-  );
+    expect(find.text('Could not load trending stickers.'), findsOneWidget);
+    expect(find.byKey(const Key('community-retry')), findsOneWidget);
+  });
 }
 
 class _FakeFeed extends CommunityStickerFeed {
-  _FakeFeed() : super(TenorRepository());
+  _FakeFeed() : super(GiphyService(apiKey: 'test-key'));
 
   @override
   Future<CommunityStickerPage> loadPage({String? cursor}) async {
@@ -197,16 +186,27 @@ class _FakeFeed extends CommunityStickerFeed {
   }
 }
 
-class _FakeTenorRepository extends TenorRepository {
+class _FailingFeed extends CommunityStickerFeed {
+  _FailingFeed() : super(GiphyService(apiKey: 'test-key'));
+
+  @override
+  Future<CommunityStickerPage> loadPage({String? cursor}) {
+    throw const GiphyException('Could not load trending stickers.');
+  }
+}
+
+class _FakeGiphyService extends GiphyService {
+  _FakeGiphyService() : super(apiKey: 'test-key');
+
   final List<String> downloadedIds = [];
 
   @override
-  Future<File> downloadSticker(
-    TenorSticker sticker, {
-    void Function(double? progress)? onProgress,
+  Future<File> downloadSticker({
+    required String id,
+    required String url,
   }) async {
-    downloadedIds.add(sticker.id);
-    return File('download_${sticker.id}.webp');
+    downloadedIds.add(id);
+    return File('download_$id.gif');
   }
 }
 

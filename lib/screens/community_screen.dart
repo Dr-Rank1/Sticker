@@ -1,12 +1,13 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import '../community/community_models.dart';
 import '../community/community_sticker_feed.dart';
-import '../discover/tenor_repository.dart';
+import '../community/giphy_service.dart';
 import '../editor/ffmpeg_sticker_service.dart';
 import '../haptics/haptic_service.dart';
 import '../images/sticker_grid_cache.dart';
@@ -74,7 +75,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         _hasMore = page.nextCursor != null;
         _loadingPage = false;
       });
-    } on TenorException catch (error) {
+    } on GiphyException catch (error) {
       if (!mounted) return;
       setState(() {
         _error = error.message;
@@ -83,7 +84,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Couldn’t load trending stickers. Pull up to try again.';
+        _error = 'Could not load trending stickers. Please retry.';
         _loadingPage = false;
       });
     }
@@ -118,17 +119,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     try {
       for (final sticker in List<CommunitySticker>.of(_tray)) {
         final downloaded = await ref
-            .read(tenorRepositoryProvider)
-            .downloadSticker(
-              TenorSticker(
-                id: sticker.stableId,
-                title: sticker.label,
-                webpUrl: sticker.imageUrl,
-                width: sticker.width,
-                height: sticker.height,
-                duration: sticker.animated ? 1 : 0,
-              ),
-            );
+            .read(giphyServiceProvider)
+            .downloadSticker(id: sticker.stableId, url: sticker.imageUrl);
         downloads.add(downloaded);
         final ready = await ref
             .read(commentStickerFormatterProvider)
@@ -151,7 +143,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       setState(_tray.clear);
       hapticService.success();
       _showMessage(result.message);
-    } on TenorException catch (error) {
+    } on GiphyException catch (error) {
       if (mounted) _showExportError(error.message);
     } on StickerExportException catch (error) {
       if (mounted) _showExportError(error.message);
@@ -231,13 +223,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_stickers.isEmpty && _error != null) {
-      return Center(
-        child: TextButton.icon(
-          onPressed: _loadNextPage,
-          icon: const Icon(Icons.refresh_rounded),
-          label: Text(_error!),
-        ),
-      );
+      return _CommunityFeedError(message: _error!, onRetry: _loadNextPage);
     }
 
     return MasonryGridView.custom(
@@ -275,6 +261,40 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   }
 }
 
+class _CommunityFeedError extends StatelessWidget {
+  const _CommunityFeedError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 42,
+              color: context.colors.textTertiary,
+            ),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const Key('community-retry'),
+              onPressed: onRetry,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CommunityStickerTile extends StatelessWidget {
   const _CommunityStickerTile({
     super.key,
@@ -304,7 +324,18 @@ class _CommunityStickerTile extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(8),
-              child: StickerGridImage(imageUrl: sticker.imageUrl),
+              child: CachedNetworkImage(
+                imageUrl: sticker.imageUrl,
+                cacheManager: StickerGridCacheManager.instance,
+                memCacheWidth: StickerGridCacheManager.maxDecodeExtent,
+                memCacheHeight: StickerGridCacheManager.maxDecodeExtent,
+                fit: BoxFit.contain,
+                placeholder: (_, _) => const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                errorWidget: (_, _, _) =>
+                    const Icon(Icons.broken_image_outlined),
+              ),
             ),
             if (sticker.animated)
               Positioned(
