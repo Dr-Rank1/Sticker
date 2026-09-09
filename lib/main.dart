@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'config/app_environment.dart';
 import 'crashlytics/crash_reporter.dart';
 import 'display/display_refresh.dart';
 import 'error/app_error_fallback.dart';
@@ -32,17 +33,19 @@ import 'widgets/main_scaffold.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final firebaseReady = await initializeFirebase();
-  if (firebaseReady) {
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
-  }
   installAppErrorHandlers();
 
   try {
+    AppEnvironment.validateRequired();
+    final firebaseReady = await initializeFirebase();
+    if (firebaseReady) {
+      FlutterError.onError =
+          FirebaseCrashlytics.instance.recordFlutterFatalError;
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+    }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       await enableHighestDisplayMode();
       await checkForImmediatePlayStoreUpdate();

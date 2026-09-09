@@ -4,6 +4,7 @@ import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_environment.dart';
 import '../crashlytics/crash_reporter.dart';
 import 'tiktok_comment_service.dart';
 
@@ -34,11 +35,13 @@ typedef ApifyPost = Future<Response<dynamic>> Function(
 );
 
 class ApifyService {
-  ApifyService({String token = apiToken, Dio? dio, this.apiPost})
-    : _token = token.trim(),
-      _dio = dio ?? createDio();
+  ApifyService({
+    String token = AppEnvironment.apifyApiToken,
+    Dio? dio,
+    this.apiPost,
+  }) : _token = token.trim(),
+       _dio = dio ?? createDio();
 
-  static const apiToken = String.fromEnvironment('APIFY_API_TOKEN');
   static const synchronousDatasetPath =
       'https://api.apify.com/v2/actors/api-ninja~tiktok-comments-scraper/run-sync-get-dataset-items';
 

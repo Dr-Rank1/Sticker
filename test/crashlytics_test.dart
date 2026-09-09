@@ -31,12 +31,8 @@ void main() {
     'main.dart installs FlutterFire fatal and async Crashlytics handlers',
     () {
       final mainSource = File('lib/main.dart').readAsStringSync();
-      expect(
-        mainSource,
-        contains(
-          'FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError',
-        ),
-      );
+      expect(mainSource, contains('FlutterError.onError'));
+      expect(mainSource, contains('recordFlutterFatalError'));
       expect(mainSource, contains('PlatformDispatcher.instance.onError'));
       expect(
         mainSource,
@@ -45,6 +41,7 @@ void main() {
         ),
       );
       expect(mainSource, contains('initializeFirebase()'));
+      expect(mainSource, contains('AppEnvironment.validateRequired()'));
     },
   );
 

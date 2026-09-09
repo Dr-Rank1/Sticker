@@ -34,7 +34,7 @@ The strongest parts of the project are its breadth of implemented user flows, lo
 
 The project is not yet production-ready. The most important blockers are:
 
-1. A live Giphy API key is committed directly in source code.
+1. The previously committed Giphy API key must still be rotated because it remains exposed in Git history.
 2. There is no continuous-integration workflow.
 3. Release builds silently fall back to debug signing if no release keystore exists.
 4. Firebase configuration is still placeholder-only, so Crashlytics is not production-configured.
@@ -414,7 +414,7 @@ This structure is appropriate for the current application size and has enabled b
 ### 4.3 Architectural weaknesses
 
 - There is no unified network layer for timeouts, retry policy, cancellation, headers, telemetry, and rate-limit behavior.
-- API secrets and configuration are inconsistent. Apify and Tenor use build-time values, while Giphy is hardcoded.
+- Giphy, Apify, and Tenor now use consistent build-time environment configuration, but client-side values remain extractable from distributed binaries.
 - Several screens directly coordinate networking, file conversion, persistence, and navigation. Community export and editor save are examples of workflows that would benefit from dedicated use-case classes.
 - Pack metadata exists in multiple forms: Flutter domain models, Isar rows, Android staging JSON, and `.stickr` manifests. These representations are not versioned together.
 - The Isar schema stores sticker paths but not sticker IDs, creation times, animation flags, accessibility labels, source provenance, or update timestamps.
@@ -454,7 +454,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 179 tests passed.
+- 181 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -529,20 +529,23 @@ Required action:
 
 ### 6.1 Critical security work
 
-#### Remove and rotate the committed Giphy key
+#### Rotate the formerly committed Giphy key
 
-`lib/community/giphy_service.dart` contains a live Giphy API key in source code.
+The live Giphy key has been removed from `lib/community/giphy_service.dart`.
+Giphy, Apify, and Tenor now read build-time environment values, startup validates
+all three, `.env` is ignored, and `.env.example` documents the required names.
 
-Why this matters:
+Remaining risk:
 
-- The key is visible in Git history and in every distributed application binary.
+- The previous Giphy key remains visible in Git history and must be treated as compromised.
+- Build-time values remain extractable from a distributed application binary.
 - It can be copied and used outside the app.
 - Abuse can exhaust quota or cause the Giphy application to be suspended.
 
 Required action:
 
 1. Rotate the current key in Giphy.
-2. Remove the old key from the repository and history if repository exposure matters.
+2. Remove the old key from repository history if exposure policy requires it.
 3. Move privileged API access behind a backend or edge function.
 4. At minimum, use build-time configuration and enforce quota and origin restrictions where the provider supports them.
 
@@ -575,7 +578,7 @@ Acceptance criteria:
 - The old home UI is not interactive while scanning.
 - Repeated share events do not open duplicate scans.
 - Non-TikTok shared text remains on the home screen.
-- Cold start and background delivery work on a physical Android device.
+- Cold start and background delive7ry work on a physical Android device.
 - The test passes reliably under both isolated and full-suite execution.
 
 ### 6.3 Add continuous integration
@@ -797,7 +800,7 @@ Examples:
 - It describes the removed offline Community catalog.
 - It describes the old asynchronous Apify polling actor.
 - It does not document the live Giphy Community architecture accurately.
-- It says secrets are not committed while a live Giphy key is committed.
+- It must continue to explain that build-time configuration prevents accidental commits but does not make mobile client values secret.
 - It still presents Tenor as the active transparent-sticker strategy.
 - It says meme templates are searchable, but the current picker has no search input.
 
@@ -1073,7 +1076,7 @@ Exit criteria:
 Target: prevent quota abuse and accidental credential exposure.
 
 - Rotate the Giphy key.
-- Remove the key from source and Git history as appropriate.
+- Remove the previous key from Git history as appropriate.
 - Put Apify behind a controlled backend.
 - Decide whether Giphy also requires a proxy based on quota and terms.
 - Add request quotas, monitoring, and provider attribution.
@@ -1130,7 +1133,7 @@ Target: close the largest product gaps.
 
 ### Highest priority
 
-- Rotate and remove the committed Giphy key.
+- Rotate the previously committed Giphy key.
 - Fix fractional FFmpeg trimming and make exported speed match the preview.
 - Restrict temporary cleanup to Stickr-owned files.
 - Add CI.

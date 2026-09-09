@@ -6,12 +6,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../config/app_environment.dart';
+
 class TenorConfig {
   TenorConfig._();
 
-  /// Supply at build/run time with:
-  /// `--dart-define=TENOR_API_KEY=your_google_tenor_key`
-  static const apiKey = String.fromEnvironment('TENOR_API_KEY');
   static const clientKey = 'stickr';
 }
 
@@ -71,7 +70,7 @@ typedef TenorFileDownload = Future<void> Function(
 class TenorRepository {
   TenorRepository({
     Dio? dio,
-    String apiKey = TenorConfig.apiKey,
+    String apiKey = AppEnvironment.tenorApiKey,
     Future<Directory> Function()? temporaryDirectory,
     this.apiGet,
     this.fileDownload,

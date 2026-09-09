@@ -211,19 +211,28 @@ Install dependencies:
 flutter pub get
 ```
 
-Run the app without optional network integrations:
+Create local credentials from the committed template:
 
 ```sh
-flutter run
+cp .env.example .env
 ```
-
-Photo creation, local packs, Imgflip templates, and TikWM imports do not use the
-optional Tenor, ScrapeBadger, or Apify keys described below.
 
 ## API configuration
 
 Secrets are intentionally not committed. Build-time values are read with
-`String.fromEnvironment`, so pass them through `--dart-define`.
+`String.fromEnvironment`, so `.env` is a local reference file and is not loaded
+into the application. Pass each required value through `--dart-define`.
+
+Stickr fails startup with a configuration error unless `GIPHY_API_KEY`,
+`APIFY_API_TOKEN`, and `TENOR_API_KEY` are present.
+
+### Giphy
+
+Giphy powers the Community trending feed.
+
+```sh
+flutter run --dart-define=GIPHY_API_KEY=your_giphy_key
+```
 
 ### Tenor
 
@@ -237,18 +246,10 @@ Tenor powers the Discover search.
 flutter run --dart-define=TENOR_API_KEY=your_tenor_key
 ```
 
-Without this key, the rest of the app remains usable and Discover displays a
-configuration message.
-
 ### Apify
 
-Clipboard comment scanning uses `ApifyService` and Actor `X6ACJnuJVBUsBocfe`:
-
-1. `POST /v2/acts/{actorId}/runs?token=...` with the pasted TikTok URL.
-2. Poll `GET /v2/acts/{actorId}/runs/{runId}?token=...` every three seconds
-   until the run status is `SUCCEEDED`.
-3. `GET /v2/datasets/{datasetId}/items` and keep only rows with a sticker or
-   image URL.
+Clipboard comment scanning uses the synchronous Apify actor dataset endpoint
+and keeps only rows that contain a valid sticker or image URL.
 
 Configure it with:
 
@@ -266,16 +267,17 @@ flutter run \
   --dart-define=SCRAPEBADGER_API_KEY=your_scrapebadger_key
 ```
 
-### Run with all optional integrations
+### Run with required API configuration
 
 ```sh
 flutter run \
+  --dart-define=GIPHY_API_KEY=your_giphy_key \
   --dart-define=TENOR_API_KEY=your_tenor_key \
-  --dart-define=SCRAPEBADGER_API_KEY=your_scrapebadger_key \
   --dart-define=APIFY_API_TOKEN=your_apify_token
 ```
 
-TikWM and Imgflip do not require keys in this project.
+TikWM and Imgflip do not require keys. ScrapeBadger is an optional alternate
+comment client and can still be supplied with `SCRAPEBADGER_API_KEY`.
 
 ## Security and privacy notes
 
@@ -304,12 +306,12 @@ Build a debug APK:
 flutter build apk --debug
 ```
 
-Build a release APK with optional integrations:
+Build a release APK with required API configuration:
 
 ```sh
 flutter build apk --release \
+  --dart-define=GIPHY_API_KEY=your_giphy_key \
   --dart-define=TENOR_API_KEY=your_tenor_key \
-  --dart-define=SCRAPEBADGER_API_KEY=your_scrapebadger_key \
   --dart-define=APIFY_API_TOKEN=your_apify_token
 ```
 
