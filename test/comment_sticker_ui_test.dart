@@ -359,14 +359,7 @@ class _ScriptedCommentStickerPipeline implements CommentStickerPipeline {
 
 class _FakeApifyService extends ApifyService {
   _FakeApifyService({this.stickers = const [], this.error, this.gate})
-    : super(
-        token: 'test-token',
-        delay: (_) async {},
-        apiPost: (_, _) async =>
-            Response<dynamic>(requestOptions: RequestOptions(path: '/')),
-        apiGet: (_, _) async =>
-            Response<dynamic>(requestOptions: RequestOptions(path: '/')),
-      );
+    : super(token: 'test-token');
 
   final List<CommentSticker> stickers;
   final Object? error;

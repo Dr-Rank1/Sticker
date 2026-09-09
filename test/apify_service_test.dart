@@ -5,114 +5,110 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stikk/tiktok/apify_service.dart';
 
 void main() {
-  test('starts, polls, and returns only items with image URLs', () async {
-    late String postPath;
-    late Map<String, dynamic> payload;
-    final getPaths = <String>[];
-    final delays = <Duration>[];
-    var polls = 0;
+  const postUrl = 'https://www.tiktok.com/@creator/video/1234567890123456789';
 
+  test('posts actor input to the synchronous dataset endpoint', () async {
+    late String requestUrl;
+    late Map<String, dynamic> payload;
     final service = ApifyService(
       token: 'test-token',
-      delay: (duration) async => delays.add(duration),
       apiPost: (path, data) async {
-        postPath = path;
+        requestUrl = path;
         payload = Map<String, dynamic>.from(data! as Map);
-        return _response({
-          'data': {
-            'id': 'run-123',
-            'defaultDatasetId': 'dataset-123',
-            'status': 'READY',
-          },
-        });
-      },
-      apiGet: (path, query) async {
-        getPaths.add(path);
-        if (path.contains('/runs/')) {
-          polls += 1;
-          return _response({
-            'data': {
-              'id': 'run-123',
-              'defaultDatasetId': 'dataset-123',
-              'status': polls == 1 ? 'RUNNING' : 'SUCCEEDED',
-            },
-          });
-        }
-        expect(query, {'token': 'test-token', 'format': 'json', 'clean': true});
         return _response([
-          {'commentId': '1', 'text': 'hello'},
+          {'id': '1', 'text': 'No image'},
           {
-            'commentId': '2',
-            'authorNickname': 'Ian',
-            'images': ['https://example.com/a.webp'],
+            'itemType': 'comment',
+            'data': {
+              'id': '2',
+              'images': [
+                {'url': 'https://example.com/sticker.webp'},
+              ],
+            },
           },
-          {'commentId': '3', 'imageUrl': null},
         ]);
       },
     );
 
-    final items = await service.runTikTokCommentScraper(
-      postUrl:
-          'https://www.tiktok.com/@phamxuanhieu2510/video/7562014017833749768',
-    );
+    final items = await service.runTikTokCommentScraper(postUrl: postUrl);
 
-    expect(postPath, '/acts/X6ACJnuJVBUsBocfe/runs');
+    expect(requestUrl, service.synchronousDatasetEndpoint);
+    expect(
+      requestUrl,
+      '${ApifyService.synchronousDatasetPath}?token=test-token',
+    );
     expect(payload, {
-      'postURLs': [
-        'https://www.tiktok.com/@phamxuanhieu2510/video/7562014017833749768',
-      ],
-      'commentsPerPost': 50,
-      'maxRepliesPerComment': 25,
-      'resultsPerPage': 100,
-      'excludePinnedPosts': false,
+      'searchUrls': [postUrl],
+      'commentsPerUrl': 50,
+      'scrapeAll': false,
+      'repliesPerComment': 0,
+      'parseAllReplies': false,
     });
-    expect(getPaths, [
-      '/acts/X6ACJnuJVBUsBocfe/runs/run-123',
-      '/acts/X6ACJnuJVBUsBocfe/runs/run-123',
-      '/datasets/dataset-123/items',
-    ]);
-    expect(delays, [const Duration(seconds: 3), const Duration(seconds: 3)]);
     expect(items, hasLength(1));
-    expect(items.single['commentId'], '2');
   });
 
-  test('maps filtered items into comment stickers', () async {
+  test('configures Dio with sixty second request timeouts', () {
+    final options = ApifyService.createDio().options;
+
+    expect(options.connectTimeout, const Duration(milliseconds: 60000));
+    expect(options.receiveTimeout, const Duration(milliseconds: 60000));
+    expect(options.sendTimeout, const Duration(milliseconds: 60000));
+  });
+
+  test('returns only unique valid sticker URLs', () async {
     final service = ApifyService(
       token: 'test-token',
-      delay: (_) async {},
-      apiPost: (_, _) async => _response({
-        'data': {
-          'id': 'run-123',
-          'defaultDatasetId': 'dataset-123',
-          'status': 'SUCCEEDED',
-        },
-      }),
-      apiGet: (_, _) async => _response([
+      apiPost: (_, _) async => _response([
         {
-          'commentId': '2',
-          'authorNickname': 'Ian',
-          'images': ['https://example.com/a.webp'],
+          'data': {
+            'images': [
+              'https://example.com/a.webp',
+              'not-a-url',
+              'https://example.com/a.webp',
+            ],
+          },
+        },
+        {'imageUrl': 'https://example.com/b.webp'},
+        {'images': []},
+      ]),
+    );
+
+    final urls = await service.fetchStickerUrls(postUrl);
+
+    expect(urls, ['https://example.com/a.webp', 'https://example.com/b.webp']);
+  });
+
+  test('maps nested actor output into comment stickers', () async {
+    final service = ApifyService(
+      token: 'test-token',
+      apiPost: (_, _) async => _response([
+        {
+          'itemType': 'comment',
+          'data': {
+            'id': 'comment-2',
+            'images': ['https://example.com/a.webp'],
+            'user': {'nickname': 'Ian'},
+          },
         },
       ]),
     );
 
-    final stickers = await service.fetchCommentStickers(
-      'https://www.tiktok.com/@creator/video/1234567890',
-    );
+    final stickers = await service.fetchCommentStickers(postUrl);
 
     expect(stickers, hasLength(1));
-    expect(stickers.single.commentId, '2');
+    expect(stickers.single.commentId, 'comment-2');
     expect(stickers.single.author, 'Ian');
     expect(stickers.single.imageUrl, 'https://example.com/a.webp');
   });
 
-  test('parseApifyItems runs inside Isolate.run', () async {
+  test('parseApifyItems remains safe for background isolates', () async {
     final items = [
       for (var i = 0; i < 40; i++)
         {
-          'commentId': '$i',
-          'authorNickname': 'User$i',
-          'images': ['https://example.com/$i.webp'],
+          'data': {
+            'id': '$i',
+            'images': ['https://example.com/$i.webp'],
+          },
         },
     ];
 
@@ -123,45 +119,15 @@ void main() {
     expect(stickers.last.commentId, '39');
   });
 
-  test('stops polling when the Actor fails', () async {
-    final service = ApifyService(
-      token: 'test-token',
-      delay: (_) async {},
-      apiPost: (_, _) async => _response({
-        'data': {'id': 'run-123', 'defaultDatasetId': 'dataset-123'},
-      }),
-      apiGet: (_, _) async => _response({
-        'data': {
-          'id': 'run-123',
-          'status': 'FAILED',
-          'statusMessage': 'Actor crashed',
-        },
-      }),
-    );
-
-    await expectLater(
-      service.runTikTokCommentScraper(
-        postUrl: 'https://vm.tiktok.com/ZMexample/',
-      ),
-      throwsA(
-        isA<ApifyException>().having(
-          (error) => error.message,
-          'message',
-          contains('Actor crashed'),
-        ),
-      ),
-    );
-  });
-
-  test('throws ApifyLimitException when the API rejects the request', () async {
+  test('throws ApifyLimitException for API rate limits', () async {
     final service = ApifyService(
       token: 'test-token',
       apiPost: (_, _) async {
         throw DioException(
-          requestOptions: RequestOptions(path: '/acts/X6ACJnuJVBUsBocfe/runs'),
+          requestOptions: RequestOptions(path: '/sync'),
           type: DioExceptionType.badResponse,
           response: Response<dynamic>(
-            requestOptions: RequestOptions(path: '/'),
+            requestOptions: RequestOptions(path: '/sync'),
             statusCode: 429,
           ),
         );
@@ -169,36 +135,41 @@ void main() {
     );
 
     await expectLater(
-      service.runTikTokCommentScraper(
-        postUrl: 'https://www.tiktok.com/@creator/video/1234567890',
-      ),
+      service.fetchStickerUrls(postUrl),
       throwsA(isA<ApifyLimitException>()),
     );
   });
 
-  test('throws ApifyNetworkException when the connection fails', () async {
-    final service = ApifyService(
-      token: 'test-token',
-      apiPost: (_, _) async {
-        throw DioException(
-          requestOptions: RequestOptions(path: '/acts/X6ACJnuJVBUsBocfe/runs'),
-          type: DioExceptionType.connectionError,
-        );
-      },
-    );
+  test(
+    'throws ApifyNetworkException for synchronous request timeouts',
+    () async {
+      final service = ApifyService(
+        token: 'test-token',
+        apiPost: (_, _) async {
+          throw DioException(
+            requestOptions: RequestOptions(path: '/sync'),
+            type: DioExceptionType.receiveTimeout,
+          );
+        },
+      );
 
-    await expectLater(
-      service.runTikTokCommentScraper(
-        postUrl: 'https://www.tiktok.com/@creator/video/1234567890',
-      ),
-      throwsA(isA<ApifyNetworkException>()),
-    );
-  });
+      await expectLater(
+        service.fetchStickerUrls(postUrl),
+        throwsA(
+          isA<ApifyNetworkException>().having(
+            (error) => error.message,
+            'message',
+            contains('timed out'),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 Response<dynamic> _response(dynamic data) {
   return Response<dynamic>(
-    requestOptions: RequestOptions(path: '/'),
+    requestOptions: RequestOptions(path: '/sync'),
     statusCode: 200,
     data: data,
   );

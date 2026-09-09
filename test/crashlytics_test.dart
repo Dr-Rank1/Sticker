@@ -88,15 +88,7 @@ void main() {
     crashReporter = recorder;
     final service = ApifyService(
       token: 'test-token',
-      delay: (_) async {},
-      apiPost: (_, _) async => _response({
-        'data': {
-          'id': 'run-123',
-          'defaultDatasetId': 'dataset-123',
-          'status': 'SUCCEEDED',
-        },
-      }),
-      apiGet: (_, _) async => _response([
+      apiPost: (_, _) async => _response([
         {
           'commentId': '2',
           'authorNickname': 'Ian',
@@ -112,7 +104,7 @@ void main() {
     expect(
       recorder.logs,
       contains(
-        'Apify scraper started for https://www.tiktok.com/@creator/video/1234567890',
+        'Apify synchronous scraper started for https://www.tiktok.com/@creator/video/1234567890',
       ),
     );
     expect(

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -267,14 +266,7 @@ Widget _shareApp({
 
 class _FakeApifyService extends ApifyService {
   _FakeApifyService({this.stickers = const [_sticker], this.gate})
-    : super(
-        token: 'test-token',
-        delay: (_) async {},
-        apiPost: (_, _) async =>
-            Response<dynamic>(requestOptions: RequestOptions(path: '/')),
-        apiGet: (_, _) async =>
-            Response<dynamic>(requestOptions: RequestOptions(path: '/')),
-      );
+    : super(token: 'test-token');
 
   static const _sticker = CommentSticker(
     id: '1_0',

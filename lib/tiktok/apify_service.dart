@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -6,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../crashlytics/crash_reporter.dart';
-import '../logging/app_logger.dart';
 import 'tiktok_comment_service.dart';
 
 class ApifyException implements Exception {
@@ -26,8 +24,7 @@ class ApifyNetworkException extends ApifyException {
 
 class ApifyLimitException extends ApifyException {
   const ApifyLimitException([
-    super.message =
-        'Apify’s request limit was reached. Please try again later.',
+    super.message = 'Apify request limit was reached. Please try again later.',
   ]);
 }
 
@@ -35,34 +32,21 @@ typedef ApifyPost = Future<Response<dynamic>> Function(
   String path,
   Object? data,
 );
-typedef ApifyGet = Future<Response<dynamic>> Function(
-  String path,
-  Map<String, dynamic>? queryParameters,
-);
 
-/// Fetches TikTok comments from Apify Actor `X6ACJnuJVBUsBocfe`.
 class ApifyService {
-  ApifyService({
-    String token = apiToken,
-    Dio? dio,
-    this.apiPost,
-    this.apiGet,
-    Future<void> Function(Duration)? delay,
-    this.pollInterval = const Duration(seconds: 3),
-    this.maxWait = const Duration(minutes: 5),
-  }) : _token = token,
-       _dio = dio ?? createDio(token: token),
-       _delay = delay ?? Future<void>.delayed;
+  ApifyService({String token = apiToken, Dio? dio, this.apiPost})
+    : _token = token.trim(),
+      _dio = dio ?? createDio();
 
-  static const actorId = 'X6ACJnuJVBUsBocfe';
-  static const baseUrl = 'https://api.apify.com/v2';
   static const apiToken = String.fromEnvironment('APIFY_API_TOKEN');
+  static const synchronousDatasetPath =
+      'https://api.apify.com/v2/actors/api-ninja~tiktok-comments-scraper/run-sync-get-dataset-items';
 
   static const scraperInputDefaults = <String, dynamic>{
-    'commentsPerPost': 50,
-    'maxRepliesPerComment': 25,
-    'resultsPerPage': 100,
-    'excludePinnedPosts': false,
+    'commentsPerUrl': 50,
+    'scrapeAll': false,
+    'repliesPerComment': 0,
+    'parseAllReplies': false,
   };
 
   static const _imageFieldKeys = <String>[
@@ -77,88 +61,47 @@ class ApifyService {
     'image',
   ];
 
-  static const _terminalFailureStatuses = {'FAILED', 'ABORTED', 'TIMED-OUT'};
-
   final String _token;
   final Dio _dio;
-  final Future<void> Function(Duration) _delay;
   final ApifyPost? apiPost;
-  final ApifyGet? apiGet;
-  final Duration pollInterval;
-  final Duration maxWait;
 
-  static Dio createDio({required String token}) {
+  String get synchronousDatasetEndpoint {
+    return '$synchronousDatasetPath?token=${Uri.encodeQueryComponent(_token)}';
+  }
+
+  static Dio createDio() {
     return Dio(
       BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 45),
-        sendTimeout: const Duration(seconds: 20),
+        connectTimeout: const Duration(milliseconds: 60000),
+        receiveTimeout: const Duration(milliseconds: 60000),
+        sendTimeout: const Duration(milliseconds: 60000),
         contentType: Headers.jsonContentType,
         headers: const {'Accept': 'application/json'},
-        queryParameters: {'token': token},
       ),
     );
   }
 
-  /// Runs the Actor, waits until it succeeds, then returns dataset items that
-  /// include a sticker or image URL.
   Future<List<Map<String, dynamic>>> runTikTokCommentScraper({
     required String postUrl,
   }) async {
     _ensureConfigured();
-    crashReporter.log('Apify scraper started for $postUrl');
-    await crashReporter.setCustomKey('apify_post_url', postUrl);
     final input = scraperInput(postUrl: postUrl);
+    crashReporter.log('Apify synchronous scraper started for $postUrl');
+    await crashReporter.setCustomKey('apify_post_url', postUrl);
 
     try {
-      final startResponse = await _post('/acts/$actorId/runs', input);
-      final initialRun = _runData(startResponse.data);
-      final runId = initialRun['id']?.toString().trim() ?? '';
-      var datasetId = initialRun['defaultDatasetId']?.toString().trim() ?? '';
-      if (runId.isEmpty) {
-        throw const ApifyException(
-          'Apify started the Actor but did not return a run ID.',
-        );
-      }
-
-      var run = initialRun;
-      final deadline = DateTime.now().add(maxWait);
-      while (_statusOf(run) != 'SUCCEEDED') {
-        if (_terminalFailureStatuses.contains(_statusOf(run))) {
-          throw ApifyException(_failureMessage(run, _statusOf(run)));
-        }
-        if (DateTime.now().isAfter(deadline)) {
-          throw const ApifyException(
-            'The TikTok comment scraper took too long to finish.',
-          );
-        }
-
-        await _delay(pollInterval);
-        final statusResponse = await _get('/acts/$actorId/runs/$runId');
-        run = _runData(statusResponse.data);
-        final currentDatasetId =
-            run['defaultDatasetId']?.toString().trim() ?? '';
-        if (currentDatasetId.isNotEmpty) datasetId = currentDatasetId;
-      }
-
-      if (datasetId.isEmpty) {
-        throw const ApifyException(
-          'The completed Apify run did not provide a dataset ID.',
-        );
-      }
-
-      final datasetResponse = await _get(
-        '/datasets/$datasetId/items',
-        queryParameters: const {'format': 'json', 'clean': true},
-      );
-      final items = _listData(datasetResponse.data)
+      final customPost = apiPost;
+      final response = customPost != null
+          ? await customPost(synchronousDatasetEndpoint, input)
+          : await _dio.post<dynamic>(synchronousDatasetEndpoint, data: input);
+      final items = _listData(response.data)
           .map(_asMap)
           .whereType<Map<String, dynamic>>()
           .where(hasStickerOrImageUrl)
           .toList(growable: false);
-      appLogger.d('Apify returned ${items.length} comment stickers.');
-      crashReporter.log('Apify returned ${items.length} comment stickers.');
+      crashReporter.log(
+        'Apify returned ${items.length} comment sticker items.',
+      );
       await crashReporter.setCustomKey('apify_item_count', items.length);
       return items;
     } on ApifyException {
@@ -168,10 +111,23 @@ class ApifyService {
     } on SocketException {
       throw const ApifyNetworkException();
     } on FormatException {
-      throw const ApifyException('Apify returned an unreadable response.');
+      throw const ApifyException(
+        'Apify returned an unreadable dataset response.',
+      );
     } catch (error) {
-      throw ApifyException('Could not run the Apify scraper: $error');
+      throw ApifyException(
+        'Could not run the synchronous Apify scraper: $error',
+      );
     }
+  }
+
+  Future<List<String>> fetchStickerUrls(String postUrl) async {
+    final items = await runTikTokCommentScraper(postUrl: postUrl);
+    final urls = <String>{};
+    for (final item in items) {
+      urls.addAll(imageUrlsFrom(item));
+    }
+    return urls.toList(growable: false);
   }
 
   Future<List<CommentSticker>> fetchCommentStickers(String postUrl) async {
@@ -195,9 +151,17 @@ class ApifyService {
     }
 
     return <String, dynamic>{
-      'postURLs': [trimmed],
+      'searchUrls': [trimmed],
       ...scraperInputDefaults,
     };
+  }
+
+  void _ensureConfigured() {
+    if (_token.isEmpty) {
+      throw const ApifyException(
+        'Apify is not configured. Add APIFY_API_TOKEN to the app build.',
+      );
+    }
   }
 
   static bool hasStickerOrImageUrl(Map<String, dynamic> item) {
@@ -206,26 +170,33 @@ class ApifyService {
 
   static List<String> imageUrlsFrom(Map<String, dynamic> item) {
     final urls = <String>[];
-    final nested = _asMap(item['data']);
-    for (final source in [item, if (nested != null) nested]) {
+    final data = _asMap(item['data']);
+    final raw = _asMap(data?['raw']);
+    for (final source in [item, ?data, ?raw]) {
       for (final key in _imageFieldKeys) {
         urls.addAll(_urlsFrom(source[key]));
       }
     }
-    return urls.toList(growable: false);
+    return urls.toSet().toList(growable: false);
   }
 
   static List<CommentSticker> stickersFromItem(Map<String, dynamic> item) {
+    final data = _asMap(item['data']);
     final commentId =
         item['commentId']?.toString() ??
         item['id']?.toString() ??
+        data?['id']?.toString() ??
         item['replyId']?.toString() ??
         '';
-    final authorMap = _asMap(item['author']);
+    final authorMap = _asMap(item['author']) ?? _asMap(data?['user']);
     final nickname = item['authorNickname']?.toString().trim() ?? '';
     final mappedNickname = authorMap?['nickname']?.toString().trim() ?? '';
     final username = item['authorUsername']?.toString().trim() ?? '';
-    final uniqueId = authorMap?['unique_id']?.toString().trim() ?? '';
+    final uniqueId =
+        (authorMap?['unique_id'] ?? authorMap?['uniqueId'])
+            ?.toString()
+            .trim() ??
+        '';
     final author = [
       nickname,
       mappedNickname,
@@ -244,68 +215,15 @@ class ApifyService {
     ];
   }
 
-  void _ensureConfigured() {
-    if (_token.trim().isEmpty && apiPost == null && apiGet == null) {
-      throw const ApifyException(
-        'Apify is not configured. Add APIFY_API_TOKEN to the app build.',
-      );
-    }
-  }
-
-  Future<Response<dynamic>> _post(String path, Object? data) {
-    final customPost = apiPost;
-    if (customPost != null) return customPost(path, data);
-    return _dio.post<dynamic>(path, data: data, queryParameters: _tokenQuery());
-  }
-
-  Future<Response<dynamic>> _get(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-  }) {
-    final query = _tokenQuery(queryParameters);
-    final customGet = apiGet;
-    if (customGet != null) return customGet(path, query);
-    return _dio.get<dynamic>(path, queryParameters: query);
-  }
-
-  Map<String, dynamic> _tokenQuery([Map<String, dynamic>? extra]) {
-    return <String, dynamic>{'token': _token, if (extra != null) ...extra};
-  }
-
-  String _statusOf(Map<String, dynamic> run) {
-    return run['status']?.toString().toUpperCase() ?? '';
-  }
-
-  Map<String, dynamic> _runData(dynamic responseData) {
-    final envelope = _asMap(responseData);
-    final run = _asMap(envelope?['data']);
-    if (run == null) {
-      throw const FormatException('Missing Apify run data.');
-    }
-    return run;
-  }
-
   List<dynamic> _listData(dynamic responseData) {
     if (responseData is List) return List<dynamic>.from(responseData);
-    final envelope = _asMap(responseData);
-    final items = envelope?['items'];
-    if (items is List) return List<dynamic>.from(items);
-    throw const FormatException('Missing Apify dataset items.');
-  }
-
-  String _failureMessage(Map<String, dynamic> run, String status) {
-    final detail = run['statusMessage']?.toString().trim();
-    return detail?.isNotEmpty == true
-        ? 'The Apify run $status: $detail'
-        : 'The Apify run ended with status $status.';
+    throw const FormatException('Expected an Apify dataset array.');
   }
 
   ApifyException _fromDio(DioException error) {
     final status = error.response?.statusCode;
     if (status == 401 || status == 403) {
-      return const ApifyException(
-        'Apify rejected the API token. Check APIFY_API_TOKEN.',
-      );
+      return const ApifyException('Apify rejected the API token.');
     }
     if (status == 402 || status == 429) {
       return const ApifyLimitException();
@@ -363,7 +281,6 @@ bool _isHttpUrl(String value) {
       uri.host.isNotEmpty;
 }
 
-/// Isolate-safe conversion of Apify dataset rows into unique comment stickers.
 List<CommentSticker> parseApifyItems(List<dynamic> items) {
   final found = <String, CommentSticker>{};
   for (final raw in items) {
