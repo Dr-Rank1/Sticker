@@ -15,6 +15,7 @@ import '../images/sticker_grid_image.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
 import '../packs/whatsapp_export_service.dart';
+import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../tiktok/comment_sticker_formatter.dart';
@@ -35,12 +36,17 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   bool _hasMore = true;
   bool _exporting = false;
   String? _error;
+  ProviderSubscription<AppTab>? _tabSubscription;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_loadMoreIfNeeded);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadNextPage());
+    _tabSubscription = ref.listenManual(navigationProvider, (_, tab) {
+      if (tab == AppTab.community && _stickers.isEmpty) {
+        _loadNextPage();
+      }
+    }, fireImmediately: true);
   }
 
   @override
@@ -48,6 +54,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     _scrollController
       ..removeListener(_loadMoreIfNeeded)
       ..dispose();
+    _tabSubscription?.close();
     super.dispose();
   }
 

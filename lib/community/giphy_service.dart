@@ -59,7 +59,7 @@ class GiphyService {
        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
 
   static const endpoint = 'https://api.giphy.com/v1/stickers/trending';
-  static const apiKey = String.fromEnvironment('GIPHY_API_KEY');
+  static const apiKey = 't6Xsdp1GtaVsAiFKwZFyYNGp9Fw48Yar';
   static const pageSize = 50;
 
   final Dio _dio;

@@ -1,9 +1,11 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:stikk/community/giphy_service.dart';
 import 'package:stikk/main.dart';
 import 'package:stikk/state/settings_store.dart';
 import 'package:stikk/storage/storage_utility.dart';
@@ -28,6 +30,19 @@ ProviderScope appWithOnboardingDone() {
         StorageUtility(
           documentsDirectory: () async => documents,
           temporaryDirectory: () async => temporary,
+        ),
+      ),
+      giphyServiceProvider.overrideWithValue(
+        GiphyService(
+          apiKey: 'test-key',
+          apiGet: (_, _) async => Response<dynamic>(
+            requestOptions: RequestOptions(path: GiphyService.endpoint),
+            statusCode: 200,
+            data: {
+              'data': <dynamic>[],
+              'pagination': {'offset': 0, 'count': 0, 'total_count': 0},
+            },
+          ),
         ),
       ),
       tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
@@ -61,9 +76,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Community'), findsWidgets);
+    expect(find.byKey(const Key('community-masonry-grid')), findsOneWidget);
     expect(find.byKey(const Key('community-staging-tray')), findsOneWidget);
     expect(find.text('My Pack  0/30'), findsOneWidget);
-    expect(find.byKey(const Key('community-retry')), findsOneWidget);
   });
 
   testWidgets('Create opens the TikTok link sheet', (tester) async {

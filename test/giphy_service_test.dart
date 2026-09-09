@@ -7,7 +7,6 @@ void main() {
     late String requestedPath;
     late Map<String, dynamic> requestedParameters;
     final service = GiphyService(
-      apiKey: 'test-key',
       apiGet: (path, parameters) async {
         requestedPath = path;
         requestedParameters = parameters;
@@ -38,8 +37,9 @@ void main() {
     final page = await service.fetchTrending();
 
     expect(requestedPath, GiphyService.endpoint);
+    expect(GiphyService.apiKey, 't6Xsdp1GtaVsAiFKwZFyYNGp9Fw48Yar');
     expect(requestedParameters, {
-      'api_key': 'test-key',
+      'api_key': GiphyService.apiKey,
       'limit': 50,
       'rating': 'g',
       'offset': 0,
