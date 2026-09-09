@@ -134,15 +134,18 @@ class NetworkClient {
   NetworkClient({
     Dio? dio,
     this.maxGetRetries = 2,
+    Duration? connectTimeout,
+    Duration? sendTimeout,
+    Duration? receiveTimeout,
     Future<void> Function(Duration)? delay,
     Duration Function(int retryNumber)? jitter,
   }) : _dio = dio ?? Dio(),
        _delay = delay ?? Future<void>.delayed,
        _jitter = jitter ?? _defaultJitter {
     _dio.options
-      ..connectTimeout = connectTimeout
-      ..sendTimeout = sendTimeout
-      ..receiveTimeout = receiveTimeout;
+      ..connectTimeout = connectTimeout ?? NetworkClient.connectTimeout
+      ..sendTimeout = sendTimeout ?? NetworkClient.sendTimeout
+      ..receiveTimeout = receiveTimeout ?? NetworkClient.receiveTimeout;
     _dio.interceptors.add(
       _SafeGetRetryInterceptor(
         _dio,

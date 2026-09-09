@@ -56,6 +56,15 @@ void main() {
     expect(options.sendTimeout, NetworkClient.sendTimeout);
   });
 
+  test('configures dio with at least sixty second sync timeouts', () {
+    final service = ApifyService(token: 'test-token');
+    final options = service.networkOptions;
+
+    expect(options.connectTimeout, const Duration(milliseconds: 60000));
+    expect(options.receiveTimeout, const Duration(milliseconds: 60000));
+    expect(options.sendTimeout, const Duration(milliseconds: 60000));
+  });
+
   test('returns only unique valid sticker URLs', () async {
     final service = ApifyService(
       token: 'test-token',

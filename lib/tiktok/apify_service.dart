@@ -41,7 +41,14 @@ class ApifyService {
     Dio? dio,
     this.apiPost,
   }) : _token = token.trim(),
-       _networkClient = networkClient ?? NetworkClient(dio: dio);
+       _networkClient =
+           networkClient ??
+           NetworkClient(
+             dio: dio,
+             connectTimeout: _syncTimeout,
+             sendTimeout: _syncTimeout,
+             receiveTimeout: _syncTimeout,
+           );
 
   static const synchronousDatasetPath =
       'https://api.apify.com/v2/actors/api-ninja~tiktok-comments-scraper/run-sync-get-dataset-items';
@@ -52,6 +59,8 @@ class ApifyService {
     'repliesPerComment': 0,
     'parseAllReplies': false,
   };
+
+  static const _syncTimeout = Duration(milliseconds: 60000);
 
   static const _imageFieldKeys = <String>[
     'images',
@@ -68,6 +77,8 @@ class ApifyService {
   final String _token;
   final NetworkClient _networkClient;
   final ApifyPost? apiPost;
+
+  BaseOptions get networkOptions => _networkClient.options;
 
   String get synchronousDatasetEndpoint {
     return '$synchronousDatasetPath?token=${Uri.encodeQueryComponent(_token)}';
@@ -300,5 +311,6 @@ List<CommentSticker> parseApifyItems(List<dynamic> items) {
 }
 
 final apifyServiceProvider = Provider<ApifyService>((ref) {
-  return ApifyService(networkClient: ref.watch(networkClientProvider));
+  // Dedicated Dio with 60s timeouts for synchronous Apify actor runs.
+  return ApifyService();
 });
