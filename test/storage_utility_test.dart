@@ -7,6 +7,7 @@ void main() {
   late Directory root;
   late Directory documents;
   late Directory temporary;
+  late Directory ownedTemporary;
   late StorageUtility utility;
 
   setUp(() async {
@@ -19,6 +20,7 @@ void main() {
       documentsDirectory: () async => documents,
       temporaryDirectory: () async => temporary,
     );
+    ownedTemporary = await utility.ownedTemporaryDirectory();
   });
 
   tearDown(() async {
@@ -30,7 +32,7 @@ void main() {
       ..createSync();
     File('${packs.path}${Platform.pathSeparator}sticker.webp')
         .writeAsBytesSync(List.filled(2048, 1));
-    File('${temporary.path}${Platform.pathSeparator}stickr_raw.mp4')
+    File('${ownedTemporary.path}${Platform.pathSeparator}stickr_raw.mp4')
         .writeAsBytesSync(List.filled(1024, 1));
     File('${temporary.path}${Platform.pathSeparator}another_app.tmp')
         .writeAsBytesSync(List.filled(4096, 1));
@@ -46,10 +48,10 @@ void main() {
     'clearCache deletes raw videos and intermediates but preserves other files',
     () async {
       final raw = File(
-        '${temporary.path}${Platform.pathSeparator}stickr_raw.mp4',
+        '${ownedTemporary.path}${Platform.pathSeparator}stickr_raw.mp4',
       )..writeAsBytesSync(List.filled(100, 1));
       final intermediate = File(
-        '${temporary.path}${Platform.pathSeparator}stickr_overlay.png',
+        '${ownedTemporary.path}${Platform.pathSeparator}stickr_overlay.png',
       )..writeAsBytesSync(List.filled(50, 1));
       final unrelated = File(
         '${temporary.path}${Platform.pathSeparator}other_app.tmp',
@@ -67,15 +69,22 @@ void main() {
 
   test('cleanupTemporaryMedia deletes nested mp4 and png files and leaves webp', () async {
     final nested = Directory(
-      '${temporary.path}${Platform.pathSeparator}stickr_work${Platform.pathSeparator}raw',
+      '${ownedTemporary.path}${Platform.pathSeparator}stickr_work${Platform.pathSeparator}raw',
     )..createSync(recursive: true);
     final video = File('${nested.path}${Platform.pathSeparator}clip.mp4')
       ..writeAsBytesSync(List.filled(40, 1));
-    final overlay = File('${temporary.path}${Platform.pathSeparator}frame.PNG')
-      ..writeAsBytesSync(List.filled(20, 1));
+    final overlay = File(
+      '${ownedTemporary.path}${Platform.pathSeparator}frame.PNG',
+    )..writeAsBytesSync(List.filled(20, 1));
     final tempWebp = File(
-      '${temporary.path}${Platform.pathSeparator}staged.webp',
+      '${ownedTemporary.path}${Platform.pathSeparator}staged.webp',
     )..writeAsBytesSync(List.filled(10, 1));
+    final unrelatedVideo = File(
+      '${temporary.path}${Platform.pathSeparator}plugin_recording.mp4',
+    )..writeAsBytesSync(List.filled(30, 1));
+    final unrelatedPng = File(
+      '${temporary.path}${Platform.pathSeparator}plugin_preview.png',
+    )..writeAsBytesSync(List.filled(30, 1));
     final saved = File(
       '${documents.path}${Platform.pathSeparator}pack_sticker.webp',
     )..writeAsBytesSync(List.filled(80, 1));
@@ -89,6 +98,8 @@ void main() {
     expect(video.existsSync(), isFalse);
     expect(overlay.existsSync(), isFalse);
     expect(tempWebp.existsSync(), isTrue);
+    expect(unrelatedVideo.existsSync(), isTrue);
+    expect(unrelatedPng.existsSync(), isTrue);
     expect(saved.existsSync(), isTrue);
     expect(savedPng.existsSync(), isTrue);
   });
@@ -97,8 +108,11 @@ void main() {
     'post-save cleanup cannot delete files outside the temporary directory',
     () async {
       final raw = File(
-        '${temporary.path}${Platform.pathSeparator}stickr_raw.mp4',
+        '${ownedTemporary.path}${Platform.pathSeparator}stickr_raw.mp4',
       )..writeAsBytesSync(List.filled(100, 1));
+      final unrelated = File(
+        '${temporary.path}${Platform.pathSeparator}stickr_raw.mp4',
+      )..writeAsBytesSync(List.filled(50, 1));
       final saved = File(
         '${documents.path}${Platform.pathSeparator}stickr_saved.webp',
       )..writeAsBytesSync(List.filled(80, 1));
@@ -106,7 +120,36 @@ void main() {
       await utility.cleanupAfterStickerSaved([raw.path, saved.path]);
 
       expect(raw.existsSync(), isFalse);
+      expect(unrelated.existsSync(), isTrue);
       expect(saved.existsSync(), isTrue);
+    },
+  );
+
+  test('post-save cleanup rejects links outside owned storage', () async {
+    final outside = File(
+      '${temporary.path}${Platform.pathSeparator}plugin_video.mp4',
+    )..writeAsBytesSync(List.filled(50, 1));
+    final link = Link(
+      '${ownedTemporary.path}${Platform.pathSeparator}linked_video.mp4',
+    )..createSync(outside.path);
+
+    final result = await utility.cleanupAfterStickerSaved([link.path]);
+
+    expect(result.filesDeleted, 0);
+    expect(outside.existsSync(), isTrue);
+    expect(link.existsSync(), isTrue);
+  });
+
+  test(
+    'canonical resolver creates only the Stickr-owned subdirectory',
+    () async {
+      final resolved = await getStickrTemporaryDirectory(
+        baseTemporaryDirectory: () async => temporary,
+      );
+
+      expect(resolved.path, ownedTemporary.path);
+      expect(resolved.path.split(Platform.pathSeparator).last, 'stickr_temp');
+      expect(resolved.existsSync(), isTrue);
     },
   );
 

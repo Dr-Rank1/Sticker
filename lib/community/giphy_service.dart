@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../config/app_environment.dart';
+import '../storage/storage_utility.dart';
 
 class GiphyException implements Exception {
   const GiphyException(this.message);
@@ -65,7 +65,8 @@ class GiphyService {
     Future<Directory> Function()? temporaryDirectory,
   }) : _dio = dio ?? Dio(),
        _apiKey = apiKey.trim(),
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+       _temporaryDirectory =
+           temporaryDirectory ?? (() => getStickrTemporaryDirectory());
 
   static const endpoint = 'https://api.giphy.com/v1/stickers/trending';
   static const searchEndpoint = 'https://api.giphy.com/v1/stickers/search';

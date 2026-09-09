@@ -111,7 +111,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       final document = ref.read(editorProvider).document;
       File? overlay;
       if (document.overlays.isNotEmpty) {
-        final temp = await getTemporaryDirectory();
+        final temp = await getStickrTemporaryDirectory();
         await WidgetsBinding.instance.endOfFrame;
         if (!mounted) return;
         overlay = await CanvasExporter.captureToFile(

@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../editor/ffmpeg_sticker_service.dart';
 import '../haptics/haptic_service.dart';
@@ -12,6 +11,7 @@ import '../images/sticker_grid_image.dart';
 import '../packs/batch_export_use_case.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
+import '../storage/storage_utility.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'apify_service.dart';
@@ -109,7 +109,9 @@ Future<void> showCommentStickerSheet(
 }
 
 final commentStickerCacheDirectoryProvider =
-    Provider<Future<Directory> Function()>((ref) => getTemporaryDirectory);
+    Provider<Future<Directory> Function()>(
+      (ref) => getStickrTemporaryDirectory,
+    );
 
 class CommentStickerSheet extends ConsumerStatefulWidget {
   const CommentStickerSheet({

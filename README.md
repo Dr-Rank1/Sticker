@@ -283,8 +283,9 @@ comment client and can still be supplied with `SCRAPEBADGER_API_KEY`.
 
 - Local photos and generated packs remain in app-owned device storage.
 - ML Kit background segmentation runs locally.
-- Temporary source and conversion files are cleaned up after successful saves
-  and can also be cleared from Settings.
+- Temporary source and conversion files live only under the app-owned
+  `stickr_temp` cache directory, are cleaned up after successful saves, and can
+  also be cleared from Settings.
 - TikTok import sends the pasted public video URL to TikWM.
 - Meme browsing contacts Imgflip.
 - Discover and Community contact Giphy.

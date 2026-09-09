@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
 
 import '../editor/editor_models.dart';
 import '../editor/ffmpeg_sticker_service.dart';
 import '../editor/image_sticker_service.dart';
 import '../photos/photo_import_controller.dart';
+import '../storage/storage_utility.dart';
 
 /// Pads a downloaded comment image on transparency and encodes a static WebP
 /// that satisfies WhatsApp's 512×512 sticker requirements.
@@ -15,7 +15,8 @@ class CommentStickerFormatter {
   CommentStickerFormatter(
     this._imageService, {
     Future<Directory> Function()? temporaryDirectory,
-  }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+  }) : _temporaryDirectory =
+           temporaryDirectory ?? (() => getStickrTemporaryDirectory());
 
   final ImageStickerService _imageService;
   final Future<Directory> Function() _temporaryDirectory;

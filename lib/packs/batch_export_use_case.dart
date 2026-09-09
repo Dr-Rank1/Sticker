@@ -3,8 +3,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
+import '../storage/storage_utility.dart';
 import '../tiktok/comment_sticker_formatter.dart';
 import 'pack_models.dart';
 import 'pack_providers.dart';
@@ -76,7 +76,8 @@ class BatchExportUseCase {
     String Function()? identifierGenerator,
     this.maxConcurrentItems = 2,
   }) : _trayIcons = trayIcons ?? TrayIconService(),
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
+       _temporaryDirectory =
+           temporaryDirectory ?? (() => getStickrTemporaryDirectory()),
        _clock = clock ?? DateTime.now,
        _identifierGenerator = identifierGenerator ?? _newIdentifier {
     if (maxConcurrentItems < 1) {

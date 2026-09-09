@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
+
+import '../storage/storage_utility.dart';
 
 @immutable
 class MemeTemplate {
@@ -52,7 +53,8 @@ class MemeService {
     this.apiGet,
     this.fileDownload,
   }) : _dio = dio ?? createDio(),
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+       _temporaryDirectory =
+           temporaryDirectory ?? (() => getStickrTemporaryDirectory());
 
   static const baseUrl = 'https://api.imgflip.com';
   static const memesPath = '/get_memes';

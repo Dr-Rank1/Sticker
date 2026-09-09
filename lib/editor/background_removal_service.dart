@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
 
+import '../storage/storage_utility.dart';
 import 'ffmpeg_sticker_service.dart';
 
 class SubjectMask {
@@ -83,7 +83,8 @@ class BackgroundRemovalService {
     SubjectSegmenter? segmenter,
     Future<Directory> Function()? temporaryDirectory,
   }) : _segmenter = segmenter ?? MlKitSelfieSegmenter(),
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+       _temporaryDirectory =
+           temporaryDirectory ?? (() => getStickrTemporaryDirectory());
 
   final SubjectSegmenter _segmenter;
   final Future<Directory> Function() _temporaryDirectory;

@@ -4,7 +4,8 @@ import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
+
+import '../storage/storage_utility.dart';
 
 typedef LocalVideoPicker = Future<XFile?> Function();
 typedef LocalVideoMetadataReader = Future<LocalVideoMetadata> Function(
@@ -46,7 +47,8 @@ class LocalVideoImportService {
     this._picker,
     this._metadataReader, {
     Future<Directory> Function()? temporaryDirectory,
-  }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+  }) : _temporaryDirectory =
+           temporaryDirectory ?? (() => getStickrTemporaryDirectory());
 
   static const maxFileBytes = 250 * 1024 * 1024;
   static const maxDuration = Duration(minutes: 10);

@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../storage/storage_utility.dart';
 import 'pack_models.dart';
 import 'pack_repository.dart';
 
@@ -14,7 +14,8 @@ class ExportService {
     required this.repository,
     Future<Directory> Function()? temporaryDirectory,
     this.shareFile,
-  }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+  }) : _temporaryDirectory =
+           temporaryDirectory ?? (() => getStickrTemporaryDirectory());
 
   static const fileExtension = '.stickr';
   static const mimeType = 'application/vnd.stickr.pack';

@@ -449,7 +449,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 197 tests passed.
+- 201 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -825,19 +825,23 @@ Do not record:
 
 ### 6.18 Fix temporary-file ownership
 
-`StorageUtility.cleanupTemporaryMedia` recursively deletes every `.mp4` and `.png` under the directory returned by `getTemporaryDirectory`, without checking a Stickr-specific prefix or owned subdirectory.
+Implemented:
 
-Risks:
+- `getStickrTemporaryDirectory` is the canonical resolver for the
+  `stickr_temp` subdirectory under the platform cache root.
+- FFmpeg, overlays, image processing, local-video copies, TikTok imports,
+  comment and Apify image downloads, Giphy downloads, meme downloads, batch
+  export workspaces, and pack archives use this directory by default.
+- Storage measurement and user-triggered cache clearing inspect only this
+  owned directory.
+- Post-save cleanup canonicalizes candidate paths and rejects anything outside
+  `stickr_temp`, including symbolic-link escapes.
+- The WorkManager task delegates to the same scoped cleanup implementation.
+- Regression tests preserve unrelated MP4 and PNG files in the general
+  temporary root and prevent media pipelines from directly resolving it.
 
-- Unrelated temporary files can be deleted if the directory is shared by plugins or platform code.
-- Stickr temporary GIF, IMG, and WebP files can be missed.
-
-Recommended change:
-
-- Put every temporary artifact under one Stickr-owned temporary directory.
-- Delete only within that canonical directory.
-- Track operation-specific subdirectories.
-- Remove a complete operation directory after success or cancellation.
+Operation-specific subdirectories and process-death expiry policies remain
+useful future hardening.
 - Add tests proving unrelated files are retained.
 
 ### 6.19 Eliminate duplicate and unreachable editor output
@@ -1083,7 +1087,6 @@ Target: close the largest product gaps.
 
 - Rotate the previously committed Giphy key.
 - Preserve the corrected FFmpeg timing, speed, and preview framing contract.
-- Restrict temporary cleanup to Stickr-owned files.
 - Track the Android Gradle wrapper.
 - Extend CI with an Android debug build.
 - Configure Firebase or remove claims that Crashlytics is active.

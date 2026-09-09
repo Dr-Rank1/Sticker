@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
+
+import '../storage/storage_utility.dart';
 
 class TiktokImportException implements Exception {
   const TiktokImportException(this.message);
@@ -52,7 +53,7 @@ class TiktokImportService {
     Future<Directory> Function()? tempDirectory,
     this.apiGet,
   }) : _dio = dio ?? createDio(),
-       _tempDirectory = tempDirectory ?? getTemporaryDirectory;
+       _tempDirectory = tempDirectory ?? (() => getStickrTemporaryDirectory());
 
   static const apiBaseUrl = 'https://www.tikwm.com';
   static const apiPath = '/api/';

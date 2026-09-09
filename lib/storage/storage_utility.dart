@@ -3,6 +3,21 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+const stickrTemporaryDirectoryName = 'stickr_temp';
+
+Future<Directory> getStickrTemporaryDirectory({
+  Future<Directory> Function()? baseTemporaryDirectory,
+}) async {
+  final base = await (baseTemporaryDirectory ?? getTemporaryDirectory)();
+  final owned = Directory(
+    '${base.path}${Platform.pathSeparator}$stickrTemporaryDirectoryName',
+  );
+  if (!await owned.exists()) {
+    await owned.create(recursive: true);
+  }
+  return owned;
+}
+
 class StorageUsage {
   const StorageUsage({required this.documentsBytes, required this.cacheBytes});
 
@@ -38,10 +53,10 @@ class StorageUtility {
 
   Future<StorageUsage> getUsage() async {
     final documents = await _documentsDirectory();
-    final temporary = await _temporaryDirectory();
+    final temporary = await ownedTemporaryDirectory();
     return StorageUsage(
       documentsBytes: await directorySize(documents),
-      cacheBytes: await _stickrCacheSize(temporary),
+      cacheBytes: await directorySize(temporary),
     );
   }
 
@@ -68,10 +83,9 @@ class StorageUtility {
     return bytes;
   }
 
-  /// Recursively deletes disposable `.mp4` and `.png` files from the OS
-  /// temporary directory. Final `.webp` stickers in documents are not scanned.
+  /// Deletes disposable media only from Stickr's owned temporary directory.
   Future<CacheClearResult> cleanupTemporaryMedia() async {
-    final temporary = await _temporaryDirectory();
+    final temporary = await ownedTemporaryDirectory();
     if (!await temporary.exists()) {
       return const CacheClearResult(bytesFreed: 0, filesDeleted: 0);
     }
@@ -107,7 +121,7 @@ class StorageUtility {
   }
 
   Future<CacheClearResult> clearCache() async {
-    final temporary = await _temporaryDirectory();
+    final temporary = await ownedTemporaryDirectory();
     if (!await temporary.exists()) {
       return const CacheClearResult(bytesFreed: 0, filesDeleted: 0);
     }
@@ -115,7 +129,6 @@ class StorageUtility {
     var bytesFreed = 0;
     var filesDeleted = 0;
     await for (final entity in temporary.list(followLinks: false)) {
-      if (!_isStickrEntity(entity)) continue;
       final result = await _deleteEntity(entity);
       bytesFreed += result.bytesFreed;
       filesDeleted += result.filesDeleted;
@@ -128,15 +141,14 @@ class StorageUtility {
   Future<CacheClearResult> cleanupAfterStickerSaved(
     Iterable<String?> paths,
   ) async {
-    final temporary = await _temporaryDirectory();
-    final root = _withSeparator(temporary.absolute.path);
+    final temporary = await ownedTemporaryDirectory();
+    final root = _withSeparator(await temporary.resolveSymbolicLinks());
     var bytesFreed = 0;
     var filesDeleted = 0;
 
     for (final path in paths.whereType<String>().toSet()) {
       final entity = File(path);
-      final absolutePath = entity.absolute.path;
-      if (!absolutePath.startsWith(root) || !_isStickrEntity(entity)) continue;
+      if (!await _isWithinDirectory(entity, root)) continue;
       final result = await _deleteEntity(entity);
       bytesFreed += result.bytesFreed;
       filesDeleted += result.filesDeleted;
@@ -145,22 +157,19 @@ class StorageUtility {
     return CacheClearResult(bytesFreed: bytesFreed, filesDeleted: filesDeleted);
   }
 
-  Future<int> _stickrCacheSize(Directory temporary) async {
-    if (!await temporary.exists()) return 0;
-    var bytes = 0;
-    await for (final entity in temporary.list(followLinks: false)) {
-      if (_isStickrEntity(entity)) {
-        bytes += entity is Directory
-            ? await directorySize(entity)
-            : await _fileSize(entity);
-      }
-    }
-    return bytes;
+  Future<Directory> ownedTemporaryDirectory() {
+    return getStickrTemporaryDirectory(
+      baseTemporaryDirectory: _temporaryDirectory,
+    );
   }
 
-  bool _isStickrEntity(FileSystemEntity entity) {
-    final name = entity.path.split(Platform.pathSeparator).last;
-    return name.startsWith('stickr_');
+  Future<bool> _isWithinDirectory(File entity, String canonicalRoot) async {
+    try {
+      if (!await entity.exists()) return false;
+      return (await entity.resolveSymbolicLinks()).startsWith(canonicalRoot);
+    } on FileSystemException {
+      return false;
+    }
   }
 
   Future<CacheClearResult> _deleteEntity(FileSystemEntity entity) async {

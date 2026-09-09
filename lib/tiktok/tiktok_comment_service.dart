@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
+import '../storage/storage_utility.dart';
 import 'tiktok_import_controller.dart';
 
 class TikTokCommentException implements Exception {
@@ -115,7 +115,8 @@ class TikTokCommentService {
     String key = apiKey,
   }) : _dio = dio ?? createDio(key: key),
        _credential = key,
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+       _temporaryDirectory =
+           temporaryDirectory ?? (() => getStickrTemporaryDirectory());
 
   static const baseUrl = 'https://scrapebadger.com';
   static const apiKey = String.fromEnvironment('SCRAPEBADGER_API_KEY');
