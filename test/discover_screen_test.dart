@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -102,13 +104,50 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('discover-sticker-next-page')), findsOneWidget);
   });
+
+  testWidgets('cancels an active search when Discover is disposed', (
+    tester,
+  ) async {
+    final temporary = Directory.systemTemp.createTempSync(
+      'stickr_discover_cancel_',
+    );
+    addTearDown(() => temporary.deleteSync(recursive: true));
+    final gate = Completer<void>();
+    final giphy = _FakeGiphyService(temporary, searchGate: gate);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [giphyServiceProvider.overrideWithValue(giphy)],
+        child: const MaterialApp(home: Scaffold(body: DiscoverScreen())),
+      ),
+    );
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('discover-search-field')),
+      'reaction',
+    );
+    await tester.tap(find.byKey(const Key('discover-search-button')));
+    await tester.pump();
+
+    expect(giphy.lastCancelToken, isNotNull);
+    expect(giphy.lastCancelToken!.isCancelled, isFalse);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(giphy.lastCancelToken!.isCancelled, isTrue);
+    gate.complete();
+  });
 }
 
 class _FakeGiphyService extends GiphyService {
-  _FakeGiphyService(this.temporary) : super(apiKey: 'test-key');
+  _FakeGiphyService(this.temporary, {this.searchGate})
+    : super(apiKey: 'test-key');
 
   final Directory temporary;
+  final Completer<void>? searchGate;
   String? lastQuery;
+  CancelToken? lastCancelToken;
   final requestedOffsets = <int>[];
   File? downloadedFile;
 
@@ -121,9 +160,15 @@ class _FakeGiphyService extends GiphyService {
   );
 
   @override
-  Future<GiphyStickerPage> search(String query, {int offset = 0}) async {
+  Future<GiphyStickerPage> search(
+    String query, {
+    int offset = 0,
+    CancelToken? cancelToken,
+  }) async {
     lastQuery = query;
+    lastCancelToken = cancelToken;
     requestedOffsets.add(offset);
+    if (searchGate != null) await searchGate!.future;
     if (offset > 0) {
       return const GiphyStickerPage(
         stickers: [
@@ -158,6 +203,7 @@ class _FakeGiphyService extends GiphyService {
   Future<File> downloadSticker({
     required String id,
     required String url,
+    CancelToken? cancelToken,
   }) async {
     final file = File('${temporary.path}/stickr_giphy_test.webp');
     file.writeAsBytesSync([1, 2, 3, 4]);

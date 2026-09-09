@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,16 +21,33 @@ import 'comment_sticker_isolate.dart';
 import 'tiktok_comment_service.dart';
 
 /// Overlay shown while Apify polls. The main scaffold stays underneath.
-Future<void> showCommentScanDialog(BuildContext context) {
+Future<void> showCommentScanDialog(
+  BuildContext context, {
+  CancelToken? cancelToken,
+}) {
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const CommentScanLoadingDialog(),
+    builder: (_) => CommentScanLoadingDialog(cancelToken: cancelToken),
   );
 }
 
-class CommentScanLoadingDialog extends StatelessWidget {
-  const CommentScanLoadingDialog({super.key});
+class CommentScanLoadingDialog extends StatefulWidget {
+  const CommentScanLoadingDialog({super.key, this.cancelToken});
+
+  final CancelToken? cancelToken;
+
+  @override
+  State<CommentScanLoadingDialog> createState() =>
+      _CommentScanLoadingDialogState();
+}
+
+class _CommentScanLoadingDialogState extends State<CommentScanLoadingDialog> {
+  @override
+  void dispose() {
+    widget.cancelToken?.cancel('The comment scan screen was closed.');
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,19 +70,25 @@ Future<void> scanAndShowCommentStickers(
   WidgetRef ref, {
   required String videoUrl,
   bool showLoadingDialog = true,
+  CancelToken? cancelToken,
 }) async {
   final l10n = context.l10n;
-  if (showLoadingDialog) showCommentScanDialog(context);
+  final requestCancelToken = cancelToken ?? CancelToken();
+  if (showLoadingDialog) {
+    unawaited(showCommentScanDialog(context, cancelToken: requestCancelToken));
+  }
 
   List<CommentSticker> stickers = const [];
   String? errorMessage;
   try {
     stickers = await ref
         .read(apifyServiceProvider)
-        .fetchCommentStickers(videoUrl);
+        .fetchCommentStickers(videoUrl, cancelToken: requestCancelToken);
   } on ApifyException catch (error) {
+    if (requestCancelToken.isCancelled) return;
     errorMessage = error.message;
   } catch (_) {
+    if (requestCancelToken.isCancelled) return;
     errorMessage = l10n.couldNotScanComments;
   }
 
@@ -503,6 +527,8 @@ class SharedTikTokScanPage extends ConsumerStatefulWidget {
 }
 
 class _SharedTikTokScanPageState extends ConsumerState<SharedTikTokScanPage> {
+  final _cancelToken = CancelToken();
+
   @override
   void initState() {
     super.initState();
@@ -516,9 +542,16 @@ class _SharedTikTokScanPageState extends ConsumerState<SharedTikTokScanPage> {
       ref,
       videoUrl: widget.videoUrl,
       showLoadingDialog: false,
+      cancelToken: _cancelToken,
     );
     if (!mounted) return;
     widget.onFinished?.call();
+  }
+
+  @override
+  void dispose() {
+    _cancelToken.cancel('The shared comment scan screen was closed.');
+    super.dispose();
   }
 
   @override

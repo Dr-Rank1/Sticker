@@ -142,6 +142,47 @@ void main() {
     expect(find.text('Apify’s request limit was reached.'), findsOneWidget);
   });
 
+  testWidgets('closing the scan dialog cancels the Apify request', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final apify = _FakeApifyService(gate: gate);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [apifyServiceProvider.overrideWithValue(apify)],
+        child: MaterialApp(
+          home: Consumer(
+            builder: (context, ref, _) => TextButton(
+              onPressed: () {
+                unawaited(
+                  scanAndShowCommentStickers(
+                    context,
+                    ref,
+                    videoUrl: 'https://www.tiktok.com/@creator/video/1234567890123456789',
+                  ),
+                );
+              },
+              child: const Text('Start scan'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Start scan'));
+    await tester.pump();
+    expect(find.byType(CommentScanLoadingDialog), findsOneWidget);
+    expect(apify.lastCancelToken, isNotNull);
+
+    Navigator.of(tester.element(find.byType(CommentScanLoadingDialog))).pop();
+    await tester.pump();
+
+    expect(apify.lastCancelToken!.isCancelled, isTrue);
+    gate.complete();
+    await tester.pump();
+  });
+
   testWidgets('selects three stickers and exports them as a new pack', (
     tester,
   ) async {
@@ -368,12 +409,20 @@ class _FakeApifyService extends ApifyService {
   final Object? error;
   final Completer<void>? gate;
   String? lastUrl;
+  CancelToken? lastCancelToken;
 
   @override
-  Future<List<CommentSticker>> fetchCommentStickers(String postUrl) async {
+  Future<List<CommentSticker>> fetchCommentStickers(
+    String postUrl, {
+    CancelToken? cancelToken,
+  }) async {
     lastUrl = postUrl;
+    lastCancelToken = cancelToken;
     final pending = gate;
     if (pending != null) await pending.future;
+    if (cancelToken?.isCancelled ?? false) {
+      throw ApifyException('Request cancelled.');
+    }
     final thrown = error;
     if (thrown != null) throw thrown;
     return stickers;

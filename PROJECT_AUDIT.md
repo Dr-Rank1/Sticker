@@ -409,7 +409,8 @@ This structure is appropriate for the current application size and has enabled b
 
 ### 4.3 Architectural weaknesses
 
-- There is no unified network layer for timeouts, retry policy, cancellation, headers, telemetry, and rate-limit behavior.
+- The unified network layer currently covers Giphy, Apify, and TikWM; Imgflip,
+  ScrapeBadger, image downloads, and dynamic fonts still use separate clients.
 - Giphy and Apify use consistent build-time environment configuration, but client-side values remain extractable from distributed binaries.
 - Several screens directly coordinate networking, file conversion, persistence, and navigation. Community export and editor save are examples of workflows that would benefit from dedicated use-case classes.
 - Pack metadata exists in multiple forms: Flutter domain models, Isar rows, Android staging JSON, and `.stickr` manifests. These representations are not versioned together.
@@ -423,7 +424,7 @@ This structure is appropriate for the current application size and has enabled b
 
 ### 5.1 Automated test inventory
 
-The repository contains 48 Dart test files covering:
+The repository contains 49 Dart test files covering:
 
 - Pack rules and repositories.
 - Isar persistence.
@@ -450,7 +451,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 203 tests passed.
+- 212 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -681,23 +682,27 @@ If animation is preserved, enforce pack-type consistency and WhatsApp's animated
 
 ### 6.10 Harden network behavior
 
-Network configuration varies by service.
+Implemented:
 
-Recommended shared standards:
+- Added a shared `NetworkClient` for Giphy, Apify, and TikWM requests with
+  explicit connect, send, and receive timeouts.
+- Safe GET requests use bounded retries with exponential jitter and honor
+  numeric or HTTP-date `Retry-After` values.
+- POST requests, cancelled requests, and non-transient failures are not
+  retried.
+- Dio failures are normalized into offline, rate-limited, timeout, cancelled,
+  unavailable, and general request categories backed by localization keys.
+- Discover search, pagination, and downloads cancel when the screen is
+  disposed or its tab becomes inactive.
+- Apify comment scans cancel when their dialog or shared-link scan page closes.
+- Unit and widget tests cover timeout policy, retry limits, `Retry-After`,
+  safe-method behavior, normalized errors, and lifecycle cancellation.
 
-- Explicit connect, send, and receive timeouts for every client.
-- Request cancellation when screens are disposed.
-- Limited retry with jitter for safe GET requests.
-- Respect for `Retry-After`.
-- Structured error categories.
-- Consistent user-facing offline and rate-limit messages.
-- Request IDs and timing metrics without logging secrets or personal content.
-- TLS-only URLs in production.
+Remaining:
 
-Specific issues:
-
-- Giphy currently constructs a default Dio client without explicit timeouts.
-- Several downloads do not expose cancellation.
+- Migrate Imgflip and ScrapeBadger to the shared client.
+- Add request IDs, timing metrics, and retry telemetry without logging secrets
+  or personal content.
 - Third-party response compatibility is protected mainly by unit fixtures, not contract monitoring.
 - The selected Apify actor's published schema currently documents a minimum of 100 for `commentsPerUrl`, while the app sends 50. Confirm the live actor accepts 50 or use dataset-output limiting to avoid production request rejection.
 
@@ -1100,7 +1105,7 @@ Target: close the largest product gaps.
 
 ### High priority
 
-- Add Giphy timeouts, cancellation, and retry policy.
+- Migrate remaining external services to the shared network client.
 - Add archive size and validation limits.
 - Add device-level Android WhatsApp export tests.
 - Resolve FFmpeg license and distribution obligations.

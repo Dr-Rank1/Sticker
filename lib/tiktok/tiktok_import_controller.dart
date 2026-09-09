@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/l10n.dart';
+import '../network/network_client.dart';
 import 'tiktok_import_service.dart';
 
 enum TiktokImportPhase { idle, resolving, downloading, completed, error }
@@ -44,7 +45,7 @@ class TiktokImportState {
 }
 
 final tiktokImportServiceProvider = Provider<TiktokImportService>((ref) {
-  return TiktokImportService();
+  return TiktokImportService(networkClient: ref.watch(networkClientProvider));
 });
 
 final tiktokImportProvider =

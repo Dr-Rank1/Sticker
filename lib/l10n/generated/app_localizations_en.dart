@@ -1174,4 +1174,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get couldNotAddStickerToPack =>
       'Could not add this sticker to the pack. Please try again.';
+
+  @override
+  String get networkOffline =>
+      'Network offline. Check your connection and try again.';
+
+  @override
+  String get serviceRateLimited =>
+      'The service is rate limited. Please try again later.';
+
+  @override
+  String get networkTimeout => 'The request timed out. Please try again.';
+
+  @override
+  String get networkRequestCancelled => 'The request was cancelled.';
+
+  @override
+  String get networkServiceUnavailable =>
+      'The service is temporarily unavailable. Please try again.';
+
+  @override
+  String get networkRequestFailed =>
+      'The network request failed. Please try again.';
 }

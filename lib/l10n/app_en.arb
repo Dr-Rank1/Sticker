@@ -539,5 +539,11 @@
   "noMemeTemplates": "The meme service did not return any templates.",
   "couldNotLoadPacks": "Could not load your sticker packs. Please try again.",
   "couldNotSavePack": "Could not save this pack. Please try again.",
-  "couldNotAddStickerToPack": "Could not add this sticker to the pack. Please try again."
+  "couldNotAddStickerToPack": "Could not add this sticker to the pack. Please try again.",
+  "networkOffline": "Network offline. Check your connection and try again.",
+  "serviceRateLimited": "The service is rate limited. Please try again later.",
+  "networkTimeout": "The request timed out. Please try again.",
+  "networkRequestCancelled": "The request was cancelled.",
+  "networkServiceUnavailable": "The service is temporarily unavailable. Please try again.",
+  "networkRequestFailed": "The network request failed. Please try again."
 }

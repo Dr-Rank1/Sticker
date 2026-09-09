@@ -2025,6 +2025,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not add this sticker to the pack. Please try again.'**
   String get couldNotAddStickerToPack;
+
+  /// No description provided for @networkOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Network offline. Check your connection and try again.'**
+  String get networkOffline;
+
+  /// No description provided for @serviceRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'The service is rate limited. Please try again later.'**
+  String get serviceRateLimited;
+
+  /// No description provided for @networkTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The request timed out. Please try again.'**
+  String get networkTimeout;
+
+  /// No description provided for @networkRequestCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'The request was cancelled.'**
+  String get networkRequestCancelled;
+
+  /// No description provided for @networkServiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The service is temporarily unavailable. Please try again.'**
+  String get networkServiceUnavailable;
+
+  /// No description provided for @networkRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The network request failed. Please try again.'**
+  String get networkRequestFailed;
 }
 
 class _AppLocalizationsDelegate

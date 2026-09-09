@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -281,7 +282,10 @@ class _FakeApifyService extends ApifyService {
   String? lastUrl;
 
   @override
-  Future<List<CommentSticker>> fetchCommentStickers(String postUrl) async {
+  Future<List<CommentSticker>> fetchCommentStickers(
+    String postUrl, {
+    CancelToken? cancelToken,
+  }) async {
     lastUrl = postUrl;
     final pending = gate;
     if (pending != null) await pending.future;

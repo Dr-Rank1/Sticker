@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 import '../l10n/l10n.dart';
+import '../network/network_client.dart';
 import '../storage/storage_utility.dart';
 
 class TiktokImportException implements Exception {
@@ -50,10 +51,11 @@ typedef TikwmApiGet = Future<Response<dynamic>> Function(
 /// Stickr's temporary directory for the existing FFmpeg editor pipeline.
 class TiktokImportService {
   TiktokImportService({
+    NetworkClient? networkClient,
     Dio? dio,
     Future<Directory> Function()? tempDirectory,
     this.apiGet,
-  }) : _dio = dio ?? createDio(),
+  }) : _networkClient = networkClient ?? NetworkClient(dio: dio),
        _tempDirectory = tempDirectory ?? (() => getStickrTemporaryDirectory());
 
   static const apiBaseUrl = 'https://www.tikwm.com';
@@ -61,24 +63,6 @@ class TiktokImportService {
   static const desktopUserAgent =
       'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36';
-
-  static Dio createDio() {
-    return Dio(
-      BaseOptions(
-        baseUrl: apiBaseUrl,
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 90),
-        sendTimeout: const Duration(seconds: 20),
-        followRedirects: true,
-        maxRedirects: 8,
-        headers: const {
-          'Accept': 'application/json',
-          'User-Agent': desktopUserAgent,
-        },
-        validateStatus: (status) => status != null && status < 400,
-      ),
-    );
-  }
 
   static final _urlWithScheme = RegExp(
     r'https?://(?:www\.|m\.|vm\.|vt\.)?tiktok\.com/[^\s]+',
@@ -90,7 +74,7 @@ class TiktokImportService {
     caseSensitive: false,
   );
 
-  final Dio _dio;
+  final NetworkClient _networkClient;
   final Future<Directory> Function() _tempDirectory;
   final TikwmApiGet? apiGet;
 
@@ -158,8 +142,12 @@ class TiktokImportService {
       );
     } on TiktokImportException {
       rethrow;
+    } on NetworkFailure catch (error) {
+      throw TiktokImportException(_friendlyNetworkMessage(error));
     } on DioException catch (error) {
-      throw TiktokImportException(_friendlyDioMessage(error));
+      throw TiktokImportException(
+        _friendlyNetworkMessage(NetworkErrorNormalizer.fromDio(error)),
+      );
     } on SocketException {
       throw TiktokImportException(serviceLocalizations.noInternetConnection);
     }
@@ -172,17 +160,30 @@ class TiktokImportService {
       final customGet = apiGet;
       final response = customGet != null
           ? await customGet(apiPath, query)
-          : await _dio.get<dynamic>(
-              apiPath,
+          : await _networkClient.get<dynamic>(
+              '$apiBaseUrl$apiPath',
               queryParameters: query,
-              options: Options(responseType: ResponseType.json),
+              options: Options(
+                responseType: ResponseType.json,
+                followRedirects: true,
+                maxRedirects: 8,
+                headers: const {
+                  'Accept': 'application/json',
+                  'User-Agent': desktopUserAgent,
+                },
+                validateStatus: (status) => status != null && status < 400,
+              ),
             );
       final body = _asJsonMap(response.data);
       return parseTikwmResponse(body);
     } on TiktokImportException {
       rethrow;
+    } on NetworkFailure catch (error) {
+      throw TiktokImportException(_friendlyNetworkMessage(error));
     } on DioException catch (error) {
-      throw TiktokImportException(_friendlyDioMessage(error, resolving: true));
+      throw TiktokImportException(
+        _friendlyNetworkMessage(NetworkErrorNormalizer.fromDio(error)),
+      );
     } on FormatException {
       throw TiktokImportException(serviceLocalizations.unreadableTikwmResponse);
     } on SocketException {
@@ -237,7 +238,7 @@ class TiktokImportService {
     );
 
     try {
-      await _dio.download(
+      await _networkClient.download(
         downloadUrl,
         file.path,
         onReceiveProgress: onReceiveProgress,
@@ -261,6 +262,7 @@ class TiktokImportService {
 
   String describeError(Object error) {
     if (error is TiktokImportException) return error.message;
+    if (error is NetworkFailure) return _friendlyNetworkMessage(error);
     if (error is DioException) return _friendlyDioMessage(error);
     if (error is SocketException) {
       return serviceLocalizations.noInternetConnection;
@@ -300,35 +302,19 @@ class TiktokImportService {
     return serviceLocalizations.tikwmProcessFailed;
   }
 
-  String _friendlyDioMessage(DioException error, {bool resolving = false}) {
-    switch (error.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return serviceLocalizations.connectionTimedOut;
-      case DioExceptionType.connectionError:
-        return serviceLocalizations.noInternetConnection;
-      case DioExceptionType.badResponse:
-        final code = error.response?.statusCode;
-        if (code == 429) {
-          return serviceLocalizations.tikwmRateLimited;
-        }
-        if (code == 400 || code == 404) {
-          return serviceLocalizations.tikwmTikTokNotFound;
-        }
-        return resolving
-            ? serviceLocalizations.tikwmLookupFailed
-            : serviceLocalizations.videoDownloadFailed;
-      case DioExceptionType.cancel:
-        return serviceLocalizations.downloadCancelled;
-      default:
-        if (error.error is SocketException) {
-          return serviceLocalizations.noInternetConnection;
-        }
-        return resolving
-            ? serviceLocalizations.tikwmLookupFailed
-            : serviceLocalizations.downloadFailed;
+  String _friendlyDioMessage(DioException error) {
+    return _friendlyNetworkMessage(NetworkErrorNormalizer.fromDio(error));
+  }
+
+  String _friendlyNetworkMessage(NetworkFailure error) {
+    final code = error.statusCode;
+    if (error.kind == NetworkErrorKind.rateLimited) {
+      return serviceLocalizations.tikwmRateLimited;
     }
+    if (code == 400 || code == 404) {
+      return serviceLocalizations.tikwmTikTokNotFound;
+    }
+    return error.message;
   }
 
   Future<void> _deletePartialDownload(File file) async {

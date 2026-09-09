@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_environment.dart';
 import '../l10n/l10n.dart';
+import '../network/network_client.dart';
 import '../storage/storage_utility.dart';
 
 class GiphyException implements Exception {
@@ -18,7 +19,8 @@ class GiphyException implements Exception {
 }
 
 class GiphyRateLimitException extends GiphyException {
-  GiphyRateLimitException() : super(serviceLocalizations.giphyRateLimitReached);
+  GiphyRateLimitException([String? message])
+    : super(message ?? serviceLocalizations.giphyRateLimitReached);
 }
 
 @immutable
@@ -59,11 +61,12 @@ typedef GiphyApiGet = Future<Response<dynamic>> Function(
 
 class GiphyService {
   GiphyService({
+    NetworkClient? networkClient,
     Dio? dio,
     String apiKey = AppEnvironment.giphyApiKey,
     this.apiGet,
     Future<Directory> Function()? temporaryDirectory,
-  }) : _dio = dio ?? Dio(),
+  }) : _networkClient = networkClient ?? NetworkClient(dio: dio),
        _apiKey = apiKey.trim(),
        _temporaryDirectory =
            temporaryDirectory ?? (() => getStickrTemporaryDirectory());
@@ -72,14 +75,17 @@ class GiphyService {
   static const searchEndpoint = 'https://api.giphy.com/v1/stickers/search';
   static const pageSize = 50;
 
-  final Dio _dio;
+  final NetworkClient _networkClient;
   final String _apiKey;
   final GiphyApiGet? apiGet;
   final Future<Directory> Function() _temporaryDirectory;
 
   bool get hasApiKey => _apiKey.isNotEmpty;
 
-  Future<GiphyStickerPage> fetchTrending({int offset = 0}) async {
+  Future<GiphyStickerPage> fetchTrending({
+    int offset = 0,
+    CancelToken? cancelToken,
+  }) async {
     if (!hasApiKey) {
       throw GiphyException(serviceLocalizations.giphyTrendingUnavailable);
     }
@@ -95,10 +101,15 @@ class GiphyService {
       endpoint: endpoint,
       parameters: parameters,
       fallbackMessage: serviceLocalizations.couldNotLoadTrending,
+      cancelToken: cancelToken,
     );
   }
 
-  Future<GiphyStickerPage> search(String query, {int offset = 0}) async {
+  Future<GiphyStickerPage> search(
+    String query, {
+    int offset = 0,
+    CancelToken? cancelToken,
+  }) async {
     final term = query.trim();
     if (term.isEmpty) {
       throw GiphyException(serviceLocalizations.giphySearchRequired);
@@ -117,12 +128,14 @@ class GiphyService {
         'offset': offset,
       },
       fallbackMessage: serviceLocalizations.couldNotSearchGiphy,
+      cancelToken: cancelToken,
     );
   }
 
   Future<File> downloadSticker({
     required String id,
     required String url,
+    CancelToken? cancelToken,
   }) async {
     final uri = Uri.tryParse(url);
     if (uri == null || !(uri.scheme == 'https' || uri.scheme == 'http')) {
@@ -136,16 +149,19 @@ class GiphyService {
       '${directory.path}${Platform.pathSeparator}giphy_${safeId.isEmpty ? 'sticker' : safeId}_${DateTime.now().microsecondsSinceEpoch}.$extension',
     );
     try {
-      await _dio.download(url, file.path);
+      await _networkClient.download(url, file.path, cancelToken: cancelToken);
       if (!await file.exists() || await file.length() == 0) {
         throw GiphyException(serviceLocalizations.giphyEmptySticker);
       }
       return file;
     } on GiphyException {
       rethrow;
+    } on NetworkFailure catch (error) {
+      if (await file.exists()) await file.delete();
+      throw _fromNetwork(error);
     } on DioException catch (error) {
       if (await file.exists()) await file.delete();
-      throw _fromDio(error);
+      throw _fromNetwork(NetworkErrorNormalizer.fromDio(error));
     } catch (_) {
       if (await file.exists()) await file.delete();
       throw GiphyException(serviceLocalizations.stickerDownloadFailed);
@@ -203,21 +219,25 @@ class GiphyService {
     required String endpoint,
     required Map<String, dynamic> parameters,
     required String fallbackMessage,
+    CancelToken? cancelToken,
   }) async {
     try {
       final customGet = apiGet;
       final response = customGet != null
           ? await customGet(endpoint, parameters)
-          : await _dio.get<dynamic>(
+          : await _networkClient.get<dynamic>(
               endpoint,
               queryParameters: parameters,
               options: Options(responseType: ResponseType.json),
+              cancelToken: cancelToken,
             );
       return _parseResponse(response.data);
     } on GiphyException {
       rethrow;
+    } on NetworkFailure catch (error) {
+      throw _fromNetwork(error);
     } on DioException catch (error) {
-      throw _fromDio(error);
+      throw _fromNetwork(NetworkErrorNormalizer.fromDio(error));
     } on FormatException {
       throw GiphyException(serviceLocalizations.giphyUnreadableResponse);
     } on SocketException {
@@ -227,22 +247,15 @@ class GiphyService {
     }
   }
 
-  GiphyException _fromDio(DioException error) {
-    final status = error.response?.statusCode;
-    if (status == 429) return GiphyRateLimitException();
+  GiphyException _fromNetwork(NetworkFailure error) {
+    final status = error.statusCode;
+    if (error.kind == NetworkErrorKind.rateLimited) {
+      return GiphyRateLimitException(error.message);
+    }
     if (status == 401 || status == 403) {
       return GiphyException(serviceLocalizations.giphyRejectedApiKey);
     }
-    switch (error.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return GiphyException(serviceLocalizations.giphyTimedOut);
-      case DioExceptionType.connectionError:
-        return GiphyException(serviceLocalizations.giphyConnectionFailed);
-      default:
-        return GiphyException(serviceLocalizations.giphyRequestFailed);
-    }
+    return GiphyException(error.message);
   }
 }
 
@@ -258,5 +271,5 @@ int _asInt(dynamic value) {
 }
 
 final giphyServiceProvider = Provider<GiphyService>((ref) {
-  return GiphyService();
+  return GiphyService(networkClient: ref.watch(networkClientProvider));
 });

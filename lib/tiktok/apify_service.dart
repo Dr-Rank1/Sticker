@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_environment.dart';
 import '../crashlytics/crash_reporter.dart';
 import '../l10n/l10n.dart';
+import '../network/network_client.dart';
 import 'tiktok_comment_service.dart';
 
 class ApifyException implements Exception {
@@ -36,10 +37,11 @@ typedef ApifyPost = Future<Response<dynamic>> Function(
 class ApifyService {
   ApifyService({
     String token = AppEnvironment.apifyApiToken,
+    NetworkClient? networkClient,
     Dio? dio,
     this.apiPost,
   }) : _token = token.trim(),
-       _dio = dio ?? createDio();
+       _networkClient = networkClient ?? NetworkClient(dio: dio);
 
   static const synchronousDatasetPath =
       'https://api.apify.com/v2/actors/api-ninja~tiktok-comments-scraper/run-sync-get-dataset-items';
@@ -64,27 +66,16 @@ class ApifyService {
   ];
 
   final String _token;
-  final Dio _dio;
+  final NetworkClient _networkClient;
   final ApifyPost? apiPost;
 
   String get synchronousDatasetEndpoint {
     return '$synchronousDatasetPath?token=${Uri.encodeQueryComponent(_token)}';
   }
 
-  static Dio createDio() {
-    return Dio(
-      BaseOptions(
-        connectTimeout: const Duration(milliseconds: 60000),
-        receiveTimeout: const Duration(milliseconds: 60000),
-        sendTimeout: const Duration(milliseconds: 60000),
-        contentType: Headers.jsonContentType,
-        headers: const {'Accept': 'application/json'},
-      ),
-    );
-  }
-
   Future<List<Map<String, dynamic>>> runTikTokCommentScraper({
     required String postUrl,
+    CancelToken? cancelToken,
   }) async {
     _ensureConfigured();
     final input = scraperInput(postUrl: postUrl);
@@ -95,7 +86,15 @@ class ApifyService {
       final customPost = apiPost;
       final response = customPost != null
           ? await customPost(synchronousDatasetEndpoint, input)
-          : await _dio.post<dynamic>(synchronousDatasetEndpoint, data: input);
+          : await _networkClient.post<dynamic>(
+              synchronousDatasetEndpoint,
+              data: input,
+              options: Options(
+                contentType: Headers.jsonContentType,
+                headers: const {'Accept': 'application/json'},
+              ),
+              cancelToken: cancelToken,
+            );
       final items = _listData(response.data)
           .map(_asMap)
           .whereType<Map<String, dynamic>>()
@@ -108,10 +107,12 @@ class ApifyService {
       return items;
     } on ApifyException {
       rethrow;
+    } on NetworkFailure catch (error) {
+      throw _fromNetwork(error);
     } on DioException catch (error) {
-      throw _fromDio(error);
+      throw _fromNetwork(NetworkErrorNormalizer.fromDio(error));
     } on SocketException {
-      throw ApifyNetworkException();
+      throw ApifyNetworkException(serviceLocalizations.networkOffline);
     } on FormatException {
       throw ApifyException(serviceLocalizations.apifyUnreadableResponse);
     } catch (error) {
@@ -121,8 +122,14 @@ class ApifyService {
     }
   }
 
-  Future<List<String>> fetchStickerUrls(String postUrl) async {
-    final items = await runTikTokCommentScraper(postUrl: postUrl);
+  Future<List<String>> fetchStickerUrls(
+    String postUrl, {
+    CancelToken? cancelToken,
+  }) async {
+    final items = await runTikTokCommentScraper(
+      postUrl: postUrl,
+      cancelToken: cancelToken,
+    );
     final urls = <String>{};
     for (final item in items) {
       urls.addAll(imageUrlsFrom(item));
@@ -130,8 +137,14 @@ class ApifyService {
     return urls.toList(growable: false);
   }
 
-  Future<List<CommentSticker>> fetchCommentStickers(String postUrl) async {
-    final items = await runTikTokCommentScraper(postUrl: postUrl);
+  Future<List<CommentSticker>> fetchCommentStickers(
+    String postUrl, {
+    CancelToken? cancelToken,
+  }) async {
+    final items = await runTikTokCommentScraper(
+      postUrl: postUrl,
+      cancelToken: cancelToken,
+    );
     if (items.isEmpty) return const [];
     crashReporter.log(
       'Apify parsing ${items.length} dataset items on a background isolate',
@@ -218,28 +231,24 @@ class ApifyService {
     throw const FormatException('Expected an Apify dataset array.');
   }
 
-  ApifyException _fromDio(DioException error) {
-    final status = error.response?.statusCode;
+  ApifyException _fromNetwork(NetworkFailure error) {
+    final status = error.statusCode;
     if (status == 401 || status == 403) {
       return ApifyException(serviceLocalizations.apifyRejectedToken);
     }
-    if (status == 402 || status == 429) {
-      return ApifyLimitException();
+    if (status == 402 || error.kind == NetworkErrorKind.rateLimited) {
+      return ApifyLimitException(error.message);
     }
-    switch (error.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return ApifyNetworkException(serviceLocalizations.apifyTimedOut);
-      case DioExceptionType.connectionError:
-        return ApifyNetworkException(
-          serviceLocalizations.apifyConnectionFailed,
-        );
-      default:
-        if (error.error is SocketException) {
-          return ApifyNetworkException();
-        }
-        return ApifyException(serviceLocalizations.apifyRequestFailed);
+    switch (error.kind) {
+      case NetworkErrorKind.offline:
+      case NetworkErrorKind.timeout:
+        return ApifyNetworkException(error.message);
+      case NetworkErrorKind.cancelled:
+      case NetworkErrorKind.serviceUnavailable:
+      case NetworkErrorKind.requestFailed:
+        return ApifyException(error.message);
+      case NetworkErrorKind.rateLimited:
+        return ApifyLimitException(error.message);
     }
   }
 }
@@ -290,5 +299,5 @@ List<CommentSticker> parseApifyItems(List<dynamic> items) {
 }
 
 final apifyServiceProvider = Provider<ApifyService>((ref) {
-  return ApifyService();
+  return ApifyService(networkClient: ref.watch(networkClientProvider));
 });

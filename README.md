@@ -164,7 +164,8 @@ The project uses:
 - Flutter localization generation with ARB resources and an English fallback.
 - Riverpod for application state and dependency injection.
 - Isar for pack persistence and Hive for settings persistence.
-- Dio for TikWM, Giphy, Imgflip, ScrapeBadger, Apify, and file downloads.
+- Dio with a shared timeout, safe-GET retry, `Retry-After`, cancellation, and
+  error-normalization layer for Giphy, Apify, and TikWM.
 - FFmpeg Kit Full-GPL (`ffmpeg_kit_flutter_new`, including `libwebp`) for animated and static WebP encoding.
 - ML Kit selfie segmentation for on-device background removal.
 - `image` for pixel processing, transparent canvases, resize, crop, and padding.
@@ -187,6 +188,8 @@ Important directories under `lib/`:
 - `memes/` — Imgflip template API and picker.
 - `discover/` — Giphy sticker search, pagination, and downloads.
 - `community/` — offline example catalog and pack-detail UI.
+- `network/` — shared Dio configuration, bounded retries, cancellation, and
+  structured network failures.
 - `onboarding/`, `permissions/`, and `settings/` — first-run experience,
   permission guidance, appearance, and storage management.
 - `theme/` and `widgets/` — visual system and shared navigation.

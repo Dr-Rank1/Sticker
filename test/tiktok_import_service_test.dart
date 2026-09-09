@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stickr/network/network_client.dart';
 import 'package:stickr/tiktok/tiktok_import_service.dart';
 
 void main() {
@@ -95,13 +96,12 @@ void main() {
       expect(video.caption, 'A clean clip');
     });
 
-    test('configures Dio for the TikWM REST endpoint', () {
-      final dio = TiktokImportService.createDio();
+    test('uses the central network client timeouts', () {
+      final options = NetworkClient().options;
 
-      expect(dio.options.baseUrl, TiktokImportService.apiBaseUrl);
-      expect(dio.options.connectTimeout, const Duration(seconds: 20));
-      expect(dio.options.receiveTimeout, const Duration(seconds: 90));
-      expect(dio.options.headers['Accept'], 'application/json');
+      expect(options.connectTimeout, NetworkClient.connectTimeout);
+      expect(options.receiveTimeout, NetworkClient.receiveTimeout);
+      expect(options.sendTimeout, NetworkClient.sendTimeout);
     });
 
     test('maps JSON rate limits to a helpful error', () {

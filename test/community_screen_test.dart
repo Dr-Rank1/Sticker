@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -210,6 +211,7 @@ class _FakeGiphyService extends GiphyService {
   Future<File> downloadSticker({
     required String id,
     required String url,
+    CancelToken? cancelToken,
   }) async {
     downloadedIds.add(id);
     return File('download_$id.gif');

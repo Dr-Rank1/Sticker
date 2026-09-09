@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -9,6 +10,7 @@ import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
 import '../l10n/l10n.dart';
 import '../packs/save_to_pack_sheet.dart';
+import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
@@ -30,15 +32,23 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   int? _nextOffset;
   int _searchGeneration = 0;
   String? _error;
+  CancelToken? _pageCancelToken;
+  final _downloadCancelTokens = <String, CancelToken>{};
+  ProviderSubscription<AppTab>? _tabSubscription;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_loadMoreIfNeeded);
+    _tabSubscription = ref.listenManual(navigationProvider, (_, tab) {
+      if (tab != AppTab.discover) _cancelRequests();
+    });
   }
 
   @override
   void dispose() {
+    _cancelRequests(updateState: false);
+    _tabSubscription?.close();
     _searchController.dispose();
     _scrollController
       ..removeListener(_loadMoreIfNeeded)
@@ -50,6 +60,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final query = _searchController.text.trim();
     if (query.isEmpty || _searching) return;
     FocusManager.instance.primaryFocus?.unfocus();
+    _pageCancelToken?.cancel('A newer search was started.');
+    final cancelToken = CancelToken();
+    _pageCancelToken = cancelToken;
     final generation = ++_searchGeneration;
     setState(() {
       _searching = true;
@@ -61,7 +74,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     });
 
     try {
-      final page = await ref.read(giphyServiceProvider).search(query);
+      final page = await ref
+          .read(giphyServiceProvider)
+          .search(query, cancelToken: cancelToken);
       if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _results = page.stickers;
@@ -86,6 +101,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         _error = message;
       });
       _showMessage(message);
+    } finally {
+      if (identical(_pageCancelToken, cancelToken)) {
+        _pageCancelToken = null;
+      }
     }
   }
 
@@ -102,11 +121,13 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       return;
     }
     final generation = _searchGeneration;
+    final cancelToken = CancelToken();
+    _pageCancelToken = cancelToken;
     setState(() => _loadingPage = true);
     try {
       final page = await ref
           .read(giphyServiceProvider)
-          .search(query, offset: offset);
+          .search(query, offset: offset, cancelToken: cancelToken);
       if (!mounted ||
           generation != _searchGeneration ||
           query != _activeQuery) {
@@ -130,17 +151,27 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       if (!mounted || generation != _searchGeneration) return;
       setState(() => _loadingPage = false);
       _showMessage(context.l10n.couldNotLoadMoreStickers);
+    } finally {
+      if (identical(_pageCancelToken, cancelToken)) {
+        _pageCancelToken = null;
+      }
     }
   }
 
   Future<void> _downloadAndSave(GiphySticker sticker) async {
     if (_downloadingIds.contains(sticker.id)) return;
+    final cancelToken = CancelToken();
+    _downloadCancelTokens[sticker.id] = cancelToken;
     setState(() => _downloadingIds.add(sticker.id));
     File? downloaded;
     try {
       downloaded = await ref
           .read(giphyServiceProvider)
-          .downloadSticker(id: sticker.id, url: sticker.url);
+          .downloadSticker(
+            id: sticker.id,
+            url: sticker.url,
+            cancelToken: cancelToken,
+          );
       if (!mounted) return;
       final pack = await showSaveToPackSheet(
         context,
@@ -150,9 +181,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       if (!mounted || pack == null) return;
       _showMessage(context.l10n.addedToPack(pack.name, pack.countLabel));
     } on GiphyException catch (error) {
-      if (mounted) _showMessage(error.message);
+      if (mounted && !cancelToken.isCancelled) {
+        _showMessage(error.message);
+      }
     } catch (_) {
-      if (mounted) {
+      if (mounted && !cancelToken.isCancelled) {
         _showMessage(context.l10n.couldNotSaveSticker);
       }
     } finally {
@@ -166,6 +199,24 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       if (mounted) {
         setState(() => _downloadingIds.remove(sticker.id));
       }
+      _downloadCancelTokens.remove(sticker.id);
+    }
+  }
+
+  void _cancelRequests({bool updateState = true}) {
+    _searchGeneration++;
+    _pageCancelToken?.cancel('Discover is no longer active.');
+    _pageCancelToken = null;
+    for (final token in _downloadCancelTokens.values) {
+      token.cancel('Discover is no longer active.');
+    }
+    _downloadCancelTokens.clear();
+    if (updateState && mounted) {
+      setState(() {
+        _searching = false;
+        _loadingPage = false;
+        _downloadingIds.clear();
+      });
     }
   }
 

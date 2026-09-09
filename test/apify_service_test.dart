@@ -2,6 +2,7 @@ import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stickr/network/network_client.dart';
 import 'package:stickr/tiktok/apify_service.dart';
 
 void main() {
@@ -47,12 +48,12 @@ void main() {
     expect(items, hasLength(1));
   });
 
-  test('configures Dio with sixty second request timeouts', () {
-    final options = ApifyService.createDio().options;
+  test('uses the central network client timeouts', () {
+    final options = NetworkClient().options;
 
-    expect(options.connectTimeout, const Duration(milliseconds: 60000));
-    expect(options.receiveTimeout, const Duration(milliseconds: 60000));
-    expect(options.sendTimeout, const Duration(milliseconds: 60000));
+    expect(options.connectTimeout, NetworkClient.connectTimeout);
+    expect(options.receiveTimeout, NetworkClient.receiveTimeout);
+    expect(options.sendTimeout, NetworkClient.sendTimeout);
   });
 
   test('returns only unique valid sticker URLs', () async {
