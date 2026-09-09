@@ -16,8 +16,8 @@ void main() {
       );
       final filter = args[args.indexOf('-filter_complex') + 1];
 
-      expect(args[args.indexOf('-ss') + 1], '00:00:00');
-      expect(args[args.indexOf('-t') + 1], '00:00:03');
+      expect(args[args.indexOf('-ss') + 1], '00:00:00.000');
+      expect(args[args.indexOf('-t') + 1], '00:00:03.000');
       expect(args, contains('clip.mp4'));
       expect(args, contains('layers.png'));
       expect(filter, contains('fps=15'));
@@ -46,6 +46,31 @@ void main() {
         outputPath: 'out.webp',
       );
       expect(args.where((part) => part == '-i'), hasLength(1));
+    });
+
+    test('preserves millisecond trim precision', () {
+      final args = builder.buildCommand(
+        sourceMp4: 'in.mp4',
+        outputPath: 'out.webp',
+        startSeconds: 1.2345,
+        durationSeconds: 0.875,
+      );
+
+      expect(args[args.indexOf('-ss') + 1], '00:00:01.235');
+      expect(args[args.indexOf('-t') + 1], '00:00:00.875');
+    });
+
+    test('applies playback speed and caps slowed output at three seconds', () {
+      final args = builder.buildCommand(
+        sourceMp4: 'in.mp4',
+        outputPath: 'out.webp',
+        durationSeconds: 3,
+        speed: 0.5,
+      );
+      final filter = args[args.indexOf('-filter_complex') + 1];
+
+      expect(args[args.indexOf('-t') + 1], '00:00:01.500');
+      expect(filter, contains('setpts=PTS/0.5'));
     });
   });
 

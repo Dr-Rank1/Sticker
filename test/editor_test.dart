@@ -42,6 +42,19 @@ void main() {
       expect(container.read(editorProvider).document.speed, 1);
     });
 
+    test('trim selection never exceeds three output seconds', () {
+      final editor = container.read(editorProvider.notifier);
+
+      editor.setTrim(0, 8);
+      expect(container.read(editorProvider).document.trimDuration, 3);
+
+      editor.setSpeed(0.5);
+      expect(container.read(editorProvider).document.trimDuration, 1.5);
+
+      editor.setTrim(0, 3);
+      expect(container.read(editorProvider).document.trimDuration, 1.5);
+    });
+
     test('font changes update the selected text overlay and are undoable', () {
       final editor = container.read(editorProvider.notifier);
       editor.addText('Hello');
@@ -85,8 +98,8 @@ void main() {
         overlayPngPath: 'overlay.png',
       );
 
-      expect(args[args.indexOf('-ss') + 1], '00:00:00');
-      expect(args[args.indexOf('-t') + 1], '00:00:03');
+      expect(args[args.indexOf('-ss') + 1], '00:00:00.000');
+      expect(args[args.indexOf('-t') + 1], '00:00:03.000');
       expect(args[args.indexOf('-loop') + 1], '0');
       expect(args[args.indexOf('-q:v') + 1], '50');
       expect(args[args.indexOf('-compression_level') + 1], '4');
@@ -102,6 +115,10 @@ void main() {
       expect(
         service.buildFilterGraph(speed: 1, fps: 15, hasOverlay: true),
         contains('overlay=0:0'),
+      );
+      expect(
+        service.buildFilterGraph(speed: 2, fps: 15, hasOverlay: false),
+        contains('setpts=PTS/2.0'),
       );
     });
 

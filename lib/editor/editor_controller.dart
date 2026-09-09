@@ -62,15 +62,12 @@ class EditorController extends Notifier<EditorState> {
 
   void hydrateDuration(double seconds) {
     final duration = seconds < 0.2 ? 0.2 : seconds;
-    final end = duration < 3 ? duration : 3;
-    final clampedEnd = end > WhatsAppStickerSpec.maxDurationSeconds
-        ? WhatsAppStickerSpec.maxDurationSeconds
-        : end;
+    final end = duration.clamp(0.2, WhatsAppStickerSpec.animatedClipSeconds);
     state = state.copyWith(
       document: state.document.copyWith(
         videoDuration: duration,
         trimStart: 0,
-        trimEnd: clampedEnd.toDouble(),
+        trimEnd: end.toDouble(),
       ),
     );
   }
@@ -182,7 +179,15 @@ class EditorController extends Notifier<EditorState> {
 
   void setSpeed(double speed) {
     if (speed == state.document.speed) return;
-    _commit(state.document.copyWith(speed: speed));
+    final document = state.document;
+    final maxDuration = WhatsAppStickerSpec.maxSourceDurationForSpeed(speed);
+    final trimEnd = document.trimDuration > maxDuration
+        ? (document.trimStart + maxDuration).clamp(
+            document.trimStart,
+            document.videoDuration,
+          )
+        : document.trimEnd;
+    _commit(document.copyWith(speed: speed, trimEnd: trimEnd.toDouble()));
   }
 
   void setTrim(double start, double end) {
@@ -192,8 +197,11 @@ class EditorController extends Notifier<EditorState> {
     if (nextEnd - nextStart < 0.2) {
       nextEnd = (nextStart + 0.2).clamp(0, duration);
     }
-    if (nextEnd - nextStart > WhatsAppStickerSpec.maxDurationSeconds) {
-      nextEnd = nextStart + WhatsAppStickerSpec.maxDurationSeconds;
+    final maxDuration = WhatsAppStickerSpec.maxSourceDurationForSpeed(
+      state.document.speed,
+    );
+    if (nextEnd - nextStart > maxDuration) {
+      nextEnd = nextStart + maxDuration;
     }
     state = state.copyWith(
       document: state.document.copyWith(

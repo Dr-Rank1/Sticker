@@ -326,12 +326,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            const ColoredBox(color: Color(0xFF151A21)),
+                            const ColoredBox(color: Colors.transparent),
                             if (widget.isStatic)
                               _StaticPhoto(path: widget.imagePath!)
                             else if (videoReady && player.value.size.width > 0)
                               FittedBox(
-                                fit: BoxFit.cover,
+                                key: const Key('editor-video-preview'),
+                                fit: BoxFit.contain,
                                 child: SizedBox(
                                   width: player.value.size.width,
                                   height: player.value.size.height,
@@ -401,6 +402,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                         start: document.trimStart,
                         end: document.trimEnd,
                         playhead: playhead,
+                        maxSelectionDuration:
+                            WhatsAppStickerSpec.maxSourceDurationForSpeed(
+                              document.speed,
+                            ),
                         onChanged: _editor.setTrim,
                         onChangeStart: _editor.beginGesture,
                         onChangeEnd: () {

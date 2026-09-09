@@ -9,6 +9,7 @@ class TrimTimeline extends StatelessWidget {
     required this.start,
     required this.end,
     required this.playhead,
+    this.maxSelectionDuration = 3,
     required this.onChanged,
     required this.onChangeStart,
     required this.onChangeEnd,
@@ -18,6 +19,7 @@ class TrimTimeline extends StatelessWidget {
   final double start;
   final double end;
   final double playhead;
+  final double maxSelectionDuration;
   final void Function(double start, double end) onChanged;
   final VoidCallback onChangeStart;
   final VoidCallback onChangeEnd;
@@ -39,7 +41,8 @@ class TrimTimeline extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                _format(end - start),
+                '${_format(end - start)} / '
+                '${_format(maxSelectionDuration)} max',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: colors.accent,
                   fontWeight: FontWeight.w700,
@@ -64,7 +67,9 @@ class TrimTimeline extends StatelessWidget {
               return Semantics(
                 button: true,
                 label: 'Clip trim range',
-                hint: 'Drag the handles to set the start and end of the clip',
+                hint:
+                    'Drag the handles to set a clip up to '
+                    '${_format(maxSelectionDuration)}',
                 value: '${_format(start)} to ${_format(end)}',
                 child: GestureDetector(
                   onHorizontalDragStart: (details) {
@@ -94,12 +99,18 @@ class TrimTimeline extends StatelessWidget {
 
   void _drag(double dx, double width, double total) {
     final t = (dx / width).clamp(0.0, 1.0) * total;
+    final limit = maxSelectionDuration.clamp(0.2, total).toDouble();
     final startDist = (t - start).abs();
     final endDist = (t - end).abs();
     if (startDist < endDist) {
-      onChanged(t, end);
+      var nextStart = t.clamp(0, end - 0.2).toDouble();
+      if (end - nextStart > limit) {
+        nextStart = end - limit;
+      }
+      onChanged(nextStart, end);
     } else {
-      onChanged(start, t);
+      final nextEnd = t.clamp(start + 0.2, start + limit).clamp(0, total);
+      onChanged(start, nextEnd.toDouble());
     }
   }
 

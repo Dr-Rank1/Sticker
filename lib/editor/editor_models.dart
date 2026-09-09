@@ -271,8 +271,12 @@ class WhatsAppStickerSpec {
   static const int size = 512;
   static const int maxBytes = 500 * 1024;
   static const int maxStaticBytes = 100 * 1024;
-  static const double maxDurationSeconds = 10;
   static const double animatedClipSeconds = 3;
   static const int animatedFps = 15;
   static const List<double> speeds = [0.5, 1, 1.5, 2];
+
+  static double maxSourceDurationForSpeed(double speed) {
+    final normalized = speed.isFinite && speed > 0 ? speed : 1.0;
+    return (animatedClipSeconds * normalized).clamp(0.2, animatedClipSeconds);
+  }
 }

@@ -28,6 +28,11 @@ void main() {
     expect(find.text('Emojis'), findsOneWidget);
     expect(find.text('Speed'), findsOneWidget);
     expect(find.text('Save'), findsOneWidget);
+    final preview = tester.widget<FittedBox>(
+      find.byKey(const Key('editor-video-preview')),
+    );
+    expect(preview.fit, BoxFit.contain);
+    expect(find.text('0:03.0 / 0:03.0 max'), findsOneWidget);
   });
 
   testWidgets('static photo editor hides speed and trim', (tester) async {

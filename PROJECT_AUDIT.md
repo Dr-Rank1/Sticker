@@ -454,7 +454,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 181 tests passed.
+- 184 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -488,40 +488,28 @@ These upgrades should be handled in small groups with platform smoke tests becau
 
 ### 5.5 Critical media correctness findings
 
-The current editor exposes controls whose exported result does not always match the preview.
+The editor timing and framing contract is now aligned with animated WebP export.
 
-#### Playback speed is preview-only
+#### Playback speed is applied during export
 
-The editor stores and previews 0.5x, 1x, 1.5x, and 2x speeds, but `FfmpegStickerService` does not pass the selected speed into `FFmpegWebpBuilder`, and the FFmpeg filter graph has no timing transform.
+The editor stores and previews 0.5x, 1x, 1.5x, and 2x speeds. `FfmpegStickerService` now passes the selected speed to `FFmpegWebpBuilder`, which applies `setpts` before frame-rate conversion, containment scaling, padding, and overlay composition.
 
-Impact:
+Slow playback also reduces the maximum selectable source range so the final timed output remains within three seconds. FFmpeg progress now uses the actual speed-adjusted output duration rather than a fixed denominator.
 
-- Users can select a speed and see it during preview.
-- The exported animated sticker retains the source timing.
-- The control is materially misleading until export honors it.
+#### Fractional trim positions are preserved
 
-#### Fractional trim positions are lost
+`FFmpegWebpBuilder.formatTimestamp` now emits `HH:MM:SS.mmm` timestamps rounded to millisecond precision. Unit tests cover fractional start and duration values.
 
-`FFmpegWebpBuilder.formatTimestamp` floors seconds to a whole integer. A trim start such as 1.9 seconds is therefore exported from 1 second.
+#### Preview and export framing match
 
-Impact:
+Video preview now uses aspect-ratio containment inside the square editor canvas. This matches FFmpeg's 512x512 containment scale and centered transparent padding instead of cropping with `BoxFit.cover`.
 
-- Fine trim adjustments are inaccurate.
-- Sub-second selections can collapse toward zero.
-- Current tests do not cover fractional FFmpeg timestamps.
+#### Export limits are visible and enforced
 
-#### Preview and export framing differ
+The trim timeline displays the current selected duration and maximum. Timeline gestures and editor state both cap the source selection at three seconds, with a speed-aware 1.5-second source cap at 0.5x so slowed output remains no longer than three seconds.
 
-Video preview uses `BoxFit.cover`, while FFmpeg scales with aspect-ratio containment and transparent padding.
+Remaining media hardening:
 
-The editor model allows longer trims, but animated export silently caps output at three seconds. Progress is also calculated against a fixed three-second duration.
-
-Required action:
-
-- Define one framing and timing contract.
-- Apply speed in the FFmpeg filter graph.
-- Preserve millisecond timestamp precision.
-- Show the actual three-second export limit in the editor.
 - Add golden or frame-comparison tests for preview/export parity.
 - Disable or intercept editor dismissal while encoding, and ensure closing the editor cancels active media work.
 
@@ -1134,7 +1122,7 @@ Target: close the largest product gaps.
 ### Highest priority
 
 - Rotate the previously committed Giphy key.
-- Fix fractional FFmpeg trimming and make exported speed match the preview.
+- Preserve the corrected FFmpeg timing, speed, and preview framing contract.
 - Restrict temporary cleanup to Stickr-owned files.
 - Add CI.
 - Track the Android Gradle wrapper.

@@ -85,10 +85,11 @@ class FFmpegWebpBuilder {
     await FFmpegKit.cancel();
   }
 
-  String buildFilterGraph({required bool hasOverlay}) {
+  String buildFilterGraph({required bool hasOverlay, double speed = 1}) {
     const size = WhatsAppStickerSpec.size;
+    final normalizedSpeed = _normalizedSpeed(speed);
     final video =
-        '[0:v]fps=$fps,'
+        '[0:v]setpts=PTS/$normalizedSpeed,fps=$fps,'
         'scale=$size:$size:force_original_aspect_ratio=decrease,'
         'pad=$size:$size:(ow-iw)/2:(oh-ih)/2:color=white@0.0';
     if (!hasOverlay) return video;
@@ -102,9 +103,11 @@ class FFmpegWebpBuilder {
     String? overlayPng,
     double startSeconds = 0,
     double durationSeconds = clipSeconds,
+    double speed = 1,
     int quality = defaultQuality,
   }) {
-    final duration = durationSeconds.clamp(0.2, clipSeconds).toDouble();
+    final normalizedSpeed = _normalizedSpeed(speed);
+    final duration = _sourceDuration(durationSeconds, normalizedSpeed);
     return [
       '-y',
       '-ss',
@@ -115,7 +118,7 @@ class FFmpegWebpBuilder {
       sourceMp4,
       if (overlayPng != null) ...['-i', overlayPng],
       '-filter_complex',
-      buildFilterGraph(hasOverlay: overlayPng != null),
+      buildFilterGraph(hasOverlay: overlayPng != null, speed: normalizedSpeed),
       '-vcodec',
       'libwebp',
       '-lossless',
@@ -132,12 +135,20 @@ class FFmpegWebpBuilder {
   }
 
   static String formatTimestamp(double seconds) {
-    final clamped = seconds.clamp(0, 359999);
-    final whole = clamped.floor();
-    final h = (whole ~/ 3600).toString().padLeft(2, '0');
-    final m = ((whole % 3600) ~/ 60).toString().padLeft(2, '0');
-    final s = (whole % 60).toString().padLeft(2, '0');
-    return '$h:$m:$s';
+    final clamped = seconds.isFinite ? seconds.clamp(0, 359999) : 0;
+    final totalMilliseconds = (clamped * 1000).round();
+    final hours = totalMilliseconds ~/ Duration.millisecondsPerHour;
+    final minutes =
+        (totalMilliseconds % Duration.millisecondsPerHour) ~/
+        Duration.millisecondsPerMinute;
+    final wholeSeconds =
+        (totalMilliseconds % Duration.millisecondsPerMinute) ~/
+        Duration.millisecondsPerSecond;
+    final milliseconds = totalMilliseconds % Duration.millisecondsPerSecond;
+    return '${hours.toString().padLeft(2, '0')}:'
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${wholeSeconds.toString().padLeft(2, '0')}.'
+        '${milliseconds.toString().padLeft(3, '0')}';
   }
 
   Future<StickerExportResult> assemble({
@@ -145,6 +156,7 @@ class FFmpegWebpBuilder {
     String? overlayPng,
     double startSeconds = 0,
     double durationSeconds = clipSeconds,
+    double speed = 1,
     void Function(double progress)? onProgress,
   }) async {
     if (kIsWeb) {
@@ -166,6 +178,10 @@ class FFmpegWebpBuilder {
     await crashReporter.setCustomKey('ffmpeg_input_bytes', inputSize);
     await crashReporter.setCustomKey('ffmpeg_has_overlay', overlayPng != null);
     await crashReporter.setCustomKey('ffmpeg_os', defaultTargetPlatform.name);
+    final normalizedSpeed = _normalizedSpeed(speed);
+    final sourceDuration = _sourceDuration(durationSeconds, normalizedSpeed);
+    final outputDuration = sourceDuration / normalizedSpeed;
+    await crashReporter.setCustomKey('ffmpeg_speed', normalizedSpeed);
     final temp = await _tempDirectory();
     final leftovers = <File>[];
     File? kept;
@@ -188,7 +204,8 @@ class FFmpegWebpBuilder {
           outputPath: output.path,
           overlayPng: overlayPng,
           startSeconds: startSeconds,
-          durationSeconds: durationSeconds,
+          durationSeconds: sourceDuration,
+          speed: normalizedSpeed,
           quality: quality,
         );
 
@@ -199,6 +216,7 @@ class FFmpegWebpBuilder {
           await crashReporter.setCustomKey('ffmpeg_quality', quality);
           final code = await _execute(
             args,
+            expectedDurationSeconds: outputDuration,
             onProgress: (raw) {
               final overall = (i + raw.clamp(0, 1)) / qualityLadder.length;
               onProgress?.call(overall.clamp(0, 0.99));
@@ -287,6 +305,7 @@ class FFmpegWebpBuilder {
 
   Future<int> _execute(
     List<String> args, {
+    required double expectedDurationSeconds,
     required void Function(double progress) onProgress,
   }) async {
     final runCommand = _runCommand;
@@ -304,7 +323,9 @@ class FFmpegWebpBuilder {
       (stats) {
         final millis = stats.getTime();
         if (millis > 0) {
-          onProgress((millis / (clipSeconds * 1000)).clamp(0.0, 0.99));
+          onProgress(
+            (millis / (expectedDurationSeconds * 1000)).clamp(0.0, 0.99),
+          );
         }
       },
     );
@@ -314,5 +335,15 @@ class FFmpegWebpBuilder {
     }
     final returnCode = await session.getReturnCode();
     return returnCode?.getValue() ?? -1;
+  }
+
+  static double _normalizedSpeed(double speed) {
+    if (!speed.isFinite || speed <= 0) return 1;
+    return speed.clamp(0.5, 2).toDouble();
+  }
+
+  static double _sourceDuration(double durationSeconds, double speed) {
+    final maximum = WhatsAppStickerSpec.maxSourceDurationForSpeed(speed);
+    return durationSeconds.clamp(0.2, maximum).toDouble();
   }
 }

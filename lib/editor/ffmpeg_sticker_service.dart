@@ -42,14 +42,13 @@ class FfmpegStickerService {
     required int quality,
     String? overlayPngPath,
   }) {
-    // Speed/fps from the editor timeline are applied at preview time.
-    // WhatsApp export is always 15fps and at most 3 seconds.
     return _builder.buildCommand(
       sourceMp4: inputPath,
       outputPath: outputPath,
       overlayPng: overlayPngPath,
       startSeconds: startSeconds,
       durationSeconds: durationSeconds,
+      speed: speed,
       quality: quality,
     );
   }
@@ -59,7 +58,7 @@ class FfmpegStickerService {
     required int fps,
     required bool hasOverlay,
   }) {
-    return _builder.buildFilterGraph(hasOverlay: hasOverlay);
+    return _builder.buildFilterGraph(hasOverlay: hasOverlay, speed: speed);
   }
 
   Future<StickerExportResult> exportSticker({
@@ -76,6 +75,7 @@ class FfmpegStickerService {
       overlayPng: overlayPngPath,
       startSeconds: document.trimStart,
       durationSeconds: duration,
+      speed: document.speed,
       onProgress: onProgress,
     );
   }
