@@ -545,5 +545,22 @@
   "networkTimeout": "The request timed out. Please try again.",
   "networkRequestCancelled": "The request was cancelled.",
   "networkServiceUnavailable": "The service is temporarily unavailable. Please try again.",
-  "networkRequestFailed": "The network request failed. Please try again."
+  "networkRequestFailed": "The network request failed. Please try again.",
+  "stickrArchiveTooLarge": "This .stickr file is larger than the 5 MB import limit.",
+  "stickrArchiveExpandedTooLarge": "This .stickr file expands beyond the safe import limit.",
+  "invalidStickerWebp": "This archive contains a sticker that is not a valid WebP image.",
+  "invalidStickerDimensions": "{fileName} must be exactly {width} by {height} pixels.",
+  "@invalidStickerDimensions": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      },
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      }
+    }
+  }
 }

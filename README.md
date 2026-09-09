@@ -290,6 +290,9 @@ comment client and can still be supplied with `SCRAPEBADGER_API_KEY`.
 - Temporary source and conversion files live only under the app-owned
   `stickr_temp` cache directory, are cleaned up after successful saves, and can
   also be cleared from Settings.
+- `.stickr` imports enforce compressed and expanded size budgets, reject unsafe
+  ZIP entries, fully validate 512 by 512 WebP stickers before persistence, and
+  roll back all files and pack data if any import step fails.
 - TikTok import sends the pasted public video URL to TikWM.
 - Meme browsing contacts Imgflip.
 - Discover and Community contact Giphy.

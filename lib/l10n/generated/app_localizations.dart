@@ -2061,6 +2061,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The network request failed. Please try again.'**
   String get networkRequestFailed;
+
+  /// No description provided for @stickrArchiveTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'This .stickr file is larger than the 5 MB import limit.'**
+  String get stickrArchiveTooLarge;
+
+  /// No description provided for @stickrArchiveExpandedTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'This .stickr file expands beyond the safe import limit.'**
+  String get stickrArchiveExpandedTooLarge;
+
+  /// No description provided for @invalidStickerWebp.
+  ///
+  /// In en, this message translates to:
+  /// **'This archive contains a sticker that is not a valid WebP image.'**
+  String get invalidStickerWebp;
+
+  /// No description provided for @invalidStickerDimensions.
+  ///
+  /// In en, this message translates to:
+  /// **'{fileName} must be exactly {width} by {height} pixels.'**
+  String invalidStickerDimensions(String fileName, int width, int height);
 }
 
 class _AppLocalizationsDelegate

@@ -242,8 +242,13 @@ Implemented:
 - Manifest, tray icon, and WebP file packaging.
 - Native share-sheet integration.
 - Opening and receiving `.stickr` files on Android.
-- Archive validation and local import.
-- A cap at WhatsApp's 30-sticker maximum during import.
+- Pre-decompression ZIP metadata checks, compressed and expanded size limits,
+  safe-path enforcement, and symbolic-link rejection.
+- Bounded per-entry decompression and a cap at WhatsApp's 30-sticker maximum.
+- Full WebP decoding with exact 512 by 512 dimension validation before
+  persistence.
+- Atomic rollback of the pack row, copied sticker files, and staging directory
+  when any import step fails.
 
 Primary files:
 
@@ -451,7 +456,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 212 tests passed.
+- 220 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -786,18 +791,28 @@ Additional documents needed:
 
 ### 6.15 Harden archive import
 
-The `.stickr` importer validates basic structure and controls extracted file names, which is a good start.
+Implemented:
 
-Further protections:
+- Rejects compressed archives above 5 MB before ZIP decoding.
+- Preflights the ZIP central directory to reject excessive declared expansion,
+  unsupported compression, encrypted entries, unsafe paths, duplicate names,
+  symbolic links, and excessive entry counts before payload decompression.
+- Uses bounded output streams while reading every accepted entry so forged
+  size metadata cannot exceed the 20 MB expanded-data budget.
+- Limits individual stickers, manifests, and tray payloads.
+- Requires sticker payloads to decode specifically as WebP and to measure
+  exactly 512 by 512 before any pack row is created.
+- Rolls back the repository row, copied pack files, and staging files if any
+  persistence step fails.
+- Regression tests cover compressed limits, decompression bombs, wrong formats,
+  wrong dimensions, checksum corruption, path traversal, symbolic links, and
+  midway failure.
 
-- Reject archives above a compressed-size limit.
-- Reject excessive uncompressed size to prevent decompression bombs.
-- Reject sticker files above per-item limits.
-- Validate WebP dimensions and decodability before persistence.
+Remaining:
+
 - Validate tray dimensions and format.
 - Add an explicit archive format version.
-- Roll back the newly created pack if import fails midway.
-- Report skipped or invalid stickers instead of silently stopping at the first `PackException`.
+- Add compatibility fixtures for each future archive format version.
 
 ### 6.16 Improve accessibility coverage
 
@@ -1074,7 +1089,7 @@ Exit criteria:
 Target: durable, versioned, diagnosable packs.
 
 - Preserve the explicit Isar metadata and monotonic content revision.
-- Add `.stickr` schema versioning and import limits.
+- Add `.stickr` schema versioning and compatibility fixtures.
 - Move batch export into a dedicated service with progress and cancellation.
 - Add Android device-level WhatsApp validation.
 
@@ -1106,7 +1121,7 @@ Target: close the largest product gaps.
 ### High priority
 
 - Migrate remaining external services to the shared network client.
-- Add archive size and validation limits.
+- Validate imported tray image dimensions and format.
 - Add device-level Android WhatsApp export tests.
 - Resolve FFmpeg license and distribution obligations.
 - Add privacy and third-party attribution screens.

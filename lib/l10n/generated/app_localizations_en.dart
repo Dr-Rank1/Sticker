@@ -1196,4 +1196,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get networkRequestFailed =>
       'The network request failed. Please try again.';
+
+  @override
+  String get stickrArchiveTooLarge =>
+      'This .stickr file is larger than the 5 MB import limit.';
+
+  @override
+  String get stickrArchiveExpandedTooLarge =>
+      'This .stickr file expands beyond the safe import limit.';
+
+  @override
+  String get invalidStickerWebp =>
+      'This archive contains a sticker that is not a valid WebP image.';
+
+  @override
+  String invalidStickerDimensions(String fileName, int width, int height) {
+    return '$fileName must be exactly $width by $height pixels.';
+  }
 }
