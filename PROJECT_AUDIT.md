@@ -456,7 +456,7 @@ The full `flutter test` run now passes:
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
-The previously failing `background share stream bypasses home and starts scanning` test now allows the `AnimatedSwitcher` transition to complete before asserting that the old `MainScaffold` has been removed.
+The previously failing `background share stream bypasses home and starts scanning` test now routes state before asynchronous clipboard cleanup and uses `pumpAndSettle()` to let the `AnimatedSwitcher` remove the old `MainScaffold` before asserting its absence.
 
 ### 5.3 Static analysis result
 
@@ -556,7 +556,7 @@ Current privacy concern:
 
 ### 6.2 Preserve reliable share-intent transitions
 
-The background share-intent transition test now passes after allowing the old `AnimatedSwitcher` child to finish exiting. The behavior should remain covered before release.
+The background share-intent handler now commits the scan route before starting asynchronous clipboard cleanup. The transition test disables only the indefinite scan progress animation, then uses `pumpAndSettle()` to wait for the old `AnimatedSwitcher` child to exit.
 
 Acceptance criteria:
 
@@ -564,7 +564,7 @@ Acceptance criteria:
 - The old home UI is not interactive while scanning.
 - Repeated share events do not open duplicate scans.
 - Non-TikTok shared text remains on the home screen.
-- Cold start and background delive7ry work on a physical Android device.
+- Cold start and background delivery work on a physical Android device.
 - The test passes reliably under both isolated and full-suite execution.
 
 ### 6.3 Add continuous integration

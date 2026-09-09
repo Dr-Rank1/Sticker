@@ -464,10 +464,12 @@ class SharedTikTokScanPage extends ConsumerStatefulWidget {
     super.key,
     required this.videoUrl,
     this.onFinished,
+    this.animateProgress = true,
   });
 
   final String videoUrl;
   final VoidCallback? onFinished;
+  final bool animateProgress;
 
   @override
   ConsumerState<SharedTikTokScanPage> createState() =>
@@ -495,15 +497,18 @@ class _SharedTikTokScanPageState extends ConsumerState<SharedTikTokScanPage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      key: Key('shared-tiktok-scan-page'),
+    return Scaffold(
+      key: const Key('shared-tiktok-scan-page'),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Scanning comments for stickers...'),
+            TickerMode(
+              enabled: widget.animateProgress,
+              child: const CircularProgressIndicator(),
+            ),
+            const SizedBox(height: 16),
+            const Text('Scanning comments for stickers...'),
           ],
         ),
       ),

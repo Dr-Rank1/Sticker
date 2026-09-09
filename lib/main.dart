@@ -107,9 +107,14 @@ class _StartupErrorApp extends StatelessWidget {
 }
 
 class StickrApp extends ConsumerStatefulWidget {
-  const StickrApp({super.key, this.initialSharedMedia = const []});
+  const StickrApp({
+    super.key,
+    this.initialSharedMedia = const [],
+    this.animateScanProgress = true,
+  });
 
   final List<SharedMediaFile> initialSharedMedia;
+  final bool animateScanProgress;
 
   @override
   ConsumerState<StickrApp> createState() => _StickrAppState();
@@ -165,10 +170,7 @@ class _StickrAppState extends ConsumerState<StickrApp> {
       return;
     }
     final url = extractTikTokUrlFromSharedMedia(files);
-    if (url == null || url == _sharedTikTokUrl) return;
-    unawaited(_consumeClipboard());
-    if (!mounted) return;
-    setState(() => _sharedTikTokUrl = url);
+    _routeToSharedTikTokUrl(url);
   }
 
   void _listenForTikTokAppLinks() {
@@ -183,10 +185,14 @@ class _StickrAppState extends ConsumerState<StickrApp> {
 
   void _handleAppLink(Uri uri) {
     final url = extractTikTokUrlFromUri(uri);
+    _routeToSharedTikTokUrl(url);
+  }
+
+  void _routeToSharedTikTokUrl(String? url) {
     if (url == null || url == _sharedTikTokUrl) return;
-    unawaited(_consumeClipboard());
     if (!mounted) return;
     setState(() => _sharedTikTokUrl = url);
+    unawaited(_consumeClipboard());
   }
 
   void _listenForStickrFiles() {
@@ -266,6 +272,7 @@ class _StickrAppState extends ConsumerState<StickrApp> {
         key: ValueKey('share-$sharedUrl'),
         videoUrl: sharedUrl,
         onFinished: _clearSharedTikTokUrl,
+        animateProgress: widget.animateScanProgress,
       );
     } else if (onboardingComplete) {
       home = const MainScaffold(key: ValueKey('home'));

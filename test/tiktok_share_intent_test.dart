@@ -116,8 +116,7 @@ void main() {
       ),
     ]);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     expect(find.byType(MainScaffold), findsNothing);
     expect(find.byKey(const Key('shared-tiktok-scan-page')), findsOneWidget);
@@ -261,7 +260,10 @@ Widget _shareApp({
         appLinks ?? FakeTikTokAppLinks(),
       ),
     ],
-    child: StickrApp(initialSharedMedia: initialSharedMedia),
+    child: StickrApp(
+      initialSharedMedia: initialSharedMedia,
+      animateScanProgress: false,
+    ),
   );
 }
 
