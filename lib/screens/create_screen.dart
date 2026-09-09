@@ -1,14 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../accessibility/accessible_tap.dart';
+import '../editor/editor_screen.dart';
+import '../editor/local_video_import_service.dart';
 import '../memes/meme_template_sheet.dart';
 import '../photos/photo_import_sheet.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../tiktok/tiktok_import_sheet.dart';
 
-class CreateScreen extends StatelessWidget {
+typedef LocalVideoEditorRoute = Route<Object?> Function(String videoPath);
+
+final localVideoEditorRouteProvider = Provider<LocalVideoEditorRoute>((ref) {
+  return (videoPath) => MaterialPageRoute<Object?>(
+    builder: (_) => EditorScreen(videoPath: videoPath),
+  );
+});
+
+class CreateScreen extends ConsumerStatefulWidget {
   const CreateScreen({super.key});
+
+  @override
+  ConsumerState<CreateScreen> createState() => _CreateScreenState();
+}
+
+class _CreateScreenState extends ConsumerState<CreateScreen> {
+  var _importingVideo = false;
+
+  Future<void> _importLocalVideo() async {
+    if (_importingVideo) return;
+    setState(() => _importingVideo = true);
+
+    LocalVideoImportResult? result;
+    try {
+      final service = ref.read(localVideoImportServiceProvider);
+      result = await service.pickAndPrepare();
+      if (result == null) return;
+      if (!mounted) {
+        await service.deleteTemporary(result.file);
+        return;
+      }
+
+      try {
+        final route = ref.read(localVideoEditorRouteProvider)(result.file.path);
+        await Navigator.of(context, rootNavigator: true).push(route);
+      } finally {
+        await service.deleteTemporary(result.file);
+      }
+    } on LocalVideoImportException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(error.message),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => _importingVideo = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,18 +115,17 @@ class CreateScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _CreateSourceCard(
+                key: const Key('create-local-video'),
                 icon: Icons.gif_box_rounded,
                 title: 'From a video',
                 subtitle: 'Make an animated sticker in seconds.',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'From a video is coming in the next phase.',
-                      ),
-                    ),
-                  );
-                },
+                onTap: _importLocalVideo,
+                trailing: _importingVideo
+                    ? const SizedBox.square(
+                        dimension: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
               ),
               const SizedBox(height: 20),
               const _FreeForeverNote(),
@@ -87,16 +139,19 @@ class CreateScreen extends StatelessWidget {
 
 class _CreateSourceCard extends StatelessWidget {
   const _CreateSourceCard({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +202,8 @@ class _CreateSourceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: colors.textTertiary),
+              trailing ??
+                  Icon(Icons.chevron_right_rounded, color: colors.textTertiary),
             ],
           ),
         ),

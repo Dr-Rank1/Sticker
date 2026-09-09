@@ -449,7 +449,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 192 tests passed.
+- 197 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -714,16 +714,23 @@ Recommended work:
 
 ### 6.12 Complete the generic video source
 
-The Create tab displays `From a video`, but tapping it only shows a future-phase message.
+Implemented:
 
-Recommended work:
+- The Create tab opens Android's gallery video picker through `image_picker`.
+- Picker output is streamed into a uniquely named app-owned temporary file.
+- Copying rejects empty files and enforces a 250 MB limit without loading the
+  complete video into memory.
+- FFprobe validates duration, video codec, dimensions, and the presence of a
+  readable video stream.
+- Accepted H.264, HEVC, MPEG, VP8, VP9, AV1, MJPEG, and ProRes sources open the
+  same editor and FFmpeg export path as TikTok imports.
+- The route deletes its temporary source whenever the editor closes, including
+  cancellation and system-back navigation.
+- Service and widget tests cover copying, validation, picker cancellation,
+  editor handoff, and immediate cleanup.
 
-- Use the media picker for local video.
-- Validate duration, codec, dimensions, and file size.
-- Reuse the existing editor and FFmpeg path.
-- Copy external content URIs into app-owned temporary storage.
-- Add permission and cancellation handling.
-- Add integration tests for common Android gallery providers.
+Remaining work is physical-device coverage for common Android gallery and
+document providers.
 
 ### 6.13 Decide iOS scope
 
@@ -862,7 +869,6 @@ Implemented:
 Current inconsistencies include:
 
 - Selecting the Create tab immediately opens the TikTok import sheet even though the Create screen offers multiple source choices.
-- The visible `From a video` source is still a placeholder.
 - `TikTokAppLinks.getInitialLink` exists but production code only subscribes to the URI stream.
 - Android requests `autoVerify` for TikTok-owned domains, but Stickr cannot control TikTok's domain association files.
 - Theme choice is held in Riverpod memory and resets to system mode after restart.
@@ -947,9 +953,11 @@ Useful editor additions:
 - Before-and-after preview.
 - Crop and subject-position controls.
 
-### 7.4 Add local video import
+### 7.4 Improve local video import resilience
 
-This is the clearest missing creation source because the UI already advertises it and the media pipeline already supports most required behavior.
+Add physical-device tests for content URIs from Google Photos, Files, and
+manufacturer galleries, plus recovery of abandoned temporary copies after
+process death.
 
 ### 7.5 Improve export confidence
 
@@ -1064,7 +1072,6 @@ Exit criteria:
 
 Target: close the largest product gaps.
 
-- Implement local video import.
 - Decide and document iOS support.
 - Add localization.
 - Improve mask editing and pack customization.
@@ -1093,7 +1100,6 @@ Target: close the largest product gaps.
 ### Medium priority
 
 - Persist Community draft trays.
-- Implement local video import.
 - Add localization.
 - Add Community search and categories.
 - Add cancellation and retry controls to batch export progress.

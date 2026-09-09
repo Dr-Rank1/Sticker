@@ -39,6 +39,14 @@ background-removal service.
 - Change playback speed and add overlays.
 - Convert the result into an animated WhatsApp WebP sticker with FFmpeg.
 
+### Create from a local video
+
+- Pick an Android gallery video through the system media picker.
+- Copy the selected content into app-owned temporary storage.
+- Validate file size, duration, dimensions, and video codec with FFprobe.
+- Open the same trimming, speed, overlay, and FFmpeg editor used by TikTok imports.
+- Delete the temporary source as soon as the editor closes.
+
 ### Detect TikTok links from the clipboard
 
 When the app enters the foreground, it checks the clipboard for supported
@@ -124,7 +132,7 @@ not a live marketplace or account-based service.
 
 ## Typical workflow
 
-1. Open **Create** and choose a photo, TikTok clip, or meme template.
+1. Open **Create** and choose a photo, local video, TikTok clip, or meme template.
 2. Trim or prepare the source image.
 3. Add text and emoji overlays in the editor.
 4. Save the generated WebP to a new or existing pack.
@@ -357,8 +365,6 @@ flutter test test/apify_service_test.dart
 ## Current limitations
 
 - Native WhatsApp export is Android-only.
-- The **From a video** source shown in Create is a placeholder; TikTok video
-  import is implemented.
 - The Community tab uses bundled demonstration data.
 - Network-backed features depend on third-party availability, quotas, terms,
   and response formats.
