@@ -456,7 +456,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 224 tests passed.
+- 231 tests passed.
 - 2 platform-dependent Isar tests were skipped.
 - No tests failed.
 
@@ -603,20 +603,28 @@ Remaining operational work:
 
 ### 6.5 Complete Firebase configuration
 
-`lib/firebase_options.dart` contains placeholder API and application IDs, and no Firebase platform configuration files are present.
+Implemented:
 
-Current effect:
+- Installed and invoked the FlutterFire CLI with a placeholder production
+  project ID. The command could not query Firebase because this environment has
+  no authenticated Firebase account, so no external project was created.
+- Preserved FlutterFire-compatible Android and iOS options with explicit mock
+  project and application values for local replacement.
+- Added a mock debug-only `google-services.json` so development and CI builds
+  can validate the Gradle plugins without containing production configuration.
+- Applied Google Services and Crashlytics through the Android plugin DSL.
+- Enabled release mapping upload and native symbol extraction/upload
+  configuration.
+- Confirmed the release mapping upload and native symbol extraction Gradle
+  tasks are registered.
 
-- Crashlytics initialization is designed to fail gracefully.
-- Production crash reporting is not actually configured.
+Remaining:
 
-Required action:
-
-- Run `flutterfire configure`.
-- Add environment-specific Firebase projects.
-- Keep service files out of source control if that is the selected policy, but inject them during CI builds.
+- Authenticate the Firebase CLI and rerun `flutterfire configure` against the
+  real production project.
+- Supply the ignored production Android and iOS service files through local or
+  CI secret provisioning.
 - Verify non-fatal and fatal reports from internal builds.
-- Upload Android obfuscation and native symbols for release builds.
 
 ### 6.6 Preserve supported Discover search
 
@@ -831,24 +839,31 @@ Recommended checks:
 
 ### 6.17 Improve observability
 
-Current logging and optional Crashlytics provide a foundation.
+Implemented:
 
-Add structured events for:
+- Added typed `import_started`, `encode_attempt`, `pack_validation_failed`, and
+  `export_whatsapp_result` analytics events.
+- Instrumented TikTok, local-gallery, photo-gallery, and camera imports.
+- Instrumented static and animated encoding attempts with quality buckets.
+- Instrumented categorized pack validation and WhatsApp export outcomes.
+- Replaced free-form Crashlytics breadcrumbs and attributes with typed,
+  allowlisted categories.
+- Removed the full TikTok URL previously sent by `ApifyService`.
+- Crash errors retain only exception types and sanitized stack traces; raw
+  exception messages are not sent.
+- File sizes, quality, sticker counts, and sources use broad buckets or fixed
+  categories.
+- Console logging now uses professional text prefixes and redacts URL, path,
+  and exception-message data.
 
-- Import started, resolved, downloaded, and failed.
-- Encode attempts, durations, output size, and compression fallback count.
-- Pack validation failures.
-- WhatsApp export launch and native result.
+Remaining:
+
+- Add import completion and categorized failure events.
+- Add encode duration and compression fallback count.
 - API latency and rate-limit events.
 - Cache cleanup results.
-
-Do not record:
-
-- API keys or tokens.
-- Full private file paths.
-- User-entered overlay text.
-- Full TikTok URLs if they are considered personal activity data.
-- Raw photos or sticker bytes.
+- Establish retention, consent, and analytics-disclosure policy before enabling
+  production collection.
 
 ### 6.18 Fix temporary-file ownership
 

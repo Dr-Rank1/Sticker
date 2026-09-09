@@ -45,7 +45,7 @@ Future<void> enableHighestDisplayMode({
     } else {
       await FlutterDisplayMode.setPreferredMode(best);
     }
-  } catch (error) {
-    appLogger.d('Highest display mode unavailable: $error');
+  } catch (_) {
+    appLogger.d('Highest display mode unavailable');
   }
 }

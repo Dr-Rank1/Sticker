@@ -285,6 +285,25 @@ flutter run \
 TikWM and Imgflip do not require keys. ScrapeBadger is an optional alternate
 comment client and can still be supplied with `SCRAPEBADGER_API_KEY`.
 
+### Configure Firebase for production
+
+The committed Firebase options and debug Android service file contain mock
+project identifiers only. Authenticate the Firebase CLI and replace them with:
+
+```sh
+flutterfire configure \
+  --project=your-production-project \
+  --platforms=android,ios \
+  --android-package-name=com.stickr.stickr \
+  --ios-bundle-id=com.stickr.stickr
+```
+
+Production `google-services.json` and `GoogleService-Info.plist` files remain
+ignored and should be provisioned locally or through protected CI secrets.
+Crashlytics collection is enabled only in release builds. Structured analytics
+uses fixed source categories and buckets and does not accept file paths, URLs,
+overlay text, or media bytes.
+
 ## Security and privacy notes
 
 - Local photos and generated packs remain in app-owned device storage.

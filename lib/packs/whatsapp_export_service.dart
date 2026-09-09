@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../analytics/analytics_service.dart';
 import '../l10n/l10n.dart';
 import 'pack_models.dart';
 
@@ -38,6 +41,12 @@ class WhatsAppExportService {
 
   WhatsAppExportResult prepare(StickerPack pack) {
     if (!pack.canExportToWhatsApp) {
+      unawaited(
+        analyticsService.packValidationFailed(
+          category: _validationCategory(pack),
+          stickerCount: pack.stickers.length,
+        ),
+      );
       throw PackException(pack.exportBlockReason);
     }
     return WhatsAppExportResult(
@@ -53,13 +62,20 @@ class WhatsAppExportService {
   }
 
   Future<WhatsAppExportResult> exportToWhatsApp(StickerPack pack) async {
-    prepare(pack);
+    try {
+      prepare(pack);
+    } on PackException {
+      await _logExportResult(pack, WhatsAppExportOutcome.validationFailed);
+      rethrow;
+    }
 
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      await _logExportResult(pack, WhatsAppExportOutcome.platformUnavailable);
       throw PackException(serviceLocalizations.whatsAppAndroidOnly);
     }
 
     if (!await isWhatsAppInstalled()) {
+      await _logExportResult(pack, WhatsAppExportOutcome.notInstalled);
       throw WhatsAppNotInstalledException();
     }
 
@@ -73,13 +89,23 @@ class WhatsAppExportService {
         'imageDataVersion': pack.imageDataVersion,
         'animated': pack.stickers.any((sticker) => sticker.animated),
       });
+      await _logExportResult(pack, WhatsAppExportOutcome.success);
       return WhatsAppExportResult(
         pack: pack,
         message: serviceLocalizations.addedToWhatsApp,
       );
     } on PlatformException catch (error) {
+      await _logExportResult(
+        pack,
+        error.code == 'CANCELLED'
+            ? WhatsAppExportOutcome.cancelled
+            : error.code == 'VALIDATION_ERROR'
+            ? WhatsAppExportOutcome.validationFailed
+            : WhatsAppExportOutcome.failed,
+      );
       throw PackException(_messageFor(error));
     } on MissingPluginException {
+      await _logExportResult(pack, WhatsAppExportOutcome.platformUnavailable);
       throw PackException(serviceLocalizations.couldNotReachWhatsAppExport);
     }
   }
@@ -117,6 +143,27 @@ class WhatsAppExportService {
       default:
         return error.message ?? serviceLocalizations.couldNotAddPackToWhatsApp;
     }
+  }
+
+  Future<void> _logExportResult(
+    StickerPack pack,
+    WhatsAppExportOutcome outcome,
+  ) {
+    return analyticsService.exportWhatsAppResult(
+      outcome: outcome,
+      stickerCount: pack.stickers.length,
+      animated: pack.stickers.any((sticker) => sticker.animated),
+    );
+  }
+
+  PackValidationCategory _validationCategory(StickerPack pack) {
+    if (pack.stickers.length < WhatsAppPackRules.minStickers) {
+      return PackValidationCategory.tooFewStickers;
+    }
+    if (pack.stickers.length > WhatsAppPackRules.maxStickers) {
+      return PackValidationCategory.tooManyStickers;
+    }
+    return PackValidationCategory.invalidMetadata;
   }
 }
 

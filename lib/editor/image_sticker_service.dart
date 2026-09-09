@@ -7,6 +7,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
+import '../analytics/analytics_service.dart';
 import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 import 'background_removal_service.dart';
@@ -203,6 +204,11 @@ class ImageStickerService {
         }
 
         try {
+          await analyticsService.encodeAttempt(
+            media: EncodeMediaCategory.staticImage,
+            attempt: i + 1,
+            quality: quality,
+          );
           final code = await _execute(
             buildStaticArguments(
               inputPath: composedPng.path,

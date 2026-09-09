@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import '../analytics/analytics_service.dart';
 import '../l10n/l10n.dart';
 import '../network/network_client.dart';
 import '../storage/storage_utility.dart';
@@ -120,6 +121,10 @@ class TiktokImportService {
     if (url == null || !isValidTikTokUrl(url)) {
       throw TiktokImportException(serviceLocalizations.invalidTikTokLink);
     }
+    await analyticsService.importStarted(
+      source: ImportSourceCategory.tiktok,
+      media: EncodeMediaCategory.animated,
+    );
 
     onProgress?.call(const TiktokImportProgress.resolving());
     final video = await resolveVideo(url);

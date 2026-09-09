@@ -5,6 +5,7 @@ import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
 
+import '../analytics/analytics_service.dart';
 import '../crashlytics/crash_reporter.dart';
 import '../l10n/l10n.dart';
 import '../logging/app_logger.dart';
@@ -173,14 +174,26 @@ class FFmpegWebpBuilder {
 
     _cancelled = false;
     final inputSize = input.lengthSync();
-    crashReporter.log('FFmpeg started with input size: $inputSize');
-    await crashReporter.setCustomKey('ffmpeg_input_bytes', inputSize);
-    await crashReporter.setCustomKey('ffmpeg_has_overlay', overlayPng != null);
-    await crashReporter.setCustomKey('ffmpeg_os', defaultTargetPlatform.name);
+    crashReporter.breadcrumb(CrashBreadcrumb.ffmpegStarted);
+    await crashReporter.setAttribute(
+      CrashAttribute.ffmpegInputSizeBucket,
+      _fileSizeBucket(inputSize),
+    );
+    await crashReporter.setAttribute(
+      CrashAttribute.ffmpegHasOverlay,
+      overlayPng != null,
+    );
+    await crashReporter.setAttribute(
+      CrashAttribute.ffmpegOs,
+      defaultTargetPlatform.name,
+    );
     final normalizedSpeed = _normalizedSpeed(speed);
     final sourceDuration = _sourceDuration(durationSeconds, normalizedSpeed);
     final outputDuration = sourceDuration / normalizedSpeed;
-    await crashReporter.setCustomKey('ffmpeg_speed', normalizedSpeed);
+    await crashReporter.setAttribute(
+      CrashAttribute.ffmpegSpeed,
+      normalizedSpeed,
+    );
     final temp = await _tempDirectory();
     final leftovers = <File>[];
     File? kept;
@@ -209,10 +222,16 @@ class FFmpegWebpBuilder {
         );
 
         try {
-          crashReporter.log(
-            'FFmpeg encode attempt quality=$quality input size: $inputSize',
+          crashReporter.breadcrumb(CrashBreadcrumb.ffmpegEncodeAttempt);
+          await crashReporter.setAttribute(
+            CrashAttribute.ffmpegQualityBucket,
+            _qualityBucket(quality),
           );
-          await crashReporter.setCustomKey('ffmpeg_quality', quality);
+          await analyticsService.encodeAttempt(
+            media: EncodeMediaCategory.animated,
+            attempt: i + 1,
+            quality: quality,
+          );
           final code = await _execute(
             args,
             expectedDurationSeconds: outputDuration,
@@ -254,13 +273,11 @@ class FFmpegWebpBuilder {
           );
         } on StickerExportCancelled {
           rethrow;
-        } catch (error, stack) {
+        } catch (error) {
           lastError = error;
-          crashReporter.log('FFmpeg encode failed quality=$quality: $error');
+          crashReporter.breadcrumb(CrashBreadcrumb.ffmpegEncodeFailed);
           appLogger.w(
             'FFmpeg WebP attempt failed; retrying with stronger compression',
-            error: error,
-            stackTrace: stack,
           );
         }
       }
@@ -343,5 +360,18 @@ class FFmpegWebpBuilder {
   static double _sourceDuration(double durationSeconds, double speed) {
     final maximum = WhatsAppStickerSpec.maxSourceDurationForSpeed(speed);
     return durationSeconds.clamp(0.2, maximum).toDouble();
+  }
+
+  static String _fileSizeBucket(int bytes) {
+    if (bytes < 5 * 1024 * 1024) return 'under_5_mb';
+    if (bytes < 25 * 1024 * 1024) return '5_to_25_mb';
+    if (bytes < 100 * 1024 * 1024) return '25_to_100_mb';
+    return 'over_100_mb';
+  }
+
+  static String _qualityBucket(int quality) {
+    if (quality >= 70) return 'high';
+    if (quality >= 40) return 'medium';
+    return 'low';
   }
 }

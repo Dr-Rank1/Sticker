@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../analytics/analytics_service.dart';
 import '../editor/ffmpeg_sticker_service.dart';
 import '../editor/image_sticker_service.dart';
 import '../l10n/l10n.dart';
@@ -106,6 +107,12 @@ class PhotoImportController extends Notifier<PhotoImportState> {
         state = state.copyWith(phase: PhotoImportPhase.idle);
         return;
       }
+      await analyticsService.importStarted(
+        source: source == ImageSource.camera
+            ? ImportSourceCategory.camera
+            : ImportSourceCategory.photoGallery,
+        media: EncodeMediaCategory.staticImage,
+      );
 
       state = state.copyWith(phase: PhotoImportPhase.processing);
 

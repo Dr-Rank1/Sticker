@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stickr/analytics/analytics_service.dart';
 import 'package:stickr/packs/pack_models.dart';
 import 'package:stickr/packs/whatsapp_export_service.dart';
 
@@ -8,6 +9,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const channel = MethodChannel(WhatsAppExportService.channelName);
+  late AnalyticsService previousAnalytics;
+  late RecordingAnalyticsService recorder;
 
   StickerPack pack({String id = 'pack_123', int stickers = 3}) {
     final now = DateTime(2026, 1, 1);
@@ -26,11 +29,15 @@ void main() {
   }
 
   setUp(() {
+    previousAnalytics = analyticsService;
+    recorder = RecordingAnalyticsService();
+    analyticsService = recorder;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
   });
 
   tearDown(() {
+    analyticsService = previousAnalytics;
     debugDefaultTargetPlatformOverride = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
@@ -126,5 +133,21 @@ void main() {
     final result = await WhatsAppExportService(canLaunch: (_) async => true)
         .exportToWhatsApp(pack());
     expect(result.message, 'Added to WhatsApp.');
+    expect(recorder.events.single.name, 'export_whatsapp_result');
+    expect(recorder.events.single.parameters['outcome'], 'success');
+  });
+
+  test('records categorized pack validation failures', () async {
+    expect(
+      () => WhatsAppExportService().prepare(pack(stickers: 2)),
+      throwsA(isA<PackException>()),
+    );
+    await pumpEventQueue();
+
+    expect(recorder.events.single.name, 'pack_validation_failed');
+    expect(
+      recorder.events.single.parameters['failure_category'],
+      'too_few_stickers',
+    );
   });
 }

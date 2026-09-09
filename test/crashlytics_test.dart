@@ -36,9 +36,7 @@ void main() {
       expect(mainSource, contains('PlatformDispatcher.instance.onError'));
       expect(
         mainSource,
-        contains(
-          'FirebaseCrashlytics.instance.recordError(error, stack, fatal: true)',
-        ),
+        contains('crashReporter.recordError(error, stack, fatal: true)'),
       );
       expect(mainSource, contains('initializeFirebase()'));
       expect(mainSource, contains('AppEnvironment.validateRequired()'));
@@ -80,42 +78,41 @@ void main() {
     expect(chained, isTrue);
   });
 
-  test('Apify logs breadcrumbs before scraping and isolate parse', () async {
-    final recorder = RecordingCrashReporter();
-    crashReporter = recorder;
-    final service = ApifyService(
-      token: 'test-token',
-      apiPost: (_, _) async => _response([
-        {
-          'commentId': '2',
-          'authorNickname': 'Ian',
-          'images': ['https://example.com/a.webp'],
-        },
-      ]),
-    );
+  test(
+    'Apify records categorized breadcrumbs without the TikTok URL',
+    () async {
+      final recorder = RecordingCrashReporter();
+      crashReporter = recorder;
+      final service = ApifyService(
+        token: 'test-token',
+        apiPost: (_, _) async => _response([
+          {
+            'commentId': '2',
+            'authorNickname': 'Ian',
+            'images': ['https://example.com/a.webp'],
+          },
+        ]),
+      );
 
-    await service.fetchCommentStickers(
-      'https://www.tiktok.com/@creator/video/1234567890',
-    );
+      await service.fetchCommentStickers(
+        'https://www.tiktok.com/@creator/video/1234567890',
+      );
 
-    expect(
-      recorder.logs,
-      contains(
-        'Apify synchronous scraper started for https://www.tiktok.com/@creator/video/1234567890',
-      ),
-    );
-    expect(
-      recorder.logs,
-      contains('Apify parsing 1 dataset items on a background isolate'),
-    );
-    expect(
-      recorder.keys['apify_post_url'],
-      'https://www.tiktok.com/@creator/video/1234567890',
-    );
-    expect(recorder.keys['apify_parse_count'], 1);
-  });
+      expect(
+        recorder.breadcrumbs,
+        containsAll([
+          CrashBreadcrumb.apifyScrapeStarted,
+          CrashBreadcrumb.apifyItemsReceived,
+          CrashBreadcrumb.apifyParseStarted,
+        ]),
+      );
+      expect(recorder.keys.containsKey('apify_post_url'), isFalse);
+      expect(recorder.keys['apify_item_count'], 1);
+      expect(recorder.keys['apify_parse_count'], 1);
+    },
+  );
 
-  test('FFmpeg logs input size before a heavy encode', () async {
+  test('FFmpeg records size and quality buckets before encoding', () async {
     final recorder = RecordingCrashReporter();
     crashReporter = recorder;
     final temp = await Directory.systemTemp.createTemp('stickr_crash_ffmpeg_');
@@ -138,14 +135,48 @@ void main() {
       throwsA(isA<StickerExportException>()),
     );
 
-    expect(recorder.logs.first, 'FFmpeg started with input size: 4');
-    expect(recorder.keys['ffmpeg_input_bytes'], 4);
-    expect(recorder.keys.containsKey('ffmpeg_quality'), isTrue);
     expect(
-      recorder.logs.any((line) => line.startsWith('FFmpeg encode failed')),
-      isTrue,
+      recorder.breadcrumbs,
+      containsAll([
+        CrashBreadcrumb.ffmpegStarted,
+        CrashBreadcrumb.ffmpegEncodeAttempt,
+        CrashBreadcrumb.ffmpegEncodeFailed,
+      ]),
     );
+    expect(recorder.keys['ffmpeg_input_size_bucket'], 'under_5_mb');
+    expect(recorder.keys.containsKey('ffmpeg_input_bytes'), isFalse);
+    expect(recorder.keys.containsKey('ffmpeg_quality_bucket'), isTrue);
   });
+
+  test(
+    'CrashReporter removes error messages, URLs, paths, and bytes',
+    () async {
+      final recorder = RecordingCrashReporter();
+      const privatePath = '/data/user/0/com.stickr.stickr/private/photo.jpg';
+      const privateUrl = 'https://www.tiktok.com/@private/video/123';
+
+      await recorder.setAttribute(CrashAttribute.ffmpegOs, privateUrl);
+      await recorder.setAttribute(CrashAttribute.ffmpegQualityBucket, const [
+        1,
+        2,
+        3,
+        4,
+      ]);
+      await recorder.recordError(
+        StateError('Failed for $privateUrl at $privatePath'),
+        StackTrace.fromString(
+          '#0 pipeline ($privatePath:10)\n#1 request ($privateUrl)',
+        ),
+      );
+
+      expect(recorder.keys['ffmpeg_os'], 'redacted');
+      expect(recorder.keys['ffmpeg_quality_bucket'], 'redacted');
+      expect(recorder.errors.single.toString(), isNot(contains(privateUrl)));
+      expect(recorder.errors.single.toString(), isNot(contains(privatePath)));
+      expect(recorder.stacks.single.toString(), isNot(contains(privateUrl)));
+      expect(recorder.stacks.single.toString(), isNot(contains(privatePath)));
+    },
+  );
 }
 
 Response<dynamic> _response(dynamic data) {

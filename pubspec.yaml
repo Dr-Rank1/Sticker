@@ -67,6 +67,7 @@ dependencies:
   share_plus: ^12.0.0
   firebase_core: ^3.8.1
   firebase_crashlytics: ^4.1.5
+  firebase_analytics: ^11.3.8
   in_app_review: ^2.0.10
   in_app_update: ^4.2.3
   shared_preferences: ^2.5.3

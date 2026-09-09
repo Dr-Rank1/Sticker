@@ -1,3 +1,8 @@
+plugins {
+    id("com.google.gms.google-services") apply false
+    id("com.google.firebase.crashlytics") apply false
+}
+
 allprojects {
     repositories {
         google()

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -40,10 +39,15 @@ Future<void> main() async {
     AppEnvironment.validateRequired();
     final firebaseReady = await initializeFirebase();
     if (firebaseReady) {
-      FlutterError.onError =
-          FirebaseCrashlytics.instance.recordFlutterFatalError;
+      final previousFlutterOnError = FlutterError.onError;
+      final previousPlatformOnError = PlatformDispatcher.instance.onError;
+      FlutterError.onError = (details) {
+        previousFlutterOnError?.call(details);
+        crashReporter.recordFlutterFatalError(details);
+      };
       PlatformDispatcher.instance.onError = (error, stack) {
-        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        previousPlatformOnError?.call(error, stack);
+        crashReporter.recordError(error, stack, fatal: true);
         return true;
       };
     }
@@ -76,8 +80,8 @@ Future<void> main() async {
     try {
       initialShare = await ReceiveSharingIntent.instance.getInitialMedia();
       await ReceiveSharingIntent.instance.reset();
-    } catch (error) {
-      appLogger.d('Share intent initial media unavailable: $error');
+    } catch (_) {
+      appLogger.d('Share intent initial media unavailable');
     }
     runApp(
       ProviderScope(
@@ -148,8 +152,8 @@ class _StickrAppState extends ConsumerState<StickrApp> {
     // App already running in the background: new Share -> Stickr intents.
     _shareSub = shareIntent.getMediaStream().listen(
       _handleSharedMedia,
-      onError: (Object error) {
-        appLogger.d('Share intent stream unavailable: $error');
+      onError: (Object _) {
+        appLogger.d('Share intent stream unavailable');
       },
     );
 
@@ -162,8 +166,8 @@ class _StickrAppState extends ConsumerState<StickrApp> {
       final files = await shareIntent.getInitialMedia();
       _handleSharedMedia(files);
       await shareIntent.reset();
-    } catch (error) {
-      appLogger.d('Share intent initial media unavailable: $error');
+    } catch (_) {
+      appLogger.d('Share intent initial media unavailable');
     }
   }
 
@@ -181,8 +185,8 @@ class _StickrAppState extends ConsumerState<StickrApp> {
     final links = ref.read(tikTokAppLinksProvider);
     _appLinksSub = links.uriLinkStream().listen(
       _handleAppLink,
-      onError: (Object error) {
-        appLogger.d('App link stream unavailable: $error');
+      onError: (Object _) {
+        appLogger.d('App link stream unavailable');
       },
     );
   }
@@ -203,8 +207,8 @@ class _StickrAppState extends ConsumerState<StickrApp> {
     final intent = ref.read(stickrFileIntentProvider);
     _stickrSub = intent.fileStream().listen(
       _importStickrFile,
-      onError: (Object error) {
-        appLogger.d('Stickr file stream unavailable: $error');
+      onError: (Object _) {
+        appLogger.d('Stickr file stream unavailable');
       },
     );
     unawaited(_loadInitialStickrFile(intent));
@@ -214,8 +218,8 @@ class _StickrAppState extends ConsumerState<StickrApp> {
     try {
       final path = await intent.getInitialFile();
       if (path != null) await _importStickrFile(path);
-    } catch (error) {
-      appLogger.d('Stickr file intent unavailable: $error');
+    } catch (_) {
+      appLogger.d('Stickr file intent unavailable');
     }
   }
 

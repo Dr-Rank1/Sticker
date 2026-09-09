@@ -79,8 +79,7 @@ class ApifyService {
   }) async {
     _ensureConfigured();
     final input = scraperInput(postUrl: postUrl);
-    crashReporter.log('Apify synchronous scraper started for $postUrl');
-    await crashReporter.setCustomKey('apify_post_url', postUrl);
+    crashReporter.breadcrumb(CrashBreadcrumb.apifyScrapeStarted);
 
     try {
       final customPost = apiPost;
@@ -100,10 +99,11 @@ class ApifyService {
           .whereType<Map<String, dynamic>>()
           .where(hasStickerOrImageUrl)
           .toList(growable: false);
-      crashReporter.log(
-        'Apify returned ${items.length} comment sticker items.',
+      crashReporter.breadcrumb(CrashBreadcrumb.apifyItemsReceived);
+      await crashReporter.setAttribute(
+        CrashAttribute.apifyItemCount,
+        items.length,
       );
-      await crashReporter.setCustomKey('apify_item_count', items.length);
       return items;
     } on ApifyException {
       rethrow;
@@ -146,10 +146,11 @@ class ApifyService {
       cancelToken: cancelToken,
     );
     if (items.isEmpty) return const [];
-    crashReporter.log(
-      'Apify parsing ${items.length} dataset items on a background isolate',
+    crashReporter.breadcrumb(CrashBreadcrumb.apifyParseStarted);
+    await crashReporter.setAttribute(
+      CrashAttribute.apifyParseCount,
+      items.length,
     );
-    await crashReporter.setCustomKey('apify_parse_count', items.length);
     return Isolate.run(() => parseApifyItems(items));
   }
 

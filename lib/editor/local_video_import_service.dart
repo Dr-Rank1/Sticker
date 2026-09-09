@@ -5,6 +5,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../analytics/analytics_service.dart';
 import '../l10n/l10n.dart';
 import '../storage/storage_utility.dart';
 
@@ -74,6 +75,10 @@ class LocalVideoImportService {
   Future<LocalVideoImportResult?> pickAndPrepare() async {
     final picked = await _picker();
     if (picked == null) return null;
+    await analyticsService.importStarted(
+      source: ImportSourceCategory.localGallery,
+      media: EncodeMediaCategory.animated,
+    );
 
     File? copied;
     try {
