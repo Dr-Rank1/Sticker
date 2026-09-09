@@ -7,7 +7,6 @@ void main() {
       () => AppEnvironment.validateRequired(
         giphyKey: 'giphy-key',
         apifyToken: 'apify-token',
-        tenorKey: 'tenor-key',
       ),
       returnsNormally,
     );
@@ -15,11 +14,7 @@ void main() {
 
   test('reports every missing required environment variable', () {
     expect(
-      () => AppEnvironment.validateRequired(
-        giphyKey: '',
-        apifyToken: ' ',
-        tenorKey: '',
-      ),
+      () => AppEnvironment.validateRequired(giphyKey: '', apifyToken: ' '),
       throwsA(
         isA<EnvironmentConfigurationException>().having(
           (error) => error.message,
@@ -27,7 +22,6 @@ void main() {
           allOf(
             contains('GIPHY_API_KEY'),
             contains('APIFY_API_TOKEN'),
-            contains('TENOR_API_KEY'),
             contains('--dart-define'),
           ),
         ),

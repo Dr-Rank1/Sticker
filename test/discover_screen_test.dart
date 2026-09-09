@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:stickr/community/giphy_service.dart';
 import 'package:stickr/discover/discover_screen.dart';
-import 'package:stickr/discover/tenor_repository.dart';
 import 'package:stickr/packs/pack_models.dart';
 import 'package:stickr/packs/pack_providers.dart';
 import 'package:stickr/packs/pack_repository.dart';
@@ -16,7 +16,7 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('searches transparent stickers and saves one to a local pack', (
+  testWidgets('searches Giphy, paginates, and saves one to a local pack', (
     tester,
   ) async {
     final temporary = Directory(
@@ -25,7 +25,7 @@ void main() {
     addTearDown(() {
       if (temporary.existsSync()) temporary.deleteSync(recursive: true);
     });
-    final tenor = _FakeTenorRepository(temporary);
+    final giphy = _FakeGiphyService(temporary);
     final now = DateTime(2026, 1, 1);
     final packs = InMemoryPackRepository(
       seed: {
@@ -44,7 +44,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          tenorRepositoryProvider.overrideWithValue(tenor),
+          giphyServiceProvider.overrideWithValue(giphy),
           packRepositoryProvider.overrideWithValue(packs),
         ],
         child: MaterialApp(
@@ -63,7 +63,8 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(tenor.lastQuery, 'happy cat');
+    expect(giphy.lastQuery, 'happy cat');
+    expect(giphy.requestedOffsets, [0]);
     expect(find.byKey(const Key('discover-masonry-grid')), findsOneWidget);
     expect(
       find.byKey(const Key('discover-sticker-transparent-1')),
@@ -83,46 +84,84 @@ void main() {
 
     final savedPacks = await packs.getAll();
     expect(savedPacks.single.stickers, hasLength(1));
-    expect(savedPacks.single.stickers.single.animated, isFalse);
-    expect(tenor.downloadedFile?.existsSync(), isFalse);
+    expect(savedPacks.single.stickers.single.animated, isTrue);
+    expect(giphy.downloadedFile?.existsSync(), isFalse);
+
+    await tester.drag(
+      find.byKey(const Key('discover-masonry-grid')),
+      const Offset(0, -1200),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(giphy.requestedOffsets, contains(12));
+    await tester.drag(
+      find.byKey(const Key('discover-masonry-grid')),
+      const Offset(0, -600),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('discover-sticker-next-page')), findsOneWidget);
   });
 }
 
-class _FakeTenorRepository extends TenorRepository {
-  _FakeTenorRepository(this.temporary) : super(apiKey: 'test-key');
+class _FakeGiphyService extends GiphyService {
+  _FakeGiphyService(this.temporary) : super(apiKey: 'test-key');
 
   final Directory temporary;
   String? lastQuery;
+  final requestedOffsets = <int>[];
   File? downloadedFile;
 
-  static const sticker = TenorSticker(
+  static const sticker = GiphySticker(
     id: 'transparent-1',
     title: 'Happy cat',
-    webpUrl: 'https://media.tenor.com/cat.webp',
+    url: 'https://media.giphy.com/cat.webp',
     width: 320,
     height: 240,
-    duration: 0,
   );
 
   @override
-  Future<TenorSearchPage> search(
-    String query, {
-    int limit = 24,
-    String? position,
-  }) async {
+  Future<GiphyStickerPage> search(String query, {int offset = 0}) async {
     lastQuery = query;
-    return const TenorSearchPage(results: [sticker], next: null);
+    requestedOffsets.add(offset);
+    if (offset > 0) {
+      return const GiphyStickerPage(
+        stickers: [
+          GiphySticker(
+            id: 'next-page',
+            title: 'Next result',
+            url: 'https://media.giphy.com/next.webp',
+            width: 320,
+            height: 320,
+          ),
+        ],
+        nextOffset: null,
+      );
+    }
+    return GiphyStickerPage(
+      stickers: [
+        sticker,
+        for (var index = 1; index < 12; index++)
+          GiphySticker(
+            id: 'result-$index',
+            title: 'Result $index',
+            url: 'https://media.giphy.com/result-$index.webp',
+            width: 320,
+            height: 240,
+          ),
+      ],
+      nextOffset: 12,
+    );
   }
 
   @override
-  Future<File> downloadSticker(
-    TenorSticker sticker, {
-    void Function(double? progress)? onProgress,
+  Future<File> downloadSticker({
+    required String id,
+    required String url,
   }) async {
-    final file = File('${temporary.path}/stickr_tenor_test.webp');
+    final file = File('${temporary.path}/stickr_giphy_test.webp');
     file.writeAsBytesSync([1, 2, 3, 4]);
     downloadedFile = file;
-    onProgress?.call(1);
     return file;
   }
 }

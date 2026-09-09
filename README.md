@@ -64,13 +64,12 @@ run succeeds, and keeps only dataset items that include a sticker or image URL.
 
 ### Discover transparent stickers
 
-- Search Tenor from the Discover tab.
-- Request sticker-only, transparent WebP results.
+- Search Giphy stickers from the Discover tab.
 - Browse results in a masonry grid.
+- Load additional results automatically while scrolling.
 - Download a sticker directly into one of your packs.
 
-Stickr sends `searchfilter=sticker` and
-`media_filter=webp_transparent` to Tenor so regular GIF results are excluded.
+Stickr uses Giphy's sticker search endpoint and its offset pagination.
 
 ### Edit stickers
 
@@ -150,7 +149,7 @@ The project uses:
 - Flutter and Dart for the application.
 - Riverpod for application state and dependency injection.
 - Hive for local pack and settings persistence.
-- Dio for TikWM, Tenor, Imgflip, ScrapeBadger, Apify, and file downloads.
+- Dio for TikWM, Giphy, Imgflip, ScrapeBadger, Apify, and file downloads.
 - FFmpeg Kit Full-GPL (`ffmpeg_kit_flutter_new`, including `libwebp`) for animated and static WebP encoding.
 - ML Kit selfie segmentation for on-device background removal.
 - `image` for pixel processing, transparent canvases, resize, crop, and padding.
@@ -171,7 +170,7 @@ Important directories under `lib/`:
   Apify Actor polling, and comment-sticker formatting.
 - `photos/` — camera/gallery import flow.
 - `memes/` — Imgflip template API and picker.
-- `discover/` — Tenor search and transparent WebP downloads.
+- `discover/` — Giphy sticker search, pagination, and downloads.
 - `community/` — offline example catalog and pack-detail UI.
 - `onboarding/`, `permissions/`, and `settings/` — first-run experience,
   permission guidance, appearance, and storage management.
@@ -223,27 +222,15 @@ Secrets are intentionally not committed. Build-time values are read with
 `String.fromEnvironment`, so `.env` is a local reference file and is not loaded
 into the application. Pass each required value through `--dart-define`.
 
-Stickr fails startup with a configuration error unless `GIPHY_API_KEY`,
-`APIFY_API_TOKEN`, and `TENOR_API_KEY` are present.
+Stickr fails startup with a configuration error unless `GIPHY_API_KEY` and
+`APIFY_API_TOKEN` are present.
 
 ### Giphy
 
-Giphy powers the Community trending feed.
+Giphy powers the Community trending feed and Discover search.
 
 ```sh
 flutter run --dart-define=GIPHY_API_KEY=your_giphy_key
-```
-
-### Tenor
-
-Tenor powers the Discover search.
-
-1. Follow the [Tenor API quickstart](https://developers.google.com/tenor/guides/quickstart).
-2. Create an API key.
-3. Run with:
-
-```sh
-flutter run --dart-define=TENOR_API_KEY=your_tenor_key
 ```
 
 ### Apify
@@ -272,7 +259,6 @@ flutter run \
 ```sh
 flutter run \
   --dart-define=GIPHY_API_KEY=your_giphy_key \
-  --dart-define=TENOR_API_KEY=your_tenor_key \
   --dart-define=APIFY_API_TOKEN=your_apify_token
 ```
 
@@ -287,7 +273,7 @@ comment client and can still be supplied with `SCRAPEBADGER_API_KEY`.
   and can also be cleared from Settings.
 - TikTok import sends the pasted public video URL to TikWM.
 - Meme browsing contacts Imgflip.
-- Discover contacts Tenor.
+- Discover and Community contact Giphy.
 - Comment scanning contacts Apify Actor `X6ACJnuJVBUsBocfe`.
 - Google Fonts may download selected font files over the network.
 
@@ -311,7 +297,6 @@ Build a release APK with required API configuration:
 ```sh
 flutter build apk --release \
   --dart-define=GIPHY_API_KEY=your_giphy_key \
-  --dart-define=TENOR_API_KEY=your_tenor_key \
   --dart-define=APIFY_API_TOKEN=your_apify_token
 ```
 

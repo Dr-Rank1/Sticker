@@ -73,6 +73,55 @@ void main() {
     expect(page.nextOffset, isNull);
   });
 
+  test('searches stickers with the query and offset', () async {
+    late String requestedPath;
+    late Map<String, dynamic> requestedParameters;
+    final service = GiphyService(
+      apiKey: 'test-key',
+      apiGet: (path, parameters) async {
+        requestedPath = path;
+        requestedParameters = parameters;
+        return _response({
+          'data': [
+            {
+              'id': 'search-1',
+              'title': 'Happy cat',
+              'images': {
+                'fixed_height': {
+                  'url': 'https://media.giphy.com/cat.gif',
+                  'webp': 'https://media.giphy.com/cat.webp',
+                  'width': '320',
+                  'height': '240',
+                },
+              },
+            },
+          ],
+          'pagination': {'offset': 50, 'count': 1, 'total_count': 100},
+        });
+      },
+    );
+
+    final page = await service.search(' happy cat ', offset: 50);
+
+    expect(requestedPath, GiphyService.searchEndpoint);
+    expect(requestedParameters, {
+      'api_key': 'test-key',
+      'q': 'happy cat',
+      'limit': 50,
+      'rating': 'g',
+      'offset': 50,
+    });
+    expect(page.stickers.single.url, endsWith('cat.webp'));
+    expect(page.stickers.single.aspectRatio, closeTo(4 / 3, 0.01));
+    expect(page.nextOffset, 51);
+  });
+
+  test('search rejects an empty query', () async {
+    final service = GiphyService(apiKey: 'test-key');
+
+    await expectLater(service.search('  '), throwsA(isA<GiphyException>()));
+  });
+
   test('converts rate limits into a Giphy error', () async {
     final service = GiphyService(
       apiKey: 'test-key',

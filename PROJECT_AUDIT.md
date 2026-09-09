@@ -25,7 +25,7 @@ Stickr is already a substantial Android-first sticker creation application rathe
 
 The project also contains two sticker-discovery paths:
 
-- Discover uses Tenor search for transparent sticker WebP files.
+- Discover uses Giphy sticker search with offset pagination and a masonry grid.
 - Community uses Giphy's live trending sticker endpoint, a masonry grid, a staging tray, and batch export.
 
 TikTok comment-sticker scanning is implemented through Apify's synchronous dataset endpoint, including multi-selection and batch export.
@@ -37,9 +37,8 @@ The project is not yet production-ready. The most important blockers are:
 1. The previously committed Giphy API key must still be rotated because it remains exposed in Git history.
 2. Firebase configuration is still placeholder-only, so Crashlytics is not production-configured.
 3. The README describes an older architecture and several removed behaviors.
-4. Discover still depends on Tenor even though the product direction has moved to Giphy.
-5. Pack persistence does not store enough metadata and derives update timestamps incorrectly.
-6. Native WhatsApp export is Android-only and has not been validated by an automated device-level contract test.
+4. Pack persistence does not store enough metadata and derives update timestamps incorrectly.
+5. Native WhatsApp export is Android-only and has not been validated by an automated device-level contract test.
 
 The recommended strategy is to stabilize and secure the existing Android product before adding more creation sources or marketplace features.
 
@@ -298,8 +297,8 @@ Primary files:
 
 Implemented:
 
-- Transparent sticker search through Tenor.
-- Sticker-only media filtering.
+- Sticker search through Giphy.
+- Offset-based infinite pagination.
 - Masonry result grid.
 - Cached thumbnails.
 - Download into a selected local pack.
@@ -308,12 +307,7 @@ Implemented:
 Primary files:
 
 - `lib/discover/discover_screen.dart`
-- `lib/discover/tenor_repository.dart`
-
-Important status:
-
-- This feature remains technically implemented, but it conflicts with the newer product direction that moved Community from Tenor to Giphy because Tenor is no longer accepting new clients.
-- `TenorRepository` parses the next-page cursor, but `DiscoverScreen` never requests subsequent pages, so each search is limited to its first response.
+- `lib/community/giphy_service.dart`
 
 ### 3.13 Community
 
@@ -412,7 +406,7 @@ This structure is appropriate for the current application size and has enabled b
 ### 4.3 Architectural weaknesses
 
 - There is no unified network layer for timeouts, retry policy, cancellation, headers, telemetry, and rate-limit behavior.
-- Giphy, Apify, and Tenor now use consistent build-time environment configuration, but client-side values remain extractable from distributed binaries.
+- Giphy and Apify use consistent build-time environment configuration, but client-side values remain extractable from distributed binaries.
 - Several screens directly coordinate networking, file conversion, persistence, and navigation. Community export and editor save are examples of workflows that would benefit from dedicated use-case classes.
 - Pack metadata exists in multiple forms: Flutter domain models, Isar rows, Android staging JSON, and `.stickr` manifests. These representations are not versioned together.
 - The Isar schema stores sticker paths but not sticker IDs, creation times, animation flags, accessibility labels, source provenance, or update timestamps.
@@ -424,7 +418,7 @@ This structure is appropriate for the current application size and has enabled b
 
 ### 5.1 Automated test inventory
 
-The repository contains 45 Dart test files covering:
+The repository contains 46 Dart test files covering:
 
 - Pack rules and repositories.
 - Isar persistence.
@@ -435,9 +429,8 @@ The repository contains 45 Dart test files covering:
 - Photo import and background removal.
 - TikTok parsing, import, clipboard, app links, and share intents.
 - Apify parsing and errors.
-- Giphy parsing and errors.
+- Giphy trending, search, pagination, parsing, and errors.
 - Community staging and export.
-- Tenor search.
 - Meme templates.
 - Storage cleanup.
 - Permissions.
@@ -452,7 +445,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 186 tests passed.
+- 185 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -518,8 +511,8 @@ Remaining media hardening:
 #### Rotate the formerly committed Giphy key
 
 The live Giphy key has been removed from `lib/community/giphy_service.dart`.
-Giphy, Apify, and Tenor now read build-time environment values, startup validates
-all three, `.env` is ignored, and `.env.example` documents the required names.
+Giphy and Apify now read build-time environment values, startup validates both,
+`.env` is ignored, and `.env.example` documents the required names.
 
 Remaining risk:
 
@@ -614,19 +607,15 @@ Required action:
 - Verify non-fatal and fatal reports from internal builds.
 - Upload Android obfuscation and native symbols for release builds.
 
-### 6.6 Update or replace Discover
+### 6.6 Preserve supported Discover search
 
-Discover still depends on Tenor and requires `TENOR_API_KEY`.
+Discover now uses Giphy's sticker search endpoint and loads subsequent result pages with API offsets. The unsupported provider repository, environment requirement, and tests have been removed.
 
-Given the decision to use Giphy because Tenor is no longer accepting new clients, Discover should be migrated rather than left as an effectively unavailable tab.
+Remaining consolidation opportunity:
 
-Recommended options:
-
-1. Add Giphy sticker search to `GiphyService` and migrate Discover.
-2. Merge Discover and Community into one Giphy-backed experience with search and trending sections.
-3. Remove Discover until a supported search provider is available.
-
-Maintaining two providers increases UI inconsistency, networking code, documentation burden, and failure modes.
+- Share more grid, download, error, and pagination behavior between Discover and Community.
+- Add Giphy attribution required by the provider's terms.
+- Consider merging search and trending into one destination.
 
 ### 6.7 Correct and expand pack persistence
 
@@ -665,7 +654,7 @@ Recommended schema migration:
 - Use a monotonic content revision for WhatsApp `imageDataVersion`.
 - Add migration tests using a copy of the previous schema.
 
-Pack readiness also needs file-level validation. `canExportToWhatsApp` currently validates metadata and sticker count, but does not verify that every file exists, decodes as WebP, is 512 by 512, meets its byte limit, or matches the pack's animation type. Discover currently copies Tenor results directly into packs, making this validation gap especially important.
+Pack readiness also needs file-level validation. `canExportToWhatsApp` currently validates metadata and sticker count, but does not verify that every file exists, decodes as WebP, is 512 by 512, meets its byte limit, or matches the pack's animation type. Discover currently copies downloaded Giphy results directly into packs, making this validation gap especially important.
 
 ### 6.8 Improve batch export workflows
 
@@ -781,7 +770,6 @@ Examples:
 - It describes the old asynchronous Apify polling actor.
 - It does not document the live Giphy Community architecture accurately.
 - It must continue to explain that build-time configuration prevents accidental commits but does not make mobile client values secret.
-- It still presents Tenor as the active transparent-sticker strategy.
 - It says meme templates are searchable, but the current picker has no search input.
 
 The README should be updated after the configuration and provider decisions are finalized.
@@ -956,7 +944,7 @@ Combine trending and search into one Giphy-backed destination:
 - Source attribution required by Giphy's terms.
 - A single consistent staging tray.
 
-This removes the unsupported Tenor dependency and avoids teaching users two different collection flows.
+This would avoid teaching users two different collection flows over the same Giphy catalog.
 
 ### 7.2 Make pack building a first-class workspace
 
@@ -1074,8 +1062,6 @@ Exit criteria:
 
 Target: one supported sticker-browsing experience.
 
-- Add Giphy search.
-- Migrate or remove Discover's Tenor code.
 - Share models, image widgets, pagination, errors, downloads, and staging.
 - Persist the draft tray.
 
@@ -1121,7 +1107,6 @@ Target: close the largest product gaps.
 - Track the Android Gradle wrapper.
 - Extend CI with an Android debug build.
 - Configure Firebase or remove claims that Crashlytics is active.
-- Replace or remove Tenor Discover.
 - Update README.
 
 ### High priority

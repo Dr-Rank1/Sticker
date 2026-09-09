@@ -36,6 +36,13 @@ class GiphySticker {
   final String url;
   final int width;
   final int height;
+
+  double get aspectRatio {
+    if (width <= 0 || height <= 0) return 1;
+    return (width / height).clamp(0.65, 1.5);
+  }
+
+  bool get animated => true;
 }
 
 class GiphyStickerPage {
@@ -61,6 +68,7 @@ class GiphyService {
        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
 
   static const endpoint = 'https://api.giphy.com/v1/stickers/trending';
+  static const searchEndpoint = 'https://api.giphy.com/v1/stickers/search';
   static const pageSize = 50;
 
   final Dio _dio;
@@ -84,33 +92,35 @@ class GiphyService {
       'offset': offset,
     };
 
-    try {
-      final customGet = apiGet;
-      final response = customGet != null
-          ? await customGet(endpoint, parameters)
-          : await _dio.get<dynamic>(
-              endpoint,
-              queryParameters: parameters,
-              options: Options(responseType: ResponseType.json),
-            );
-      return _parseResponse(response.data);
-    } on GiphyException {
-      rethrow;
-    } on DioException catch (error) {
-      throw _fromDio(error);
-    } on FormatException {
+    return _fetchPage(
+      endpoint: endpoint,
+      parameters: parameters,
+      fallbackMessage: 'Could not load trending stickers. Please retry.',
+    );
+  }
+
+  Future<GiphyStickerPage> search(String query, {int offset = 0}) async {
+    final term = query.trim();
+    if (term.isEmpty) {
+      throw const GiphyException('Type something to search for stickers.');
+    }
+    if (!hasApiKey) {
       throw const GiphyException(
-        'Giphy returned an unreadable sticker response.',
-      );
-    } on SocketException {
-      throw const GiphyException(
-        'Could not connect to Giphy. Check your connection and retry.',
-      );
-    } catch (_) {
-      throw const GiphyException(
-        'Could not load trending stickers. Please retry.',
+        'Sticker search is unavailable because Giphy is not configured.',
       );
     }
+
+    return _fetchPage(
+      endpoint: searchEndpoint,
+      parameters: <String, dynamic>{
+        'api_key': _apiKey,
+        'q': term,
+        'limit': pageSize,
+        'rating': 'g',
+        'offset': offset,
+      },
+      fallbackMessage: 'Could not search Giphy. Please retry.',
+    );
   }
 
   Future<File> downloadSticker({
@@ -124,8 +134,9 @@ class GiphyService {
 
     final directory = await _temporaryDirectory();
     final safeId = id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '');
+    final extension = uri.path.toLowerCase().endsWith('.webp') ? 'webp' : 'gif';
     final file = File(
-      '${directory.path}${Platform.pathSeparator}giphy_${safeId.isEmpty ? 'sticker' : safeId}_${DateTime.now().microsecondsSinceEpoch}.gif',
+      '${directory.path}${Platform.pathSeparator}giphy_${safeId.isEmpty ? 'sticker' : safeId}_${DateTime.now().microsecondsSinceEpoch}.$extension',
     );
     try {
       await _dio.download(url, file.path);
@@ -159,7 +170,10 @@ class GiphyService {
       final images = _asMap(item?['images']);
       final image =
           _asMap(images?['fixed_height']) ?? _asMap(images?['original']);
-      final url = image?['url']?.toString().trim() ?? '';
+      final url =
+          image?['webp']?.toString().trim() ??
+          image?['url']?.toString().trim() ??
+          '';
       final uri = Uri.tryParse(url);
       if (item == null ||
           image == null ||
@@ -186,6 +200,38 @@ class GiphyService {
         ? offset + count
         : null;
     return GiphyStickerPage(stickers: stickers, nextOffset: nextOffset);
+  }
+
+  Future<GiphyStickerPage> _fetchPage({
+    required String endpoint,
+    required Map<String, dynamic> parameters,
+    required String fallbackMessage,
+  }) async {
+    try {
+      final customGet = apiGet;
+      final response = customGet != null
+          ? await customGet(endpoint, parameters)
+          : await _dio.get<dynamic>(
+              endpoint,
+              queryParameters: parameters,
+              options: Options(responseType: ResponseType.json),
+            );
+      return _parseResponse(response.data);
+    } on GiphyException {
+      rethrow;
+    } on DioException catch (error) {
+      throw _fromDio(error);
+    } on FormatException {
+      throw const GiphyException(
+        'Giphy returned an unreadable sticker response.',
+      );
+    } on SocketException {
+      throw const GiphyException(
+        'Could not connect to Giphy. Check your connection and retry.',
+      );
+    } catch (_) {
+      throw GiphyException(fallbackMessage);
+    }
   }
 
   GiphyException _fromDio(DioException error) {
