@@ -82,18 +82,22 @@ class StickerRepository implements PackRepository {
   Future<StickerPack> createPack({
     required String name,
     required String author,
+    String? identifier,
   }) async {
     final trimmedName = _requireName(name);
     final publisher = _requirePublisher(author);
-    final identifier = _uuidV4();
-    final packDir = _packDir(identifier);
+    final packIdentifier = identifier ?? _uuidV4();
+    if (await isar.stickerPacks.getByIdentifier(packIdentifier) != null) {
+      throw const PackException('A pack with that identifier already exists.');
+    }
+    final packDir = _packDir(packIdentifier);
     final trayBytes = await _trayIcons.createDefaultBytes(name: trimmedName);
     final trayFile = File('${packDir.path}${Platform.pathSeparator}tray.png');
     await trayFile.writeAsBytes(trayBytes);
     final nowMillis = _clock().millisecondsSinceEpoch;
 
     final row = isar_db.StickerPack()
-      ..identifier = identifier
+      ..identifier = packIdentifier
       ..name = trimmedName
       ..publisher = publisher
       ..trayIconBytes = List<int>.from(trayBytes)
@@ -132,6 +136,7 @@ class StickerRepository implements PackRepository {
     required String packId,
     required String sourcePath,
     bool animated = true,
+    String accessibilityText = '',
   }) async {
     final row = await _requireRow(packId);
     final current = _toDomain(row);
@@ -168,7 +173,7 @@ class StickerRepository implements PackRepository {
           ..filePath = dest.path
           ..createdAtMillis = createdAtMillis
           ..animated = animated
-          ..accessibilityText = '',
+          ..accessibilityText = accessibilityText.trim(),
       ]
       ..stickerPaths = []
       ..updatedAtMillis = _nextRevision(row.updatedAtMillis);

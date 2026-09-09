@@ -9,13 +9,12 @@ import '../editor/ffmpeg_sticker_service.dart';
 import '../haptics/haptic_service.dart';
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
+import '../packs/batch_export_use_case.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
-import '../packs/whatsapp_export_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'apify_service.dart';
-import 'comment_sticker_formatter.dart';
 import 'comment_sticker_isolate.dart';
 import 'tiktok_comment_service.dart';
 
@@ -131,6 +130,8 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
   final List<String> _selectedUrls = [];
   final List<CommentSticker> _visible = [];
   var _exporting = false;
+  var _exportCompleted = 0;
+  var _exportTotal = 0;
   var _downloaded = 0;
   var _total = 0;
   StreamSubscription<CommentStickerProgress>? _subscription;
@@ -194,36 +195,56 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
       return;
     }
 
-    setState(() => _exporting = true);
-    final downloadedFiles = <File>[];
-    final readyFiles = <File>[];
+    final selected = [
+      for (final imageUrl in List<String>.of(_selectedUrls))
+        _visible.firstWhere((item) => item.imageUrl == imageUrl),
+    ];
+    setState(() {
+      _exporting = true;
+      _exportCompleted = 0;
+      _exportTotal = selected.length;
+    });
     try {
-      for (final imageUrl in List<String>.of(_selectedUrls)) {
-        final sticker = _visible.firstWhere(
-          (item) => item.imageUrl == imageUrl,
-        );
-        final File downloaded;
-        if (sticker.localPath != null) {
-          downloaded = File(sticker.localPath!);
-        } else {
-          downloaded = await ref
-              .read(tikTokCommentServiceProvider)
-              .downloadSticker(sticker);
-          downloadedFiles.add(downloaded);
+      BatchExportResult? result;
+      final stream = ref
+          .read(batchExportUseCaseProvider)
+          .export(
+            items: [
+              for (final sticker in selected)
+                BatchExportItem(
+                  id: sticker.id,
+                  accessibilityText: sticker.author,
+                  download: () async {
+                    final localPath = sticker.localPath;
+                    if (localPath != null) {
+                      return BatchExportDownload(
+                        file: File(localPath),
+                        deleteAfterUse: false,
+                      );
+                    }
+                    return BatchExportDownload(
+                      file: await ref
+                          .read(tikTokCommentServiceProvider)
+                          .downloadSticker(sticker),
+                    );
+                  },
+                ),
+            ],
+            packName: commentPackName,
+            author: commentPackAuthor,
+          );
+      await for (final progress in stream) {
+        if (mounted) {
+          setState(() {
+            _exportCompleted = progress.completedItems;
+            _exportTotal = progress.totalItems;
+          });
         }
-        final ready = await ref
-            .read(commentStickerFormatterProvider)
-            .makeWhatsAppReady(downloaded);
-        readyFiles.add(ready);
+        result = progress.result ?? result;
       }
-      if (!mounted) return;
-
-      final pack = await ref
-          .read(packsProvider.notifier)
-          .createStaticStickerPack([for (final file in readyFiles) file.path]);
-      final result = await ref
-          .read(whatsAppExportServiceProvider)
-          .exportToWhatsApp(pack);
+      if (result == null) {
+        throw const PackException('The batch export did not complete.');
+      }
       if (!mounted) return;
 
       hapticService.success();
@@ -249,21 +270,13 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
         _showMessage('Couldn’t export those stickers. Please try again.');
       }
     } finally {
-      for (final file in downloadedFiles) {
-        _delete(file);
+      if (mounted) {
+        setState(() {
+          _exporting = false;
+          _exportCompleted = 0;
+          _exportTotal = 0;
+        });
       }
-      for (final file in readyFiles) {
-        _delete(file);
-      }
-      if (mounted) setState(() => _exporting = false);
-    }
-  }
-
-  void _delete(File? file) {
-    try {
-      if (file?.existsSync() == true) file!.deleteSync();
-    } on FileSystemException {
-      // Temporary files can already have been reclaimed by the OS.
     }
   }
 
@@ -357,7 +370,10 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                     )
                   : const Icon(Icons.ios_share_rounded),
               label: Text(
-                'Export (${_selectedUrls.length}/${WhatsAppPackRules.maxStickers})',
+                _exporting && _exportTotal > 0
+                    ? 'Export $_exportCompleted/$_exportTotal'
+                    : 'Export (${_selectedUrls.length}/${WhatsAppPackRules.maxStickers})',
+                key: const Key('comment-sticker-export-progress'),
               ),
             ),
           ),

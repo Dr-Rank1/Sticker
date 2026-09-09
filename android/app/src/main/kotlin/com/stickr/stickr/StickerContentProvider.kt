@@ -9,7 +9,6 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
-import android.text.TextUtils
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -35,6 +34,7 @@ class StickerContentProvider : ContentProvider() {
         require(authority.startsWith(packageName)) {
             "ContentProvider authority ($authority) must start with $packageName"
         }
+        StickerPackStore.recoverInterruptedStaging(ctx)
         synchronized(MATCHER) {
             if (!matcherInitialized) {
                 MATCHER.addURI(authority, METADATA, METADATA_CODE)
@@ -248,13 +248,13 @@ class StickerContentProvider : ContentProvider() {
         private var matcherInitialized = false
 
         private fun joinEmojis(emojis: JSONArray?): String {
-            if (emojis == null || emojis.length() == 0) return "✨"
+            if (emojis == null || emojis.length() == 0) return ""
             val values = ArrayList<String>(emojis.length())
             for (i in 0 until emojis.length()) {
                 val value = emojis.optString(i)
                 if (value.isNotBlank()) values += value
             }
-            return if (values.isEmpty()) "✨" else TextUtils.join(",", values)
+            return values.joinToString(",")
         }
     }
 }

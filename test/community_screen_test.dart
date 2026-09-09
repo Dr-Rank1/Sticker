@@ -9,6 +9,7 @@ import 'package:stickr/community/community_sticker_feed.dart';
 import 'package:stickr/community/giphy_service.dart';
 import 'package:stickr/editor/image_sticker_service.dart';
 import 'package:stickr/main.dart';
+import 'package:stickr/packs/batch_export_use_case.dart';
 import 'package:stickr/packs/pack_models.dart';
 import 'package:stickr/packs/pack_providers.dart';
 import 'package:stickr/packs/pack_repository.dart';
@@ -62,6 +63,7 @@ ProviderScope communityApp({
   GiphyService? giphy,
   WhatsAppExportService? whatsApp,
 }) {
+  final formatter = _FakeFormatter();
   return ProviderScope(
     overrides: [
       settingsStoreProvider.overrideWithValue(
@@ -73,7 +75,11 @@ ProviderScope communityApp({
       if (giphy != null) giphyServiceProvider.overrideWithValue(giphy),
       if (whatsApp != null)
         whatsAppExportServiceProvider.overrideWithValue(whatsApp),
-      commentStickerFormatterProvider.overrideWithValue(_FakeFormatter()),
+      commentStickerFormatterProvider.overrideWithValue(formatter),
+      if (repository != null && whatsApp != null)
+        batchExportUseCaseProvider.overrideWithValue(
+          _WidgetBatchExportUseCase(repository, whatsApp, formatter),
+        ),
       tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
       tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
     ],
@@ -226,5 +232,74 @@ class _FakeWhatsAppExportService extends WhatsAppExportService {
   Future<WhatsAppExportResult> exportToWhatsApp(StickerPack pack) async {
     exportedPack = pack;
     return WhatsAppExportResult(pack: pack, message: 'Added to WhatsApp.');
+  }
+}
+
+class _WidgetBatchExportUseCase extends BatchExportUseCase {
+  _WidgetBatchExportUseCase(
+    this.repository,
+    this.whatsApp,
+    CommentStickerFormatter formatter,
+  ) : super(repository, whatsApp, formatter);
+
+  final PackRepository repository;
+  final WhatsAppExportService whatsApp;
+
+  @override
+  Stream<BatchExportProgress> export({
+    required List<BatchExportItem> items,
+    required String packName,
+    required String author,
+  }) async* {
+    final files = <File>[];
+    for (var index = 0; index < items.length; index++) {
+      files.add((await items[index].download()).file);
+      yield BatchExportProgress(
+        stage: BatchExportStage.itemReady,
+        itemId: items[index].id,
+        itemIndex: index,
+        completedItems: index + 1,
+        totalItems: items.length,
+      );
+    }
+    final now = DateTime.now();
+    final draft = StickerPack(
+      id: 'community_batch',
+      name: packName,
+      author: author,
+      trayIconPath: 'tray.png',
+      trayIconBytes: const [1],
+      stickers: [
+        for (var index = 0; index < files.length; index++)
+          StickerItem(
+            id: items[index].id,
+            filePath: files[index].path,
+            createdAt: now,
+            animated: false,
+          ),
+      ],
+      createdAt: now,
+      updatedAt: now,
+    );
+    final result = await whatsApp.exportToWhatsApp(draft);
+    var saved = await repository.createPack(
+      name: packName,
+      author: author,
+      identifier: draft.id,
+    );
+    for (final file in files) {
+      saved = await repository.addSticker(
+        packId: saved.id,
+        sourcePath: file.path,
+        animated: false,
+      );
+    }
+    saved = await repository.save(saved);
+    yield BatchExportProgress(
+      stage: BatchExportStage.complete,
+      completedItems: items.length,
+      totalItems: items.length,
+      result: BatchExportResult(pack: saved, message: result.message),
+    );
   }
 }

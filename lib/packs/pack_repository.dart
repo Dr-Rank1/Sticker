@@ -9,12 +9,14 @@ abstract class PackRepository {
   Future<StickerPack> createPack({
     required String name,
     required String author,
+    String? identifier,
   });
   Future<StickerPack> updatePack(StickerPack pack);
   Future<StickerPack> addSticker({
     required String packId,
     required String sourcePath,
     bool animated = true,
+    String accessibilityText = '',
   });
   Future<StickerPack> removeSticker({
     required String packId,
@@ -65,6 +67,7 @@ class InMemoryPackRepository implements PackRepository {
   Future<StickerPack> createPack({
     required String name,
     required String author,
+    String? identifier,
   }) async {
     if (name.trim().isEmpty) {
       throw const PackException('Give this pack a name.');
@@ -74,8 +77,12 @@ class InMemoryPackRepository implements PackRepository {
     }
     _seq += 1;
     final now = DateTime.now();
+    final id = identifier ?? 'mem_$_seq';
+    if (_packs.containsKey(id)) {
+      throw const PackException('A pack with that identifier already exists.');
+    }
     final pack = StickerPack(
-      id: 'mem_$_seq',
+      id: id,
       name: name.trim(),
       author: author.trim(),
       trayIconPath: 'tray_$_seq.png',
@@ -104,6 +111,7 @@ class InMemoryPackRepository implements PackRepository {
     required String packId,
     required String sourcePath,
     bool animated = true,
+    String accessibilityText = '',
   }) async {
     final pack = _packs[packId];
     if (pack == null) {
@@ -130,6 +138,7 @@ class InMemoryPackRepository implements PackRepository {
           filePath: sourcePath,
           createdAt: DateTime.now(),
           animated: animated,
+          accessibilityText: accessibilityText,
         ),
       ],
       updatedAt: _nextRevision(pack),

@@ -2,9 +2,11 @@ package com.stickr.stickr
 
 import android.content.Context
 import android.net.Uri
+import android.system.Os
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 
 /**
  * Stages WhatsApp sticker packs under the app documents directory so
@@ -44,6 +46,38 @@ object StickerPackStore {
         return cleaned.ifBlank { "pack" }
     }
 
+    fun recoverInterruptedStaging(context: Context) {
+        val root = root(context)
+        if (!root.isDirectory) return
+
+        val backupPattern = Regex("""^\.(.+)\.backup-\d+$""")
+        val backups = root.listFiles()
+            ?.filter { it.isDirectory && backupPattern.matches(it.name) }
+            ?.groupBy { backupPattern.matchEntire(it.name)!!.groupValues[1] }
+            .orEmpty()
+        backups.forEach { (identifier, candidates) ->
+            val destination = File(root, identifier)
+            val newest = candidates.maxByOrNull(File::lastModified) ?: return@forEach
+            if (!destination.exists()) {
+                atomicRename(newest, destination)
+            }
+            candidates.filter { it.exists() }.forEach { it.deleteRecursively() }
+        }
+
+        root.listFiles()?.forEach { candidate ->
+            val stalePackTemporary =
+                candidate.isDirectory &&
+                    candidate.name.startsWith(".") &&
+                    candidate.name.contains(".tmp-")
+            val staleMetadataTemporary =
+                candidate.isFile &&
+                    candidate.name.startsWith(".$CONTENTS_FILE.tmp-")
+            if (stalePackTemporary || staleMetadataTemporary) {
+                candidate.deleteRecursively()
+            }
+        }
+    }
+
     fun stagePack(
         context: Context,
         identifier: String,
@@ -54,51 +88,71 @@ object StickerPackStore {
         imageDataVersion: String,
         animated: Boolean,
     ): String {
+        recoverInterruptedStaging(context)
         val id = sanitizeIdentifier(identifier)
+        val root = root(context)
+        if (!root.mkdirs() && !root.isDirectory) {
+            throw IllegalStateException("Could not create sticker pack root directory.")
+        }
         val dir = packDir(context, id)
-        if (dir.exists()) {
-            dir.deleteRecursively()
-        }
-        if (!dir.mkdirs() && !dir.isDirectory) {
-            throw IllegalStateException("Could not create pack directory.")
+        val transactionId = System.nanoTime().toString()
+        val temporaryDir = File(root, ".$id.tmp-$transactionId")
+        val backupDir = File(root, ".$id.backup-$transactionId")
+        val metadataTemporary = File(root, ".$CONTENTS_FILE.tmp-$transactionId")
+        if (!temporaryDir.mkdirs() || !temporaryDir.isDirectory) {
+            throw IllegalStateException("Could not create temporary pack directory.")
         }
 
-        copyRequired(File(trayIconPath), File(dir, TRAY_FILE_NAME))
+        try {
+            copyRequired(File(trayIconPath), File(temporaryDir, TRAY_FILE_NAME))
 
-        val stickerFiles = stickerPaths.mapIndexed { index, path ->
-            val fileName = "sticker_$index.webp"
-            copyRequired(File(path), File(dir, fileName))
-            JSONObject().apply {
-                put("image_file", fileName)
-                put("source_path", path)
-                put("emojis", JSONArray().put("✨"))
-                put("accessibility_text", "")
+            val stickerFiles = stickerPaths.mapIndexed { index, path ->
+                val fileName = "sticker_$index.webp"
+                copyRequired(File(path), File(temporaryDir, fileName))
+                JSONObject().apply {
+                    put("image_file", fileName)
+                    put("source_path", path)
+                    put("emojis", JSONArray())
+                    put("accessibility_text", "")
+                }
             }
-        }
 
-        val packs = loadPacks(context).filterNot { it.optString("identifier") == id }.toMutableList()
-        packs += JSONObject().apply {
-            put("identifier", id)
-            put("name", name)
-            put("publisher", publisher)
-            put("tray_image_file", TRAY_FILE_NAME)
-            put("image_data_version", imageDataVersion)
-            put("avoid_cache", false)
-            put("animated_sticker_pack", animated)
-            put("publisher_email", "")
-            put("publisher_website", "")
-            put("privacy_policy_website", "")
-            put("license_agreement_website", "")
-            put("android_play_store_link", "")
-            put("ios_app_store_link", "")
-            put("stickers", JSONArray().also { array -> stickerFiles.forEach(array::put) })
-        }
+            val packs = loadPacks(context)
+                .filterNot { it.optString("identifier") == id }
+                .toMutableList()
+            packs += JSONObject().apply {
+                put("identifier", id)
+                put("name", name)
+                put("publisher", publisher)
+                put("tray_image_file", TRAY_FILE_NAME)
+                put("image_data_version", imageDataVersion)
+                put("avoid_cache", false)
+                put("animated_sticker_pack", animated)
+                put("publisher_email", "")
+                put("publisher_website", "")
+                put("privacy_policy_website", "")
+                put("license_agreement_website", "")
+                put("android_play_store_link", "")
+                put("ios_app_store_link", "")
+                put("stickers", JSONArray().also { array -> stickerFiles.forEach(array::put) })
+            }
 
-        val payload = JSONObject().put(
-            "sticker_packs",
-            JSONArray().also { array -> packs.forEach(array::put) },
-        )
-        contentsFile(context).writeText(payload.toString())
+            val payload = JSONObject().put(
+                "sticker_packs",
+                JSONArray().also { array -> packs.forEach(array::put) },
+            )
+            writeSynced(metadataTemporary, payload.toString())
+            commitStagedPack(
+                temporaryDir = temporaryDir,
+                destinationDir = dir,
+                backupDir = backupDir,
+                metadataTemporary = metadataTemporary,
+                metadataDestination = contentsFile(context),
+            )
+        } finally {
+            temporaryDir.deleteRecursively()
+            metadataTemporary.delete()
+        }
 
         val authority = BuildConfig.CONTENT_PROVIDER_AUTHORITY
         context.contentResolver.notifyChange(
@@ -184,9 +238,70 @@ object StickerPackStore {
         if (!source.isFile) {
             throw IllegalArgumentException("Missing sticker file: ${source.path}")
         }
-        source.copyTo(destination, overwrite = true)
+        source.inputStream().use { input ->
+            FileOutputStream(destination).use { output ->
+                input.copyTo(output)
+                output.flush()
+                output.fd.sync()
+            }
+        }
         if (!destination.isFile || destination.length() == 0L) {
             throw IllegalStateException("Failed to stage sticker file: ${destination.path}")
+        }
+    }
+
+    private fun writeSynced(destination: File, contents: String) {
+        FileOutputStream(destination).use { output ->
+            output.write(contents.toByteArray(Charsets.UTF_8))
+            output.flush()
+            output.fd.sync()
+        }
+    }
+
+    private fun commitStagedPack(
+        temporaryDir: File,
+        destinationDir: File,
+        backupDir: File,
+        metadataTemporary: File,
+        metadataDestination: File,
+    ) {
+        var movedExistingPack = false
+        var installedNewPack = false
+        try {
+            if (destinationDir.exists()) {
+                atomicRename(destinationDir, backupDir)
+                movedExistingPack = true
+            }
+            atomicRename(temporaryDir, destinationDir)
+            installedNewPack = true
+            atomicRename(metadataTemporary, metadataDestination, replace = true)
+        } catch (error: Exception) {
+            if (installedNewPack) {
+                destinationDir.deleteRecursively()
+            }
+            if (movedExistingPack && backupDir.exists()) {
+                try {
+                    atomicRename(backupDir, destinationDir)
+                } catch (rollbackError: Exception) {
+                    error.addSuppressed(rollbackError)
+                }
+            }
+            throw error
+        }
+        backupDir.deleteRecursively()
+    }
+
+    private fun atomicRename(source: File, destination: File, replace: Boolean = false) {
+        if (!replace && destination.exists()) {
+            throw IllegalStateException("Atomic rename destination already exists.")
+        }
+        try {
+            Os.rename(source.path, destination.path)
+        } catch (error: Exception) {
+            throw IllegalStateException(
+                "Could not atomically rename ${source.name} to ${destination.name}.",
+                error,
+            )
         }
     }
 

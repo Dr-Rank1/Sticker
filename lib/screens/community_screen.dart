@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,13 +10,12 @@ import '../editor/ffmpeg_sticker_service.dart';
 import '../haptics/haptic_service.dart';
 import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
+import '../packs/batch_export_use_case.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
-import '../packs/whatsapp_export_service.dart';
 import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
-import '../tiktok/comment_sticker_formatter.dart';
 
 class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});
@@ -35,6 +32,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   bool _loadingPage = false;
   bool _hasMore = true;
   bool _exporting = false;
+  int _exportCompleted = 0;
+  int _exportTotal = 0;
   String? _error;
   ProviderSubscription<AppTab>? _tabSubscription;
 
@@ -120,32 +119,47 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       return;
     }
 
-    setState(() => _exporting = true);
-    final downloads = <File>[];
-    final formatted = <File>[];
+    final selected = List<CommunitySticker>.of(_tray);
+    setState(() {
+      _exporting = true;
+      _exportCompleted = 0;
+      _exportTotal = selected.length;
+    });
     try {
-      for (final sticker in List<CommunitySticker>.of(_tray)) {
-        final downloaded = await ref
-            .read(giphyServiceProvider)
-            .downloadSticker(id: sticker.stableId, url: sticker.imageUrl);
-        downloads.add(downloaded);
-        final ready = await ref
-            .read(commentStickerFormatterProvider)
-            .makeWhatsAppReady(downloaded);
-        formatted.add(ready);
-      }
-      if (!mounted) return;
-
-      final pack = await ref
-          .read(packsProvider.notifier)
-          .createStaticStickerPack(
-            [for (final file in formatted) file.path],
-            name: 'My Pack',
+      BatchExportResult? result;
+      final stream = ref
+          .read(batchExportUseCaseProvider)
+          .export(
+            items: [
+              for (final sticker in selected)
+                BatchExportItem(
+                  id: sticker.stableId,
+                  accessibilityText: sticker.label,
+                  download: () async => BatchExportDownload(
+                    file: await ref
+                        .read(giphyServiceProvider)
+                        .downloadSticker(
+                          id: sticker.stableId,
+                          url: sticker.imageUrl,
+                        ),
+                  ),
+                ),
+            ],
+            packName: 'My Pack',
             author: commentPackAuthor,
           );
-      final result = await ref
-          .read(whatsAppExportServiceProvider)
-          .exportToWhatsApp(pack);
+      await for (final progress in stream) {
+        if (mounted) {
+          setState(() {
+            _exportCompleted = progress.completedItems;
+            _exportTotal = progress.totalItems;
+          });
+        }
+        result = progress.result ?? result;
+      }
+      if (result == null) {
+        throw const PackException('The batch export did not complete.');
+      }
       if (!mounted) return;
       setState(_tray.clear);
       hapticService.success();
@@ -161,10 +175,13 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         _showExportError('Couldn’t export My Pack. Please try again.');
       }
     } finally {
-      for (final file in [...downloads, ...formatted]) {
-        _delete(file);
+      if (mounted) {
+        setState(() {
+          _exporting = false;
+          _exportCompleted = 0;
+          _exportTotal = 0;
+        });
       }
-      if (mounted) setState(() => _exporting = false);
     }
   }
 
@@ -179,14 +196,6 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       ..showSnackBar(
         SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
-  }
-
-  void _delete(File file) {
-    try {
-      if (file.existsSync()) file.deleteSync();
-    } on FileSystemException {
-      // Temporary files may already have been reclaimed by the OS.
-    }
   }
 
   @override
@@ -217,6 +226,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
           _StagingTray(
             stickers: _tray,
             exporting: _exporting,
+            exportCompleted: _exportCompleted,
+            exportTotal: _exportTotal,
             onRemove: _removeFromTray,
             onExport: _exportTray,
           ),
@@ -394,12 +405,16 @@ class _StagingTray extends StatelessWidget {
   const _StagingTray({
     required this.stickers,
     required this.exporting,
+    required this.exportCompleted,
+    required this.exportTotal,
     required this.onRemove,
     required this.onExport,
   });
 
   final List<CommunitySticker> stickers;
   final bool exporting;
+  final int exportCompleted;
+  final int exportTotal;
   final ValueChanged<CommunitySticker> onRemove;
   final VoidCallback onExport;
 
@@ -446,7 +461,12 @@ class _StagingTray extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.ios_share_rounded, size: 18),
-                label: const Text('Export to WhatsApp'),
+                label: Text(
+                  exporting && exportTotal > 0
+                      ? 'Export $exportCompleted/$exportTotal'
+                      : 'Export to WhatsApp',
+                  key: const Key('community-export-progress'),
+                ),
               ),
             ],
           ),

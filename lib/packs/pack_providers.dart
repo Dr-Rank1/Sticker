@@ -76,11 +76,13 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
     required String packId,
     required String sourcePath,
     bool animated = true,
+    String accessibilityText = '',
   }) async {
     final pack = await _repo.addSticker(
       packId: packId,
       sourcePath: sourcePath,
       animated: animated,
+      accessibilityText: accessibilityText,
     );
     await refresh();
     return pack;

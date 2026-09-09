@@ -218,7 +218,8 @@ Implemented:
 - Dart-side pack validation.
 - WhatsApp installation check.
 - Flutter method-channel call to native Android.
-- Native staging of tray and sticker files.
+- Crash-safe native staging of tray and sticker files through synchronized
+  temporary files, atomic renames, rollback, and startup recovery.
 - WhatsApp `ENABLE_STICKER_PACK` intent.
 - Consumer WhatsApp and WhatsApp Business fallback.
 - An exported Android `ContentProvider` implementing WhatsApp's metadata, sticker listing, and asset endpoints.
@@ -448,7 +449,7 @@ This is a strong foundation for an application of this size.
 
 The full `flutter test` run now passes:
 
-- 188 tests passed.
+- 192 tests passed.
 - 1 platform-dependent Isar test was skipped.
 - No tests failed.
 
@@ -643,28 +644,24 @@ Pack readiness also needs file-level validation. `canExportToWhatsApp` currently
 
 ### 6.8 Improve batch export workflows
 
-Community and comment-sticker exports currently perform substantial orchestration in widget state:
+Community and comment-sticker exports now share a dedicated
+`BatchExportUseCase` that:
 
-- Download each selected file.
-- Convert each file.
-- Create a pack.
-- Save every sticker.
-- Invoke WhatsApp.
-- Delete temporary files.
+- Limits download and conversion concurrency to two items.
+- Streams per-item download, conversion, and completion progress to the UI.
+- Creates a transient WhatsApp-ready pack without adding it to Isar.
+- Waits for the native WhatsApp result before finalizing the local pack.
+- Uses the same stable identifier for native staging and local persistence.
+- Cleans up Stickr-owned temporary downloads and converted files.
 
-Recommended improvement:
+This ordering resolves the previous orphan-pack failure mode: a cancelled,
+rejected, or failed WhatsApp launch no longer leaves a new pack in Library.
 
-- Move this sequence into a dedicated batch-export use case.
-- Expose item-level progress, current stage, cancellation, and retry.
-- Use bounded concurrency for downloads.
-- Keep conversion concurrency low to avoid memory pressure.
+Remaining improvement:
+
+- Add cancellation and retry controls.
 - Preserve successfully downloaded intermediates during recoverable retries.
-- Prevent duplicate pack creation if WhatsApp launch fails after persistence.
 - Add an export operation ID for diagnostics.
-
-Lifecycle concerns:
-
-- Community and comment export create the local pack before WhatsApp accepts it. A cancelled or failed native export therefore leaves a pack in Library.
 - Successful comment-sticker export does not close the sheet or clear its selection, making accidental duplicate pack creation possible.
 
 ### 6.9 Clarify Community animation behavior
@@ -851,21 +848,14 @@ Whichever option is selected, add orphan cleanup and avoid storing two permanent
 
 ### 6.20 Make native staging crash-safe
 
-`StickerPackStore.stagePack` deletes an existing staged directory before the replacement has succeeded, and writes `contents.json` directly.
+Implemented:
 
-Risks:
-
-- A crash or storage failure can remove the last valid staged pack.
-- A partial JSON write can make all staged metadata unreadable.
-- There is no recovery path for malformed staging data.
-
-Recommended change:
-
-- Stage files in a new temporary directory.
-- Verify all copied files.
-- Write metadata to a temporary file and flush it.
-- Atomically rename the directory and metadata into place.
-- Keep a recoverable previous version until replacement succeeds.
+- Sticker and tray files are copied into a transaction-specific temporary directory.
+- Every copied file and the temporary JSON metadata file are flushed and synchronized.
+- The previous staged directory is retained as a backup until both atomic renames succeed.
+- Commit failures roll the staged directory back to the previous version.
+- `StickerContentProvider` repairs interrupted transactions when its process starts.
+- Regression tests enforce the temporary-write, synchronization, atomic-rename, and recovery contract.
 
 ### 6.21 Resolve interaction and state inconsistencies
 
@@ -1094,9 +1084,7 @@ Target: close the largest product gaps.
 
 ### High priority
 
-- Make Android export staging atomic.
 - Add Giphy timeouts, cancellation, and retry policy.
-- Extract batch export from widget state.
 - Add archive size and validation limits.
 - Add device-level Android WhatsApp export tests.
 - Resolve FFmpeg license and distribution obligations.
@@ -1108,7 +1096,7 @@ Target: close the largest product gaps.
 - Implement local video import.
 - Add localization.
 - Add Community search and categories.
-- Add item-level export progress.
+- Add cancellation and retry controls to batch export progress.
 - Add accessibility announcements and large-text tests.
 - Upgrade dependencies in controlled batches.
 

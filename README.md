@@ -99,6 +99,12 @@ On Android, Stickr checks whether consumer WhatsApp or WhatsApp Business can
 handle the export before launching the native pack flow. If WhatsApp is
 missing, the app displays a friendly installation guide.
 
+Community and comment-sticker batches use bounded download and conversion
+concurrency with item-level progress. The local Isar pack is created only after
+WhatsApp confirms the add-pack intent. Native files and metadata are flushed to
+temporary locations and atomically moved into place with interrupted-staging
+recovery.
+
 Pack validation follows the important WhatsApp rules:
 
 - A pack must contain between 3 and 30 stickers.
