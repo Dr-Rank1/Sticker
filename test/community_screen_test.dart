@@ -4,37 +4,76 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stikk/community/community_catalog.dart';
-import 'package:stikk/community/community_pack_detail_screen.dart';
+import 'package:stikk/community/community_models.dart';
+import 'package:stikk/community/community_sticker_feed.dart';
+import 'package:stikk/discover/tenor_repository.dart';
+import 'package:stikk/editor/image_sticker_service.dart';
 import 'package:stikk/main.dart';
+import 'package:stikk/packs/pack_models.dart';
 import 'package:stikk/packs/pack_providers.dart';
 import 'package:stikk/packs/pack_repository.dart';
+import 'package:stikk/packs/whatsapp_export_service.dart';
 import 'package:stikk/state/settings_store.dart';
+import 'package:stikk/tiktok/comment_sticker_formatter.dart';
 import 'package:stikk/tiktok/tiktok_app_links.dart';
 import 'package:stikk/tiktok/tiktok_share_intent.dart';
 
 import 'tiktok_share_intent_support.dart';
 
-CommunityCatalog loadBundledCatalog() {
-  return CommunityCatalog.fromJsonString(
-    File('assets/community/packs.json').readAsStringSync(),
-  );
-}
+const stickers = [
+  CommunitySticker(
+    id: 'one',
+    label: 'One',
+    imageUrl: 'https://example.com/one.webp',
+    animated: true,
+  ),
+  CommunitySticker(
+    id: 'two',
+    label: 'Two',
+    imageUrl: 'https://example.com/two.webp',
+    width: 400,
+    height: 600,
+  ),
+  CommunitySticker(
+    id: 'three',
+    label: 'Three',
+    imageUrl: 'https://example.com/three.webp',
+  ),
+  CommunitySticker(
+    id: 'four',
+    label: 'Four',
+    imageUrl: 'https://example.com/four.webp',
+  ),
+  CommunitySticker(
+    id: 'five',
+    label: 'Five',
+    imageUrl: 'https://example.com/five.webp',
+  ),
+  CommunitySticker(
+    id: 'six',
+    label: 'Six',
+    imageUrl: 'https://example.com/six.webp',
+  ),
+];
 
 ProviderScope communityApp({
-  Duration downloadDelay = Duration.zero,
+  required CommunityStickerFeed feed,
   PackRepository? repository,
+  TenorRepository? tenor,
+  WhatsAppExportService? whatsApp,
 }) {
-  final catalog = loadBundledCatalog();
   return ProviderScope(
     overrides: [
       settingsStoreProvider.overrideWithValue(
         InMemorySettingsStore(onboardingComplete: true),
       ),
-      communityCatalogProvider.overrideWith((ref) async => catalog),
-      communityDownloadDelayProvider.overrideWithValue(downloadDelay),
+      communityStickerFeedProvider.overrideWithValue(feed),
       if (repository != null)
         packRepositoryProvider.overrideWithValue(repository),
+      if (tenor != null) tenorRepositoryProvider.overrideWithValue(tenor),
+      if (whatsApp != null)
+        whatsAppExportServiceProvider.overrideWithValue(whatsApp),
+      commentStickerFormatterProvider.overrideWithValue(_FakeFormatter()),
       tikTokShareIntentProvider.overrideWithValue(FakeTikTokShareIntent()),
       tikTokAppLinksProvider.overrideWithValue(FakeTikTokAppLinks()),
     ],
@@ -54,91 +93,138 @@ void main() {
     mockShareIntent();
   });
 
-  testWidgets('community feed shows trending pack cards', (tester) async {
-    await tester.pumpWidget(communityApp());
+  testWidgets('shows a masonry feed and persistent empty staging tray', (
+    tester,
+  ) async {
+    await tester.pumpWidget(communityApp(feed: _FakeFeed()));
     await tester.pump();
     await openCommunity(tester);
 
     expect(find.text('Community'), findsWidgets);
-    expect(find.text('Trending'), findsOneWidget);
-    expect(find.text('Anime reactions'), findsOneWidget);
-    expect(find.text('sakura.ink'), findsOneWidget);
-    expect(find.text('210.8k'), findsOneWidget);
-    expect(find.text('#anime'), findsOneWidget);
-
-    await tester.scrollUntilVisible(find.text('Monday moods'), 400);
-    expect(find.text('Monday moods'), findsOneWidget);
-    expect(find.text('nina.makes'), findsOneWidget);
-    expect(find.text('#funny'), findsWidgets);
-  });
-
-  testWidgets('New filter reorders the feed', (tester) async {
-    await tester.pumpWidget(communityApp());
-    await tester.pump();
-    await openCommunity(tester);
-
-    await tester.tap(find.byKey(const Key('community-filter-newest')));
-    await tester.pump();
-
-    expect(find.text('Weekend plans'), findsOneWidget);
-    expect(find.text('sun.day'), findsOneWidget);
-  });
-
-  testWidgets('tapping a pack opens the detail screen', (tester) async {
-    await tester.pumpWidget(communityApp());
-    await tester.pump();
-    await openCommunity(tester);
-
-    await tester.tap(
-      find.byKey(const Key('community-pack-comm_anime_reactions')),
+    expect(find.byKey(const Key('community-masonry-grid')), findsOneWidget);
+    expect(find.byKey(const Key('community-staging-tray')), findsOneWidget);
+    expect(find.text('My Pack  0/30'), findsOneWidget);
+    expect(find.text('GIF'), findsWidgets);
+    final export = tester.widget<FilledButton>(
+      find.byKey(const Key('community-export-pack')),
     );
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byType(CommunityPackDetailScreen), findsOneWidget);
-    expect(find.text('Download Pack'), findsOneWidget);
-    expect(find.text('Big feelings, bigger eyes, zero chill.'), findsOneWidget);
-    expect(find.text('8 stickers'), findsOneWidget);
-    expect(find.text('#anime'), findsWidgets);
+    expect(export.onPressed, isNull);
   });
 
-  testWidgets('Download Pack shows a loading state then saves to library', (
+  testWidgets('three collected stickers enable and export My Pack', (
     tester,
   ) async {
     final repo = InMemoryPackRepository();
+    final tenor = _FakeTenorRepository();
+    final whatsApp = _FakeWhatsAppExportService();
     await tester.pumpWidget(
       communityApp(
-        downloadDelay: const Duration(milliseconds: 250),
+        feed: _FakeFeed(),
         repository: repo,
+        tenor: tenor,
+        whatsApp: whatsApp,
       ),
     );
     await tester.pump();
     await openCommunity(tester);
 
-    await tester.tap(
-      find.byKey(const Key('community-pack-comm_anime_reactions')),
+    for (final id in ['one', 'two', 'three']) {
+      final add = find.byKey(Key('community-add-$id'));
+      await tester.scrollUntilVisible(
+        add,
+        200,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('community-masonry-grid')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      tester.widget<IconButton>(add).onPressed!.call();
+      await tester.pump();
+    }
+
+    expect(find.text('My Pack  3/30'), findsOneWidget);
+    expect(find.byKey(const Key('community-tray-list')), findsOneWidget);
+    var export = tester.widget<FilledButton>(
+      find.byKey(const Key('community-export-pack')),
     );
+    expect(export.onPressed, isNotNull);
+
+    await tester.tap(find.byKey(const Key('community-export-pack')));
     await tester.pump();
     await tester.pump();
-
-    await tester.tap(find.byKey(const Key('download-community-pack')));
-    await tester.pump();
-
-    expect(find.text('Downloading…'), findsOneWidget);
-    expect(
-      find.byKey(const Key('download-community-pack-loading')),
-      findsOneWidget,
-    );
-
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pump();
-
-    expect(find.text('In library'), findsOneWidget);
-    expect(find.textContaining('saved to Library'), findsWidgets);
 
     final packs = await repo.getAll();
     expect(packs, hasLength(1));
-    expect(packs.single.name, 'Anime reactions');
-    expect(packs.single.author, 'sakura.ink');
+    expect(packs.single.name, 'My Pack');
+    expect(packs.single.stickers, hasLength(3));
+    expect(packs.single.stickers.every((item) => !item.animated), isTrue);
+    expect(tenor.downloadedIds, ['one', 'two', 'three']);
+    expect(whatsApp.exportedPack?.id, packs.single.id);
+    expect(find.text('My Pack  0/30'), findsOneWidget);
+    export = tester.widget<FilledButton>(
+      find.byKey(const Key('community-export-pack')),
+    );
+    expect(export.onPressed, isNull);
   });
+
+  test(
+    'mock feed supplies distinct endless pages of transparent WebPs',
+    () async {
+      final feed = CommunityStickerFeed(TenorRepository());
+      final first = await feed.loadPage();
+      final second = await feed.loadPage(cursor: first.nextCursor);
+
+      expect(first.stickers, hasLength(24));
+      expect(second.stickers, hasLength(24));
+      expect(first.nextCursor, isNotNull);
+      expect(second.nextCursor, isNot(first.nextCursor));
+      expect(
+        first.stickers.every((item) => item.imageUrl.contains('.webp')),
+        isTrue,
+      );
+      expect(first.stickers.any((item) => item.animated), isTrue);
+      expect(first.stickers.any((item) => !item.animated), isTrue);
+    },
+  );
+}
+
+class _FakeFeed extends CommunityStickerFeed {
+  _FakeFeed() : super(TenorRepository());
+
+  @override
+  Future<CommunityStickerPage> loadPage({String? cursor}) async {
+    return const CommunityStickerPage(stickers: stickers, nextCursor: null);
+  }
+}
+
+class _FakeTenorRepository extends TenorRepository {
+  final List<String> downloadedIds = [];
+
+  @override
+  Future<File> downloadSticker(
+    TenorSticker sticker, {
+    void Function(double? progress)? onProgress,
+  }) async {
+    downloadedIds.add(sticker.id);
+    return File('download_${sticker.id}.webp');
+  }
+}
+
+class _FakeFormatter extends CommentStickerFormatter {
+  _FakeFormatter() : super(ImageStickerService());
+
+  @override
+  Future<File> makeWhatsAppReady(File source) async {
+    return File('ready_${source.path}');
+  }
+}
+
+class _FakeWhatsAppExportService extends WhatsAppExportService {
+  StickerPack? exportedPack;
+
+  @override
+  Future<WhatsAppExportResult> exportToWhatsApp(StickerPack pack) async {
+    exportedPack = pack;
+    return WhatsAppExportResult(pack: pack, message: 'Added to WhatsApp.');
+  }
 }

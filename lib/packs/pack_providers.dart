@@ -142,7 +142,11 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
   }
 
   /// Creates a new static pack from a batch of already-formatted WebP files.
-  Future<StickerPack> createStaticStickerPack(List<String> sourcePaths) async {
+  Future<StickerPack> createStaticStickerPack(
+    List<String> sourcePaths, {
+    String name = commentPackName,
+    String author = commentPackAuthor,
+  }) async {
     if (sourcePaths.length < WhatsAppPackRules.minStickers ||
         sourcePaths.length > WhatsAppPackRules.maxStickers) {
       throw const ValidationException(
@@ -150,10 +154,7 @@ class PacksController extends AsyncNotifier<List<StickerPack>> {
       );
     }
 
-    final pack = await _repo.createPack(
-      name: commentPackName,
-      author: commentPackAuthor,
-    );
+    final pack = await _repo.createPack(name: name, author: author);
     try {
       var updated = pack;
       for (final sourcePath in sourcePaths) {
