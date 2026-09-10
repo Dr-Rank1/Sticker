@@ -49,6 +49,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get library => 'Library';
 
   @override
+  String get myPacks => 'My Packs';
+
+  @override
+  String get scanner => 'Scanner';
+
+  @override
+  String get scannerSubtitle =>
+      'Paste a TikTok link to pull sticker images from comments.';
+
+  @override
+  String get pasteTikTokVideoLink => 'Paste TikTok Video Link';
+
+  @override
+  String get scanCommentsForStickers => 'Scan Comments for Stickers';
+
+  @override
+  String get trending => 'Trending';
+
+  @override
+  String get trendingSubtitle =>
+      'Collect trending stickers and build your next pack.';
+
+  @override
+  String get fromPhotoMenu => 'From Photo';
+
+  @override
+  String get fromVideoMenu => 'From Video';
+
+  @override
   String get create => 'Create';
 
   @override

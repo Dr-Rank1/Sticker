@@ -91,8 +91,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(requested, isTrue);
-    expect(find.text('Library'), findsWidgets);
-    expect(find.text('No packs yet'), findsOneWidget);
+    expect(find.text('Scanner'), findsWidgets);
+    expect(find.byKey(const Key('scanner-tiktok-field')), findsOneWidget);
   });
 
   testWidgets('Not now still finishes onboarding', (tester) async {
@@ -122,7 +122,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Library'), findsWidgets);
+    expect(find.text('Scanner'), findsWidgets);
   });
 
   test('onboarding copy covers the three product pillars', () {

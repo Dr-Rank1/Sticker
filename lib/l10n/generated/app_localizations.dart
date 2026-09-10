@@ -172,6 +172,60 @@ abstract class AppLocalizations {
   /// **'Library'**
   String get library;
 
+  /// No description provided for @myPacks.
+  ///
+  /// In en, this message translates to:
+  /// **'My Packs'**
+  String get myPacks;
+
+  /// No description provided for @scanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanner'**
+  String get scanner;
+
+  /// No description provided for @scannerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a TikTok link to pull sticker images from comments.'**
+  String get scannerSubtitle;
+
+  /// No description provided for @pasteTikTokVideoLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste TikTok Video Link'**
+  String get pasteTikTokVideoLink;
+
+  /// No description provided for @scanCommentsForStickers.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Comments for Stickers'**
+  String get scanCommentsForStickers;
+
+  /// No description provided for @trending.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get trending;
+
+  /// No description provided for @trendingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collect trending stickers and build your next pack.'**
+  String get trendingSubtitle;
+
+  /// No description provided for @fromPhotoMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'From Photo'**
+  String get fromPhotoMenu;
+
+  /// No description provided for @fromVideoMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'From Video'**
+  String get fromVideoMenu;
+
   /// No description provided for @create.
   ///
   /// In en, this message translates to:

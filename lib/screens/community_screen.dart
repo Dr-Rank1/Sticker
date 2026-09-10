@@ -212,12 +212,12 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.l10n.community,
+                  context.l10n.trending,
                   style: Theme.of(context).textTheme.displaySmall,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  context.l10n.communitySubtitle,
+                  context.l10n.trendingSubtitle,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],

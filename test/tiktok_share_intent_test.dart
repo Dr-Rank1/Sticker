@@ -107,7 +107,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(MainScaffold), findsOneWidget);
-    expect(find.text('Library'), findsWidgets);
+    expect(find.text('Scanner'), findsWidgets);
 
     media.add([
       SharedMediaFile(

@@ -58,44 +58,55 @@ void main() {
     mockShareIntent();
   });
 
-  testWidgets('shows library and switches tabs', (tester) async {
+  testWidgets('shows scanner home and switches tabs', (tester) async {
     await tester.pumpWidget(appWithOnboardingDone());
     await tester.pump();
 
-    expect(find.text('Library'), findsWidgets);
-    expect(find.text('No packs yet'), findsOneWidget);
+    expect(find.text('Scanner'), findsWidgets);
+    expect(find.byKey(const Key('scanner-tiktok-field')), findsOneWidget);
+    expect(find.byKey(const Key('scanner-scan-button')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('nav-discover')));
+    await tester.tap(find.byKey(const Key('nav-library')));
     await tester.pump();
 
-    expect(find.text('Discover'), findsWidgets);
-    expect(find.byKey(const Key('discover-search-field')), findsOneWidget);
+    expect(find.text('My Packs'), findsWidgets);
+    expect(find.text('No packs yet'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('nav-community')));
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Community'), findsWidgets);
+    expect(find.text('Trending'), findsWidgets);
     expect(find.byKey(const Key('community-masonry-grid')), findsOneWidget);
     expect(find.byKey(const Key('community-staging-tray')), findsOneWidget);
     expect(find.text('My Pack  0/30'), findsOneWidget);
   });
 
-  testWidgets('Create opens the TikTok link sheet', (tester) async {
+  testWidgets('Scanner rejects an invalid TikTok link', (tester) async {
     await tester.pumpWidget(appWithOnboardingDone());
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('nav-create')));
+    await tester.enterText(
+      find.byKey(const Key('scanner-tiktok-field')),
+      'https://example.com/not-tiktok',
+    );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byKey(const Key('tiktok-link-field')), findsOneWidget);
-    expect(find.text('Import video'), findsOneWidget);
-    expect(find.text('From a photo'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('scanner-scan-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      find.textContaining('doesn\'t look like a TikTok link'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('opens Settings from the Library app bar', (tester) async {
+  testWidgets('opens Settings from the My Packs app bar', (tester) async {
     await tester.pumpWidget(appWithOnboardingDone());
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('nav-library')));
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('open-settings')));
@@ -108,30 +119,6 @@ void main() {
       find.text(
         'See what Stickr uses on this device and remove disposable working files.',
       ),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('invalid TikTok link shows a friendly snackbar', (tester) async {
-    await tester.pumpWidget(appWithOnboardingDone());
-    await tester.pump();
-
-    await tester.tap(find.byKey(const Key('nav-create')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    await tester.enterText(
-      find.byKey(const Key('tiktok-link-field')),
-      'https://example.com/not-tiktok',
-    );
-    await tester.pump();
-
-    await tester.tap(find.byKey(const Key('tiktok-import-button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-
-    expect(
-      find.textContaining('doesn\'t look like a TikTok link'),
       findsOneWidget,
     );
   });

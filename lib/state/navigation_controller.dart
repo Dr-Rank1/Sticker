@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum AppTab { library, create, discover, community }
+enum AppTab { scanner, library, community }
 
 class NavigationController extends Notifier<AppTab> {
   @override
-  AppTab build() => AppTab.library;
+  AppTab build() => AppTab.scanner;
 
   void select(AppTab tab) => state = tab;
 }

@@ -3,73 +3,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../accessibility/accessible_tap.dart';
-import '../discover/discover_screen.dart';
 import '../l10n/l10n.dart';
 import '../screens/community_screen.dart';
-import '../screens/create_screen.dart';
 import '../screens/library_screen.dart';
+import '../screens/scanner_screen.dart';
 import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
-import '../tiktok/comment_sticker_sheet.dart';
-import '../tiktok/tiktok_import_sheet.dart';
-import '../tiktok/tiktok_url.dart';
 
 export '../tiktok/tiktok_url.dart' show extractTikTokClipboardUrl;
 
-class MainScaffold extends ConsumerStatefulWidget {
+class MainScaffold extends ConsumerWidget {
   const MainScaffold({super.key});
 
   @override
-  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
-}
-
-class _MainScaffoldState extends ConsumerState<MainScaffold>
-    with WidgetsBindingObserver {
-  bool _checkingClipboard = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkClipboard());
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkClipboard();
-    }
-  }
-
-  Future<void> _checkClipboard() async {
-    if (_checkingClipboard || !mounted) return;
-    _checkingClipboard = true;
-    try {
-      final data = await Clipboard.getData(Clipboard.kTextPlain);
-      final url = extractTikTokClipboardUrl(data?.text);
-      if (url == null || !mounted) return;
-
-      // Consume the link before opening the sheet so another lifecycle event
-      // cannot trigger the same scan.
-      await Clipboard.setData(const ClipboardData(text: ''));
-      if (!mounted) return;
-      await scanAndShowCommentStickers(context, ref, videoUrl: url);
-    } on PlatformException {
-      // Clipboard access may be denied by the OS or device privacy settings.
-    } finally {
-      _checkingClipboard = false;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(navigationProvider);
     final colors = context.colors;
     final brightness = Theme.of(context).brightness;
@@ -88,23 +36,19 @@ class _MainScaffoldState extends ConsumerState<MainScaffold>
             ),
       child: Scaffold(
         extendBody: true,
+        floatingActionButton:
+            tab == AppTab.library ? const LibraryCreateFab() : null,
         body: IndexedStack(
           index: tab.index,
           children: const [
+            ScannerScreen(),
             LibraryScreen(),
-            CreateScreen(),
-            DiscoverScreen(),
             CommunityScreen(),
           ],
         ),
         bottomNavigationBar: StickrBottomBar(
           current: tab,
-          onSelect: (next) {
-            ref.read(navigationProvider.notifier).select(next);
-            if (next == AppTab.create) {
-              showTiktokImportSheet(context);
-            }
-          },
+          onSelect: (next) => ref.read(navigationProvider.notifier).select(next),
         ),
       ),
     );
@@ -149,36 +93,27 @@ class StickrBottomBar extends StatelessWidget {
           children: [
             Expanded(
               child: _NavItem(
+                key: const Key('nav-scanner'),
+                icon: Icons.document_scanner_outlined,
+                label: l10n.scanner,
+                selected: current == AppTab.scanner,
+                onTap: () => onSelect(AppTab.scanner),
+              ),
+            ),
+            Expanded(
+              child: _NavItem(
                 key: const Key('nav-library'),
                 icon: Icons.grid_view_rounded,
-                label: l10n.library,
+                label: l10n.myPacks,
                 selected: current == AppTab.library,
                 onTap: () => onSelect(AppTab.library),
               ),
             ),
             Expanded(
               child: _NavItem(
-                key: const Key('nav-create'),
-                icon: Icons.add_circle_rounded,
-                label: l10n.create,
-                selected: current == AppTab.create,
-                onTap: () => onSelect(AppTab.create),
-              ),
-            ),
-            Expanded(
-              child: _NavItem(
-                key: const Key('nav-discover'),
-                icon: Icons.auto_awesome_rounded,
-                label: l10n.discover,
-                selected: current == AppTab.discover,
-                onTap: () => onSelect(AppTab.discover),
-              ),
-            ),
-            Expanded(
-              child: _NavItem(
                 key: const Key('nav-community'),
-                icon: Icons.public_rounded,
-                label: l10n.community,
+                icon: Icons.local_fire_department_outlined,
+                label: l10n.trending,
                 selected: current == AppTab.community,
                 onTap: () => onSelect(AppTab.community),
               ),

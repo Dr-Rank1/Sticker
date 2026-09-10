@@ -107,7 +107,7 @@ void main() {
     await tester.pump();
     await openCommunity(tester);
 
-    expect(find.text('Community'), findsWidgets);
+    expect(find.text('Trending'), findsWidgets);
     expect(find.byKey(const Key('community-masonry-grid')), findsOneWidget);
     expect(find.byKey(const Key('community-staging-tray')), findsOneWidget);
     expect(find.text('My Pack  0/30'), findsOneWidget);

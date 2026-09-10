@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:stickr/create/manual_create.dart';
 import 'package:stickr/editor/local_video_import_service.dart';
-import 'package:stickr/screens/create_screen.dart';
+import 'package:stickr/screens/library_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -168,11 +169,18 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: Scaffold(body: CreateScreen())),
+        child: const MaterialApp(
+          home: Scaffold(
+            body: LibraryScreen(),
+            floatingActionButton: LibraryCreateFab(),
+          ),
+        ),
       ),
     );
 
-    await tester.tap(find.byKey(const Key('create-local-video')));
+    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-from-video')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 

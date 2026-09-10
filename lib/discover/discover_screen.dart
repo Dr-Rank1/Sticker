@@ -10,7 +10,6 @@ import '../images/sticker_grid_cache.dart';
 import '../images/sticker_grid_image.dart';
 import '../l10n/l10n.dart';
 import '../packs/save_to_pack_sheet.dart';
-import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
@@ -34,21 +33,16 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   String? _error;
   CancelToken? _pageCancelToken;
   final _downloadCancelTokens = <String, CancelToken>{};
-  ProviderSubscription<AppTab>? _tabSubscription;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_loadMoreIfNeeded);
-    _tabSubscription = ref.listenManual(navigationProvider, (_, tab) {
-      if (tab != AppTab.discover) _cancelRequests();
-    });
   }
 
   @override
   void dispose() {
     _cancelRequests(updateState: false);
-    _tabSubscription?.close();
     _searchController.dispose();
     _scrollController
       ..removeListener(_loadMoreIfNeeded)

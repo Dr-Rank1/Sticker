@@ -11,7 +11,6 @@ import '../state/navigation_controller.dart';
 import '../store/review_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
-import '../tiktok/tiktok_import_sheet.dart';
 import 'pack_form_sheet.dart';
 import 'pack_models.dart';
 import 'pack_providers.dart';
@@ -210,9 +209,8 @@ class _PackDetailScreenState extends ConsumerState<PackDetailScreen>
                               hapticService.buttonTap();
                               ref
                                   .read(navigationProvider.notifier)
-                                  .select(AppTab.create);
+                                  .select(AppTab.scanner);
                               Navigator.pop(context);
-                              showTiktokImportSheet(context);
                             },
                       child: Text(context.l10n.addStickers),
                     ),

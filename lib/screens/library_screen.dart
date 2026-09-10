@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../accessibility/accessible_tap.dart';
+import '../create/manual_create.dart';
 import '../haptics/haptic_service.dart';
 import '../l10n/l10n.dart';
 import '../packs/pack_detail_screen.dart';
@@ -13,7 +14,6 @@ import '../settings/settings_screen.dart';
 import '../state/navigation_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
-import '../tiktok/tiktok_import_sheet.dart';
 import '../widgets/empty_state.dart';
 
 class LibraryScreen extends ConsumerWidget {
@@ -40,7 +40,7 @@ class LibraryScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.library,
+                          l10n.myPacks,
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
                         const SizedBox(height: 6),
@@ -57,7 +57,7 @@ class LibraryScreen extends ConsumerWidget {
                       hapticService.buttonTap();
                       showCreatePackSheet(context);
                     },
-                    icon: const Icon(Icons.add_rounded),
+                    icon: const Icon(Icons.create_new_folder_outlined),
                     style: IconButton.styleFrom(
                       backgroundColor: colors.surface,
                       foregroundColor: colors.textPrimary,
@@ -118,12 +118,11 @@ class LibraryScreen extends ConsumerWidget {
                         icon: Icons.auto_awesome_mosaic_rounded,
                         title: l10n.noPacksYet,
                         message: l10n.noPacksMessage,
-                        actionLabel: l10n.createSticker,
+                        actionLabel: l10n.scanCommentsForStickers,
                         onAction: () {
                           ref
                               .read(navigationProvider.notifier)
-                              .select(AppTab.create);
-                          showTiktokImportSheet(context);
+                              .select(AppTab.scanner);
                         },
                       ),
                     ),
@@ -158,6 +157,102 @@ class LibraryScreen extends ConsumerWidget {
     );
   }
 }
+
+class LibraryCreateFab extends ConsumerStatefulWidget {
+  const LibraryCreateFab({super.key});
+
+  @override
+  ConsumerState<LibraryCreateFab> createState() => _LibraryCreateFabState();
+}
+
+class _LibraryCreateFabState extends ConsumerState<LibraryCreateFab> {
+  final _fabKey = GlobalKey();
+  var _importingVideo = false;
+
+  Future<void> _openCreateMenu() async {
+    final button = _fabKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null) return;
+
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final l10n = context.l10n;
+    final selected = await showMenu<_ManualCreateAction>(
+      context: context,
+      position: position,
+      items: [
+        PopupMenuItem(
+          key: const Key('create-from-photo'),
+          value: _ManualCreateAction.photo,
+          child: Text(l10n.fromPhotoMenu),
+        ),
+        PopupMenuItem(
+          key: const Key('create-from-video'),
+          value: _ManualCreateAction.video,
+          child: Text(l10n.fromVideoMenu),
+        ),
+      ],
+    );
+
+    if (!mounted || selected == null) return;
+    switch (selected) {
+      case _ManualCreateAction.photo:
+        await openPhotoCreateFlow(context);
+      case _ManualCreateAction.video:
+        if (_importingVideo) return;
+        setState(() => _importingVideo = true);
+        try {
+          await openLocalVideoCreateFlow(context: context, ref: ref);
+        } finally {
+          if (mounted) setState(() => _importingVideo = false);
+        }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 72),
+      child: FloatingActionButton.small(
+        key: _fabKey,
+        heroTag: 'library-manual-create-fab',
+        tooltip: l10n.create,
+        backgroundColor: colors.surface,
+        foregroundColor: colors.textPrimary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          side: BorderSide(color: colors.border),
+        ),
+        onPressed: _importingVideo ? null : _openCreateMenu,
+        child: _importingVideo
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.textPrimary,
+                ),
+              )
+            : const Icon(Icons.add_rounded, key: Key('library-create-fab')),
+      ),
+    );
+  }
+}
+
+enum _ManualCreateAction { photo, video }
 
 class _PackCard extends StatelessWidget {
   const _PackCard({required this.pack});

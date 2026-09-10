@@ -10,7 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:stickr/editor/image_sticker_service.dart';
 import 'package:stickr/photos/photo_import_controller.dart';
 import 'package:stickr/photos/photo_import_sheet.dart';
-import 'package:stickr/screens/create_screen.dart';
+import 'package:stickr/screens/library_screen.dart';
 
 void main() {
   setUpAll(() {
@@ -20,12 +20,19 @@ void main() {
   testWidgets('Create photo card opens the import sheet', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(home: Scaffold(body: CreateScreen())),
+        child: MaterialApp(
+          home: Scaffold(
+            body: LibraryScreen(),
+            floatingActionButton: LibraryCreateFab(),
+          ),
+        ),
       ),
     );
     await tester.pump();
 
-    await tester.tap(find.text('From a photo'));
+    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-from-photo')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

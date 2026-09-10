@@ -7,8 +7,8 @@ import 'package:image/image.dart' as img;
 import 'package:stickr/editor/editor_screen.dart';
 import 'package:stickr/editor/image_sticker_service.dart';
 import 'package:stickr/memes/meme_service.dart';
+import 'package:stickr/memes/meme_template_sheet.dart';
 import 'package:stickr/photos/photo_import_controller.dart';
-import 'package:stickr/screens/create_screen.dart';
 
 void main() {
   testWidgets('meme picker loads templates and hands a square image to editor', (
@@ -33,13 +33,25 @@ void main() {
           memeServiceProvider.overrideWithValue(memeService),
           imageStickerServiceProvider.overrideWithValue(imageService),
         ],
-        child: const MaterialApp(home: Scaffold(body: CreateScreen())),
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => Center(
+                child: TextButton(
+                  key: const Key('open-meme-sheet'),
+                  onPressed: () => showMemeTemplateSheet(context),
+                  child: const Text('Start from Meme'),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
     await tester.pump();
 
     expect(find.text('Start from Meme'), findsOneWidget);
-    await tester.tap(find.text('Start from Meme'));
+    await tester.tap(find.byKey(const Key('open-meme-sheet')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
