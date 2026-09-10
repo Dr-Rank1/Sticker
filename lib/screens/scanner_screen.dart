@@ -20,6 +20,8 @@ class ScannerScreen extends ConsumerStatefulWidget {
 
 class _ScannerScreenState extends ConsumerState<ScannerScreen>
     with WidgetsBindingObserver {
+  static const _scannerLoadingSize = 220.0;
+
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   bool _checkingClipboard = false;
@@ -143,14 +145,29 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             ),
             Expanded(
               child: _isLoading
-                  ? const Center(
-                      child: Lottie.asset(
-                        // Place your downloaded quirky animation file at
-                        // assets/animations/scanner_loading.json
-                        'assets/animations/scanner_loading.json',
-                        key: Key('scanner-loading-lottie'),
-                        repeat: true,
-                        fit: BoxFit.contain,
+                  ? Center(
+                      child: SizedBox(
+                        width: _scannerLoadingSize,
+                        height: _scannerLoadingSize,
+                        child: Lottie.asset(
+                          // Place your downloaded quirky animation file at
+                          // assets/animations/scanner_loading.json
+                          'assets/animations/scanner_loading.json',
+                          key: const Key('scanner-loading-lottie'),
+                          repeat: true,
+                          fit: BoxFit.contain,
+                          width: _scannerLoadingSize,
+                          height: _scannerLoadingSize,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     )
                   : Column(
