@@ -30,6 +30,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_onFieldChanged);
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkClipboard());
   }
@@ -37,9 +38,15 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _controller.dispose();
+    _controller
+      ..removeListener(_onFieldChanged)
+      ..dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -47,6 +54,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     if (state == AppLifecycleState.resumed) {
       _checkClipboard();
     }
+  }
+
+  void _clearPasteField() {
+    _controller.clear();
+    _focusNode.requestFocus();
   }
 
   Future<void> _checkClipboard() async {
@@ -64,6 +76,18 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       // trigger the same scan.
       await Clipboard.setData(const ClipboardData(text: ''));
       if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            key: const Key('scanner-clipboard-notice'),
+            content: Text(context.l10n.clipboardTikTokLinkScanning),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
       await _scan(url);
     } on PlatformException {
       // Clipboard access may be denied by the OS or device privacy settings.
@@ -92,6 +116,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
+    final l10n = context.l10n;
     List<CommentSticker> stickers = const [];
     String? errorMessage;
     try {
@@ -101,7 +126,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     } on ApifyException catch (error) {
       errorMessage = error.message;
     } catch (_) {
-      errorMessage = context.l10n.couldNotScanComments;
+      errorMessage = l10n.couldNotScanComments;
     }
 
     if (!mounted) return;
@@ -119,7 +144,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       return;
     }
 
-    await showCommentStickerSheet(context, stickers: stickers);
+    await showCommentStickerSheet(
+      context,
+      stickers: stickers,
+      prefetchDownloads: true,
+    );
   }
 
   @override
@@ -127,6 +156,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     final colors = context.colors;
     final l10n = context.l10n;
     final textTheme = Theme.of(context).textTheme;
+    final hasPasteText = _controller.text.trim().isNotEmpty;
 
     return SafeArea(
       bottom: false,
@@ -150,8 +180,6 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                         width: _scannerLoadingSize,
                         height: _scannerLoadingSize,
                         child: Lottie.asset(
-                          // Place your downloaded quirky animation file at
-                          // assets/animations/scanner_loading.json
                           'assets/animations/scanner_loading.json',
                           key: const Key('scanner-loading-lottie'),
                           repeat: true,
@@ -193,10 +221,20 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                             alignLabelWithHint: true,
                             filled: true,
                             fillColor: colors.surface,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 22,
+                            contentPadding: const EdgeInsets.fromLTRB(
+                              20,
+                              22,
+                              12,
+                              22,
                             ),
+                            suffixIcon: hasPasteText
+                                ? IconButton(
+                                    key: const Key('scanner-clear-paste'),
+                                    tooltip: l10n.clearPasteField,
+                                    onPressed: _clearPasteField,
+                                    icon: const Icon(Icons.clear_rounded),
+                                  )
+                                : null,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(
                                 AppTheme.radiusLg,

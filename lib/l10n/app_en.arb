@@ -15,9 +15,34 @@
   "library": "Library",
   "myPacks": "My Packs",
   "scanner": "Scanner",
-  "scannerSubtitle": "Paste a TikTok link to pull sticker images from comments.",
+  "scannerSubtitle": "Paste a TikTok link to pull stickers from comments.",
   "pasteTikTokVideoLink": "Paste TikTok Video Link",
   "scanCommentsForStickers": "Scan Comments for Stickers",
+  "clearPasteField": "Clear link",
+  "clipboardTikTokLinkScanning": "TikTok link found on clipboard. Scanning comments for stickers.",
+  "exportPreparingStickers": "Preparing stickers ({completed}/{total})",
+  "@exportPreparingStickers": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "exportConvertingStickers": "Converting to WhatsApp stickers ({completed}/{total})",
+  "@exportConvertingStickers": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "exportOpeningWhatsApp": "Opening WhatsApp...",
+  "exportSavingPack": "Saving pack...",
+  "preparingCommentStickers": "Preparing stickers ({downloaded}/{total})",
+  "@preparingCommentStickers": {
+    "placeholders": {
+      "downloaded": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "trending": "Trending",
   "trendingSubtitle": "Collect trending stickers and build your next pack.",
   "fromPhotoMenu": "From Photo",
@@ -254,7 +279,7 @@
       }
     }
   },
-  "noCommentStickers": "No image stickers were found in the scanned comments.",
+  "noCommentStickers": "No stickers were found in the scanned comments.",
   "pack": "Pack",
   "packDeleted": "This pack was deleted.",
   "sharePack": "Share pack",

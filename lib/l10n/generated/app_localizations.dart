@@ -187,7 +187,7 @@ abstract class AppLocalizations {
   /// No description provided for @scannerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Paste a TikTok link to pull sticker images from comments.'**
+  /// **'Paste a TikTok link to pull stickers from comments.'**
   String get scannerSubtitle;
 
   /// No description provided for @pasteTikTokVideoLink.
@@ -201,6 +201,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scan Comments for Stickers'**
   String get scanCommentsForStickers;
+
+  /// No description provided for @clearPasteField.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear link'**
+  String get clearPasteField;
+
+  /// No description provided for @clipboardTikTokLinkScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'TikTok link found on clipboard. Scanning comments for stickers.'**
+  String get clipboardTikTokLinkScanning;
+
+  /// No description provided for @exportPreparingStickers.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing stickers ({completed}/{total})'**
+  String exportPreparingStickers(int completed, int total);
+
+  /// No description provided for @exportConvertingStickers.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting to WhatsApp stickers ({completed}/{total})'**
+  String exportConvertingStickers(int completed, int total);
+
+  /// No description provided for @exportOpeningWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening WhatsApp...'**
+  String get exportOpeningWhatsApp;
+
+  /// No description provided for @exportSavingPack.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving pack...'**
+  String get exportSavingPack;
+
+  /// No description provided for @preparingCommentStickers.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing stickers ({downloaded}/{total})'**
+  String preparingCommentStickers(int downloaded, int total);
 
   /// No description provided for @trending.
   ///
@@ -1027,7 +1069,7 @@ abstract class AppLocalizations {
   /// No description provided for @noCommentStickers.
   ///
   /// In en, this message translates to:
-  /// **'No image stickers were found in the scanned comments.'**
+  /// **'No stickers were found in the scanned comments.'**
   String get noCommentStickers;
 
   /// No description provided for @pack.

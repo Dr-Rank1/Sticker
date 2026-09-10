@@ -13,6 +13,7 @@ import '../l10n/l10n.dart';
 import '../packs/batch_export_use_case.dart';
 import '../packs/pack_models.dart';
 import '../packs/pack_providers.dart';
+import '../photos/photo_import_controller.dart';
 import '../storage/storage_utility.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -116,7 +117,7 @@ Future<void> scanAndShowCommentStickers(
 Future<void> showCommentStickerSheet(
   BuildContext context, {
   required List<CommentSticker> stickers,
-  bool prefetchDownloads = false,
+  bool prefetchDownloads = true,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -143,7 +144,7 @@ class CommentStickerSheet extends ConsumerStatefulWidget {
   const CommentStickerSheet({
     super.key,
     required this.stickers,
-    this.prefetchDownloads = false,
+    this.prefetchDownloads = true,
   });
 
   final List<CommentSticker> stickers;
@@ -160,8 +161,10 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
   var _exporting = false;
   var _exportCompleted = 0;
   var _exportTotal = 0;
+  var _exportStage = BatchExportStage.downloading;
   var _downloaded = 0;
   var _total = 0;
+  var _preparingCutouts = 0;
   StreamSubscription<CommentStickerProgress>? _subscription;
 
   @override
@@ -190,12 +193,54 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
     setState(() {
       _downloaded = progress.downloaded;
       _total = progress.total;
-      final sticker = progress.sticker;
-      if (sticker != null &&
-          !_visible.any((item) => item.imageUrl == sticker.imageUrl)) {
-        _visible.add(sticker);
-      }
     });
+    final sticker = progress.sticker;
+    if (sticker == null) return;
+    // Cut opaque photo comments into stickers before they appear in the grid.
+    if (ApifyService.isPhotoCommentUrl(sticker.imageUrl)) {
+      unawaited(_prepareThenShow(sticker));
+      return;
+    }
+    if (!_visible.any((item) => item.imageUrl == sticker.imageUrl)) {
+      setState(() => _visible.add(sticker));
+    }
+  }
+
+  Future<void> _prepareThenShow(CommentSticker sticker) async {
+    if (_visible.any((item) => item.imageUrl == sticker.imageUrl)) return;
+    setState(() => _preparingCutouts++);
+    CommentSticker ready = sticker;
+    try {
+      ready = await _cutOutIfNeeded(sticker) ?? sticker;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _preparingCutouts = (_preparingCutouts - 1).clamp(0, 1 << 20);
+          if (!_visible.any((item) => item.imageUrl == ready.imageUrl)) {
+            _visible.add(ready);
+          }
+        });
+      }
+    }
+  }
+
+  /// Opaque comment photos become cut-out stickers before the user sees them.
+  Future<CommentSticker?> _cutOutIfNeeded(CommentSticker sticker) async {
+    final localPath = sticker.localPath;
+    if (localPath == null) return sticker;
+    if (!ApifyService.isPhotoCommentUrl(sticker.imageUrl)) {
+      return sticker;
+    }
+    try {
+      final source = File(localPath);
+      if (!source.existsSync()) return sticker;
+      final prepared = await ref
+          .read(imageStickerServiceProvider)
+          .prepareForEditor(source, removeBackground: true);
+      return sticker.copyWith(localPath: prepared.file.path);
+    } catch (_) {
+      return sticker;
+    }
   }
 
   @override
@@ -231,6 +276,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
       _exporting = true;
       _exportCompleted = 0;
       _exportTotal = selected.length;
+      _exportStage = BatchExportStage.downloading;
     });
     try {
       BatchExportResult? result;
@@ -266,6 +312,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           setState(() {
             _exportCompleted = progress.completedItems;
             _exportTotal = progress.totalItems;
+            _exportStage = progress.stage;
           });
         }
         result = progress.result ?? result;
@@ -303,8 +350,25 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
           _exporting = false;
           _exportCompleted = 0;
           _exportTotal = 0;
+          _exportStage = BatchExportStage.downloading;
         });
       }
+    }
+  }
+
+  String _exportStatusLabel(AppLocalizations l10n) {
+    switch (_exportStage) {
+      case BatchExportStage.downloading:
+        return l10n.exportPreparingStickers(_exportCompleted, _exportTotal);
+      case BatchExportStage.converting:
+      case BatchExportStage.itemReady:
+        return l10n.exportConvertingStickers(_exportCompleted, _exportTotal);
+      case BatchExportStage.launchingWhatsApp:
+        return l10n.exportOpeningWhatsApp;
+      case BatchExportStage.savingPack:
+        return l10n.exportSavingPack;
+      case BatchExportStage.complete:
+        return l10n.exportProgress(_exportCompleted, _exportTotal);
     }
   }
 
@@ -356,8 +420,21 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
-                                '$_downloaded / $_total',
+                                context.l10n.preparingCommentStickers(
+                                  _visible.length,
+                                  _total,
+                                ),
                                 key: const Key('comment-sticker-progress'),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: colors.textSecondary),
+                              ),
+                            ),
+                          if (_exporting && _exportTotal > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                _exportStatusLabel(context.l10n),
+                                key: const Key('comment-sticker-export-status'),
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: colors.textSecondary),
                               ),
@@ -399,10 +476,7 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
                   : const Icon(Icons.ios_share_rounded),
               label: Text(
                 _exporting && _exportTotal > 0
-                    ? context.l10n.exportProgress(
-                        _exportCompleted,
-                        _exportTotal,
-                      )
+                    ? _exportStatusLabel(context.l10n)
                     : context.l10n.exportSelection(
                         _selectedUrls.length,
                         WhatsAppPackRules.maxStickers,
@@ -418,11 +492,27 @@ class _CommentStickerSheetState extends ConsumerState<CommentStickerSheet> {
 
   Widget _buildContent() {
     final colors = context.colors;
-    if (_visible.isEmpty &&
+    final waitingOnPrefetch =
         widget.prefetchDownloads &&
         _total > 0 &&
-        _downloaded < _total) {
-      return const Center(child: CircularProgressIndicator());
+        (_visible.isEmpty ||
+            _downloaded < _total ||
+            _preparingCutouts > 0) &&
+        _visible.length < _total;
+    if (_visible.isEmpty && waitingOnPrefetch) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              context.l10n.preparingCommentStickers(_visible.length, _total),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
     }
     if (_visible.isEmpty) {
       return _MessageState(

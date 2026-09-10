@@ -39,13 +39,43 @@ void main() {
       '${ApifyService.synchronousDatasetPath}?token=test-token',
     );
     expect(payload, {
-      'searchUrls': [postUrl],
-      'commentsPerUrl': 50,
+      'searchUrls': ['1234567890123456789'],
+      'commentsPerUrl': 100,
       'scrapeAll': false,
       'repliesPerComment': 0,
       'parseAllReplies': false,
     });
     expect(items, hasLength(1));
+  });
+
+  test('resolves short share links before calling Apify', () async {
+    late Map<String, dynamic> payload;
+    final service = ApifyService(
+      token: 'test-token',
+      videoIdResolver: (url) async {
+        expect(url, 'https://vt.tiktok.com/ZSqURv8Xp/');
+        return '7672778337843989792';
+      },
+      apiPost: (_, data) async {
+        payload = Map<String, dynamic>.from(data! as Map);
+        return _response([
+          {
+            'data': {
+              'id': 'sticker-1',
+              'images': ['https://example.com/sticker.webp'],
+            },
+          },
+        ]);
+      },
+    );
+
+    final stickers = await service.fetchCommentStickers(
+      'https://vt.tiktok.com/ZSqURv8Xp/',
+    );
+
+    expect(payload['searchUrls'], ['7672778337843989792']);
+    expect(stickers, hasLength(1));
+    expect(stickers.single.imageUrl, 'https://example.com/sticker.webp');
   });
 
   test('uses the central network client timeouts', () {
@@ -60,9 +90,63 @@ void main() {
     final service = ApifyService(token: 'test-token');
     final options = service.networkOptions;
 
-    expect(options.connectTimeout, const Duration(milliseconds: 60000));
-    expect(options.receiveTimeout, const Duration(milliseconds: 60000));
-    expect(options.sendTimeout, const Duration(milliseconds: 60000));
+    expect(options.connectTimeout, const Duration(milliseconds: 120000));
+    expect(options.receiveTimeout, const Duration(milliseconds: 120000));
+    expect(options.sendTimeout, const Duration(milliseconds: 120000));
+  });
+
+  test('prefers sticker-pack URLs over photo-comment uploads', () async {
+    final service = ApifyService(
+      token: 'test-token',
+      apiPost: (_, _) async => _response([
+        {
+          'data': {
+            'id': 'both',
+            'images': [
+              'https://p16.tiktokcdn.com/tos-alisg-i-zt8igodiya-sg/photo~tplv-image-origin.jpeg',
+            ],
+            'stickerUrl':
+                'https://p16-va.tiktokcdn.com/sticker/pack_asset~tplv.image',
+          },
+        },
+        {
+          'data': {
+            'id': 'photo-only',
+            'images': [
+              'https://p16.tiktokcdn.com/tos-alisg-i-zt8igodiya-sg/other~tplv-image-origin.jpeg',
+            ],
+          },
+        },
+      ]),
+    );
+
+    final urls = await service.fetchStickerUrls(postUrl);
+
+    expect(urls, [
+      'https://p16-va.tiktokcdn.com/sticker/pack_asset~tplv.image',
+    ]);
+  });
+
+  test('falls back to photo comments when no sticker assets exist', () async {
+    final service = ApifyService(
+      token: 'test-token',
+      apiPost: (_, _) async => _response([
+        {
+          'data': {
+            'id': 'photo-only',
+            'images': [
+              'https://p16.tiktokcdn.com/tos-alisg-i-zt8igodiya-sg/photo~tplv-image-origin.jpeg',
+            ],
+          },
+        },
+      ]),
+    );
+
+    final urls = await service.fetchStickerUrls(postUrl);
+
+    expect(urls, [
+      'https://p16.tiktokcdn.com/tos-alisg-i-zt8igodiya-sg/photo~tplv-image-origin.jpeg',
+    ]);
   });
 
   test('returns only unique valid sticker URLs', () async {

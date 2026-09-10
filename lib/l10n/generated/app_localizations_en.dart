@@ -56,13 +56,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scannerSubtitle =>
-      'Paste a TikTok link to pull sticker images from comments.';
+      'Paste a TikTok link to pull stickers from comments.';
 
   @override
   String get pasteTikTokVideoLink => 'Paste TikTok Video Link';
 
   @override
   String get scanCommentsForStickers => 'Scan Comments for Stickers';
+
+  @override
+  String get clearPasteField => 'Clear link';
+
+  @override
+  String get clipboardTikTokLinkScanning =>
+      'TikTok link found on clipboard. Scanning comments for stickers.';
+
+  @override
+  String exportPreparingStickers(int completed, int total) {
+    return 'Preparing stickers ($completed/$total)';
+  }
+
+  @override
+  String exportConvertingStickers(int completed, int total) {
+    return 'Converting to WhatsApp stickers ($completed/$total)';
+  }
+
+  @override
+  String get exportOpeningWhatsApp => 'Opening WhatsApp...';
+
+  @override
+  String get exportSavingPack => 'Saving pack...';
+
+  @override
+  String preparingCommentStickers(int downloaded, int total) {
+    return 'Preparing stickers ($downloaded/$total)';
+  }
 
   @override
   String get trending => 'Trending';
@@ -533,7 +561,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noCommentStickers =>
-      'No image stickers were found in the scanned comments.';
+      'No stickers were found in the scanned comments.';
 
   @override
   String get pack => 'Pack';
